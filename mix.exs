@@ -29,6 +29,17 @@ defmodule ScoutApm.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    []
+    [
+      {:plug, "~>1.0"},
+      {:poison, "~> 2.0"},
+      {:hackney, "~> 1.7"},
+
+      #########################
+      # Dev & Testing Deps
+
+      {:propcheck, "~> 0.0", only: [:dev, :test]},
+      {:credo, "~> 0.5", only: [:dev, :test]},
+      # {:eqc_ex, "~> 1.4", only: [:dev, :test]}
+    ]
   end
 end

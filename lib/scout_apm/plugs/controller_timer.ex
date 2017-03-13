@@ -16,6 +16,13 @@ defmodule ScoutApm.Plugs.ControllerTimer do
                                         payload = ScoutApm.Payload.new
                                         ScoutApm.Payload.post(payload)
 
+                                        case Process.whereis(ScoutApm.Worker) do
+                                          nil -> Logger.info("Couldn't find worker?")
+                                          pid ->
+                                            Logger.info("Found worker!")
+                                            GenServer.cast(pid, {:time, tdiff})
+                                        end
+
                                         print_payload(payload)
 
                                         conn
