@@ -10,16 +10,28 @@ defmodule ScoutApm.Reporter do
 
     :hackney.start()
     case :hackney.request(method, url, headers(), encoded_payload, options) do
-      {:ok, status_code, _resp_headers, _client_ref}  -> Logger.info("Ok, status: #{status_code}")
-      {:error, ereason} -> Logger.info("Failed to Report: #{ereason}")
+      {:ok, status_code, _resp_headers, _client_ref} ->
+        Logger.info("Ok, status: #{status_code}")
+      {:error, ereason} ->
+        Logger.info("Failed to Report: #{ereason}")
     end
   end
 
   def headers do
     [
-      {"Agent-Hostname", "hostname"},
+      {"Agent-Hostname", hostname()},
       {"Content-Type", "application/json"},
-      {"Agent-Version", "0.0.1"}
+      {"Agent-Version", version()},
     ]
   end
+
+  def hostname do
+    {:ok, name} = :inet.gethostname()
+    name
+  end
+
+  def version do
+    Application.spec(:scout_apm, :vsn)
+  end
+
 end

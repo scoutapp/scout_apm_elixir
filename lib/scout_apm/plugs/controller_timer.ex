@@ -11,13 +11,7 @@ defmodule ScoutApm.Plugs.ControllerTimer do
   end
 
   def before_send(t1, conn) do
-    controller_name = conn.private[:phoenix_controller]
-    action_name = conn.private[:phoenix_action]
-    full_name =
-      "#{controller_name}##{action_name}"
-      |>  String.split(".")
-      |>  Enum.drop(2) # TODO: Revisit - this should drop "Elixir.TestappPhoenix", leaving just ["PageController#index"]
-      |>  Enum.join(".")
+    full_name = action_name(conn)
 
     t2 = System.monotonic_time(:microseconds)
     tdiff = (t2 - t1) / 1_000_000
@@ -27,7 +21,15 @@ defmodule ScoutApm.Plugs.ControllerTimer do
     conn
   end
 
-  def print_payload(payload) do
-    Logger.info Poison.encode!(payload)
+  # Takes a connection, extracts the phoenix controller & action, then manipulates & cleans it up.
+  # Returns a string like "PageController#index"
+  defp action_name(conn) do
+    controller_name = conn.private[:phoenix_controller]
+    action_name = conn.private[:phoenix_action]
+
+    "#{controller_name}##{action_name}" # a string like "Elixir.TestappPhoenix.PageController#index"
+      |>  String.split(".") # Split into a list
+      |>  Enum.drop(2) # drop "Elixir.TestappPhoenix", leaving just ["PageController#index"]
+      |>  Enum.join(".") # Probably just "joining" a 1 elem array, but recombine this way anyway in case of periods
   end
 end
