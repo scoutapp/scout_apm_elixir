@@ -11,7 +11,7 @@ defmodule ScoutApm.Payload.Metadata do
   def new do
     %ScoutApm.Payload.Metadata{
       app_root: System.cwd(),
-      unique_id: random_string(20),
+      unique_id: ScoutApm.Utils.random_string(20),
       agent_version: "0.0.1",
       agent_time: DateTime.utc_now() |> DateTime.to_iso8601(),
       agent_pid: System.get_pid(),
@@ -19,10 +19,4 @@ defmodule ScoutApm.Payload.Metadata do
     }
   end
 
-  def random_string(length) do
-    length
-    |> :crypto.strong_rand_bytes
-    |> Base.url_encode64
-    |> binary_part(0, length)
-  end
 end
