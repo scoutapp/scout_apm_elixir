@@ -21,7 +21,7 @@ defmodule ScoutApm.Reporter do
     [
       {"Agent-Hostname", hostname()},
       {"Content-Type", "application/json"},
-      {"Agent-Version", version()},
+      {"Agent-Version", ScoutApm.Utils.agent_version()},
     ]
   end
 
@@ -29,9 +29,4 @@ defmodule ScoutApm.Reporter do
     {:ok, name} = :inet.gethostname()
     name
   end
-
-  def version do
-    Application.spec(:scout_apm, :vsn)
-  end
-
 end

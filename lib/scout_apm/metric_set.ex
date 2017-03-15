@@ -1,4 +1,6 @@
 defmodule ScoutApm.MetricSet do
+  require Logger
+
   @moduledoc """
   A way to absorb & combine metrics into a single set, keeping track of min/max/count, etc.
 
@@ -9,13 +11,18 @@ defmodule ScoutApm.MetricSet do
     %{}
   end
 
-  def absorb(metric_set, type, name, time) do
-    key = "#{type}/#{name}"
+  def absorb(metric_set, type, name, time, scope) do
+    Logger.info("Absorbing #{type}, #{name}, scope: #{inspect scope}")
+    global_key = "#{type}/#{name}"
+    scoped_key = "#{global_key}/scope/#{scope[:type]}/#{scope[:name]}"
 
-    Map.update(metric_set, key,
-               new_metric(type, name, time),
-               fn metric -> update_metric(metric, time) end
-              )
+     metric_set
+     |> Map.update(global_key,
+          new_metric(type, name, time),
+          fn metric -> update_metric(metric, time) end)
+     |> Map.update(scoped_key,
+          new_metric(type, name, time, scope),
+          fn metric -> update_metric(metric, time) end)
   end
 
   # Ditches the key part, and just returns the aggregate metric
@@ -29,10 +36,11 @@ defmodule ScoutApm.MetricSet do
   #  Private Helpers  #
   #####################
 
-  defp new_metric(type, name, time) do
+  defp new_metric(type, name, time, scope \\ %{}) do
     %{
       type: type,
       name: name,
+      scope: scope,
 
       call_count: 1,
       total_call_time: time,

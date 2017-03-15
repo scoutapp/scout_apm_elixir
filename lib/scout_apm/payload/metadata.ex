@@ -12,7 +12,7 @@ defmodule ScoutApm.Payload.Metadata do
     %ScoutApm.Payload.Metadata{
       app_root: System.cwd(),
       unique_id: ScoutApm.Utils.random_string(20),
-      agent_version: "0.0.1",
+      agent_version: ScoutApm.Utils.agent_version(),
       agent_time: DateTime.utc_now() |> DateTime.to_iso8601(),
       agent_pid: System.get_pid(),
       platform: "elixir",

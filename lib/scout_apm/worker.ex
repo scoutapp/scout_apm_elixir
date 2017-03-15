@@ -11,12 +11,11 @@ defmodule ScoutApm.Worker do
     GenServer.start_link(__MODULE__, :ok, [name: ScoutApm.Worker])
   end
 
-  def register_layer(type, name, time) do
+  def register_layer(type, name, time, scope) do
     case Process.whereis(ScoutApm.Worker) do
-      nil -> Logger.info("Couldn't find worker?")
+      nil -> Logger.info("Couldn't find worker!?")
       pid ->
-        Logger.info("Found a pid")
-        GenServer.cast(pid, {:register_layer, type, name, time})
+        GenServer.cast(pid, {:register_layer, type, name, time, scope})
     end
   end
 
@@ -31,9 +30,9 @@ defmodule ScoutApm.Worker do
     {:reply, nil}
   end
 
-  def handle_cast({:register_layer, type, name, time}, state) do
+  def handle_cast({:register_layer, type, name, time, scope}, state) do
     new_state = %{state |
-      metric_set: ScoutApm.MetricSet.absorb(state[:metric_set], type, name, time)
+      metric_set: ScoutApm.MetricSet.absorb(state.metric_set, type, name, time, scope)
     }
     {:noreply, new_state}
   end
@@ -42,6 +41,7 @@ defmodule ScoutApm.Worker do
     state[:metric_set]
     |> ScoutApm.Payload.new
     |> ScoutApm.Payload.encode
+    |> log_payload()
     |> ScoutApm.Reporter.post
 
     {:noreply, initial_state()}
@@ -56,6 +56,11 @@ defmodule ScoutApm.Worker do
   # Set up a timer that runs `handle_info(:tick, state)` on self every X milliseconds.
   def start_timer do
     :timer.send_interval(@tick_interval, :tick)
+  end
+
+  def log_payload(p) do
+    Logger.info(inspect p)
+    p
   end
 end
 

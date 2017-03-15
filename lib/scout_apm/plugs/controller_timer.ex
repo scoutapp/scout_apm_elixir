@@ -4,20 +4,15 @@ defmodule ScoutApm.Plugs.ControllerTimer do
   def init(default), do: default
 
   def call(conn, _default) do
-    t1 = System.monotonic_time(:microseconds)
+    ScoutApm.TrackedRequest.start_layer("Controller", action_name(conn))
 
     conn
-    |> Plug.Conn.register_before_send(fn conn -> before_send(t1, conn) end)
+    |> Plug.Conn.register_before_send(&before_send/1)
   end
 
-  def before_send(t1, conn) do
+  def before_send(conn) do
     full_name = action_name(conn)
-
-    t2 = System.monotonic_time(:microseconds)
-    tdiff = (t2 - t1) / 1_000_000
-
-    ScoutApm.Worker.register_layer("Controller", full_name, tdiff)
-
+    ScoutApm.TrackedRequest.stop_layer(full_name)
     conn
   end
 

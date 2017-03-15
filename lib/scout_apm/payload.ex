@@ -22,13 +22,19 @@ defmodule ScoutApm.Payload do
   end
 
   def make_metric(metric) do
+    scope_map =
+      case metric.scope do
+        %{:type => type, :name => name} -> %{bucket: type, name: name}
+        _ -> %{}
+      end
+
     %{
       key: %{
         bucket: metric[:type],
         name: metric[:name],
         desc: nil,
         extra: nil,
-        scope: %{},
+        scope: scope_map,
       },
       call_count: metric[:call_count],
       min_call_time: metric[:min_call_time],
