@@ -5,28 +5,47 @@
 # Alternately - this could not scope anything, and then fixup the tree of
 # layers after, before storing it off.
 
+
+# START Controller (this is scope.)
+#   START Ecto (got it!)
+#   STOP Ecto
+# 
+#   START View
+#     START Partial View
+#     STOP Partial View
+#   STOP View
+# STOP Controller
+
 defmodule ScoutApm.TrackedRequest do
   import Logger
+
+  alias ScoutApm.Internal.Layer
 
   ###############
   #  Interface  #
   ###############
   def start_layer(type, name \\ nil) do
     Logger.info("Starting layer of type: #{type} with name: #{name}")
-    start_time = System.monotonic_time(:microseconds)
-    push_layer(%{start_time: start_time, type: type, name: name})
-    # TODO: set a "current_scope" if it's a Controller layer?
+
+    push_layer(Layer.new(%{type: type, name: name}))
+
+    # if type == "Controller" do
+      # set_current_scope()
+    # end
+    # TODO: set a "current_scope" if it's a Controller layer?, then use it in the stop_layer
   end
 
   def stop_layer(name \\ nil) do
+    children = [] # TODO: Track children. Should be atomic part of pop_layer or diff function?
     layer = pop_layer()
+            |> Layer.update_stopped_at
+            |> Layer.update_name(name)
+            |> Layer.update_children(children)
 
-    stop_time = System.monotonic_time(:microseconds)
-    time_elapsed = (stop_time - layer.start_time) / 1_000_000
-
+    time_elapsed = Layer.total_exclusive_time(layer)
     resolved_type = layer.type
     resolved_name = name || layer.name
-    scope = %{} # TODO: Determine if this should have a scope.
+    scope = %{}
 
     ScoutApm.Worker.register_layer(
       resolved_type,
