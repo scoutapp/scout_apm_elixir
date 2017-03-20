@@ -2,10 +2,12 @@ defmodule ScoutApm.Reporter do
   import Logger
 
   def post(encoded_payload) do
-    Logger.info("Encoded payload: #{encoded_payload}")
-    key = Application.fetch_env!(:scout_apm, :key)
+    key = ScoutApm.Config.find("key")
+    host = ScoutApm.Config.find("host")
+    name = ScoutApm.Config.find("name")
+
     method = :post
-    url = <<"http://localhost:3000/apps/checkin.scout?key=#{key}&name=TestElixir">>
+    url = <<"http://#{host}/apps/checkin.scout?key=#{key}&name=#{name}">>
     options = []
 
     :hackney.start()

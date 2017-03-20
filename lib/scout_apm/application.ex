@@ -10,6 +10,7 @@ defmodule ScoutApm.Application do
 
     children = [
       worker(ScoutApm.Store, []),
+      worker(ScoutApm.Config, []),
     ]
 
     opts = [strategy: :one_for_one, name: ScoutApm.Supervisor]

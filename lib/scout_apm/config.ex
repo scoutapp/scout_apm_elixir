@@ -1,0 +1,58 @@
+defmodule ScoutApm.Config do
+  @moduledoc """
+  Public interface to configuration settings. Reads from several configuration
+  sources, giving each an opportunity to respond with its value before trying
+  the next.
+
+  Application.get_env, and Defaults are the the current ones, with
+  an always-nil at the end of the chain.
+  """
+
+  use GenServer
+  import Logger
+
+  ## Client API
+
+  def start_link do
+    GenServer.start_link(__MODULE__, :ok, [name: __MODULE__])
+  end
+
+  def find(key) do
+    case Process.whereis(__MODULE__) do
+      nil -> Logger.info("Couldn't find config?")
+      pid ->
+        GenServer.call(pid, {:find, key})
+    end
+  end
+
+  ## Server Callbacks
+
+  def init(:ok) do
+    initial_state = [
+      {ScoutApm.Config.Application, ScoutApm.Config.Application.load},
+      {ScoutApm.Config.Defaults, ScoutApm.Config.Defaults.load},
+      {ScoutApm.Config.Null, ScoutApm.Config.Null.load},
+    ]
+
+    {:ok, initial_state}
+  end
+
+  def handle_call({:find, key}, _from, state) do
+    # Which config source wants to answer this?
+    { mod, data } = Enum.find(state, fn {mod, data} -> mod.contains?(data, key) end)
+
+    # If we found a source who knows, let it answer, if not, nil.
+    val = mod.lookup(data, key)
+
+    {:reply, val, state}
+  end
+
+  def handle_cast({}, state) do
+    {:noreply, state}
+  end
+
+  def handle_info(_msg, state) do
+    {:noreply, state}
+  end
+end
+
