@@ -2,6 +2,8 @@ defmodule ScoutApm.Worker do
   use GenServer
   import Logger
 
+  alias ScoutApm.Internal.Layer
+
   # 60 seconds
   @tick_interval 60_000
 
@@ -11,11 +13,11 @@ defmodule ScoutApm.Worker do
     GenServer.start_link(__MODULE__, :ok, [name: ScoutApm.Worker])
   end
 
-  def register_layer(type, name, time, scope) do
+  def register_layer(layer) do
     case Process.whereis(ScoutApm.Worker) do
       nil -> Logger.info("Couldn't find worker!?")
       pid ->
-        GenServer.cast(pid, {:register_layer, type, name, time, scope})
+        GenServer.cast(pid, {:register_layer, layer})
     end
   end
 
@@ -30,9 +32,12 @@ defmodule ScoutApm.Worker do
     {:reply, nil}
   end
 
-  def handle_cast({:register_layer, type, name, time, scope}, state) do
+  # TODO: Scope should be on the layer
+  def handle_cast({:register_layer, layer}, state) do
+    time_elapsed = Layer.total_exclusive_time(layer)
+
     new_state = %{state |
-      metric_set: ScoutApm.MetricSet.absorb(state.metric_set, type, name, time, scope)
+      metric_set: ScoutApm.MetricSet.absorb(state.metric_set, layer.type, layer.name, time_elapsed, %{})
     }
     {:noreply, new_state}
   end

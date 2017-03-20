@@ -1,5 +1,5 @@
 defmodule ScoutApm.Internal.Layer do
-  defstruct [:type, :name, :started_at, :stopped_at, :children]
+  defstruct [:type, :name, :desc, :scope, :started_at, :stopped_at, :children]
 
   ##################
   #  Construction  #
@@ -7,17 +7,17 @@ defmodule ScoutApm.Internal.Layer do
 
   def new(%{type: type}) do
     started_at = System.monotonic_time(:microseconds)
-    %__MODULE__{type: type, name: nil, started_at: started_at, children: []}
+    %__MODULE__{type: type, name: nil, desc: nil, started_at: started_at, children: []}
   end
   def new(%{type: type, name: name}) do
     started_at = System.monotonic_time(:microseconds)
-    %__MODULE__{type: type, name: name, started_at: started_at, children: []}
+    %__MODULE__{type: type, name: name, desc: nil, started_at: started_at, children: []}
   end
   def new(%{type: type, started_at: started_at}) do
-    %__MODULE__{type: type, name: nil, started_at: started_at, children: []}
+    %__MODULE__{type: type, name: nil, desc: nil, started_at: started_at, children: []}
   end
   def new(%{type: type, name: name, started_at: started_at}) do
-    %__MODULE__{type: type, name: name, started_at: started_at, children: []}
+    %__MODULE__{type: type, name: name, desc: nil, started_at: started_at, children: []}
   end
 
   #######################
@@ -35,6 +35,10 @@ defmodule ScoutApm.Internal.Layer do
 
   def update_children(layer, children) do
     %{layer | children: children}
+  end
+
+  def update_desc(layer, desc) do
+    %{layer | desc: desc}
   end
 
   #############

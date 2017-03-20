@@ -1,11 +1,8 @@
-# TODO: This should keep track of the stack of layers we're starting &
-# stopping, and allow registered layers to scope themselves correctly to an
-# outer controller layer.o
+# Stores information about a single request, as the request is happening.
+# Attempts to do minimal processing. Its job is only to collect up information.
+# Once the request is finished, the last layer will be stopped - and we can
+# send this whole data structure off to be processed in another worker.
 #
-# Alternately - this could not scope anything, and then fixup the tree of
-# layers after, before storing it off.
-
-
 # START Controller (this is scope.)
 #   START Ecto (got it!)
 #   STOP Ecto
@@ -17,7 +14,7 @@
 # STOP Controller
 
 defmodule ScoutApm.TrackedRequest do
-  import Logger
+  require Logger
 
   alias ScoutApm.Internal.Layer
 
@@ -26,57 +23,37 @@ defmodule ScoutApm.TrackedRequest do
   ###############
   def start_layer(type, name \\ nil) do
     Logger.info("Starting layer of type: #{type} with name: #{name}")
-
     push_layer(Layer.new(%{type: type, name: name}))
-
-    # if type == "Controller" do
-      # set_current_scope()
-    # end
-    # TODO: set a "current_scope" if it's a Controller layer?, then use it in the stop_layer
   end
 
-  def stop_layer(name \\ nil) do
-    children = [] # TODO: Track children. Should be atomic part of pop_layer or diff function?
+  def stop_layer(name \\ nil, callback \\ (fn x -> x end)) do
     layer = pop_layer()
             |> Layer.update_stopped_at
             |> Layer.update_name(name)
-            |> Layer.update_children(children)
+            |> callback.()
 
-    time_elapsed = Layer.total_exclusive_time(layer)
-    resolved_type = layer.type
-    resolved_name = name || layer.name
-    scope = %{}
+    record_child_of_current_layer(layer)
 
-    ScoutApm.Worker.register_layer(
-      resolved_type,
-      resolved_name,
-      time_elapsed,
-      scope
-    )
+    # TODO: Don't record this right away, instead trust the child tree we're
+    # building, and walk over it later.
+    ScoutApm.Worker.register_layer(layer)
 
-    Logger.info("Stopping layer of type: #{resolved_type} with name: #{resolved_name}")
+    case layers() do
+      [] -> Logger.info("LAST LAYER POPPED")
+      _ -> Logger.info("INNER LAYER POPPED")
+    end
+
+    Logger.info("\n\nStopping layer of type: #{layer.type} with name: #{layer.name}\n#{inspect layer}\n")
   end
 
-  # Immediately store the details passed, without going through start/stop
-  def store_layer(type, name, time) do
-    scope = %{type: current_layer().type, name: current_layer().name}
-
-    ScoutApm.Worker.register_layer(
-      type,
-      name,
-      time,
-      scope
-    )
-    Logger.info("Stored a layer of type: #{type} with name: #{name}, time: #{time}, scope: #{inspect scope}")
-  end
-
-  ###########################
-  #  Constructors & Lookup  #
-  ###########################
+  #################################
+  #  Constructors & Manipulation  #
+  #################################
 
   defp new() do
     save(%{
-      layers: []
+      layers: [],
+      children: [],
     })
   end
 
@@ -101,16 +78,54 @@ defmodule ScoutApm.TrackedRequest do
 
   defp push_layer(l) do
     lookup()
+
+    # Track the layer itself
     |> Map.update!(:layers, fn ls -> [l | ls] end)
+
+    # Push a new children tracking layer
+    |> Map.update!(:children, fn cs -> [[] | cs] end)
     |> save()
   end
 
+  # TODO: Can we organize this code to avoid having to name intermediate states?
+  #
+  # Pop this layer off the layer stack
+  # Pop the children recorded for this layer
+  # Attach the children to the layer
+  # - note, we can't save this layer into its parent's children array yet, since it will get further edited in stop_layer
+  # Return the layer
   defp pop_layer() do
-    state = lookup()
-    {cur_layer, new_state} =
-      Map.get_and_update(state, :layers,
+    s0 = lookup()
+    {cur_layer, s1} =
+      Map.get_and_update(s0, :layers,
                          fn [cur | rest] -> {cur, rest} end)
+
+    {children, new_state} =
+      Map.get_and_update(s1, :children,
+                         fn [cur | rest] -> {cur, rest} end)
+
     save(new_state)
+
     cur_layer
+    |> Layer.update_children(children)
   end
+
+  # Inserts a child layer into the children array for its parent. Should be
+  # called after pop_layer() has been called, so that the child list at the
+  # head is for its parent.
+  defp record_child_of_current_layer(child) do
+    lookup()
+    |> Map.update!(:children, fn children_stack ->
+      case children_stack do
+        # child was passed in
+        # children_stack is a nested list, one element for each layer "above" this one.
+        # layer_children is a list of Layer objects for the the parent of child
+        # cs is the rest of the ancestors, that we are not manipulating
+        [layer_children | cs] -> [[child | layer_children] | cs]
+        [] -> []
+      end
+    end)
+    |> save()
+  end
+
 end

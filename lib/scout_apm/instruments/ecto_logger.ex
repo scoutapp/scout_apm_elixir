@@ -21,16 +21,7 @@ defmodule ScoutApm.Instruments.EctoLogger do
    #      },
     # source: "users"}
   def log(entry) do
-    # Logger.info("Entry: #{inspect entry}")
-    # Logger.info("Query: #{entry.query}")
-    # Logger.info("Query Time: #{entry.query_time}")
-    # Logger.info("Queue Time: #{entry.queue_time}")
-    # Logger.info("Num Rows: #{num_rows(entry)}")
-
-    ScoutApm.TrackedRequest.store_layer("Ecto", name_query(entry), query_time(entry))
-
     Process.put(:ecto_log_entry, entry)
-
     entry
   end
 

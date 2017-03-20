@@ -1,8 +1,8 @@
 defmodule ScoutApm.Instrumentation do
-  defmacro __using__(arg) do
+  defmacro __using__(_arg) do
     quote do
       plug ScoutApm.Plugs.ControllerTimer
-      alias ScoutApm.Repo, as: Repo
+      alias TestappPhoenix.Repo.ScoutApm, as: Repo
     end
   end
 end
