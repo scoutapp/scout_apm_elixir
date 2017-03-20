@@ -36,7 +36,7 @@ defmodule ScoutApm.TrackedRequest do
 
     # TODO: Don't record this right away, instead trust the child tree we're
     # building, and walk over it later.
-    ScoutApm.Worker.register_layer(layer)
+    ScoutApm.Store.register_layer(layer)
 
     case layers() do
       [] -> Logger.info("LAST LAYER POPPED")
@@ -87,8 +87,6 @@ defmodule ScoutApm.TrackedRequest do
     |> save()
   end
 
-  # TODO: Can we organize this code to avoid having to name intermediate states?
-  #
   # Pop this layer off the layer stack
   # Pop the children recorded for this layer
   # Attach the children to the layer

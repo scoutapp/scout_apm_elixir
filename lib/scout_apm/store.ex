@@ -1,4 +1,4 @@
-defmodule ScoutApm.Worker do
+defmodule ScoutApm.Store do
   use GenServer
   import Logger
 
@@ -10,11 +10,11 @@ defmodule ScoutApm.Worker do
   ## Client API
 
   def start_link do
-    GenServer.start_link(__MODULE__, :ok, [name: ScoutApm.Worker])
+    GenServer.start_link(__MODULE__, :ok, [name: __MODULE__])
   end
 
   def register_layer(layer) do
-    case Process.whereis(ScoutApm.Worker) do
+    case Process.whereis(__MODULE__) do
       nil -> Logger.info("Couldn't find worker!?")
       pid ->
         GenServer.cast(pid, {:register_layer, layer})
