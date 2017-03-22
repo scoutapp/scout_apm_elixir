@@ -21,6 +21,7 @@ defmodule ScoutApm.TrackedRequest do
   ###############
   #  Interface  #
   ###############
+
   def start_layer(type, name \\ nil) do
     Logger.info("Starting layer of type: #{type} with name: #{name}")
     push_layer(Layer.new(%{type: type, name: name}))
@@ -34,16 +35,13 @@ defmodule ScoutApm.TrackedRequest do
 
     record_child_of_current_layer(layer)
 
-    # TODO: Don't record this right away, instead trust the child tree we're
-    # building, and walk over it later.
-    ScoutApm.Store.register_layer(layer)
-
-    case layers() do
-      [] -> Logger.info("LAST LAYER POPPED")
-      _ -> Logger.info("INNER LAYER POPPED")
+    # We finished tracing this request, so go and record it.
+    if Enum.count(layers()) == 0 do
+      Logger.info("Recording Trace")
+      ScoutApm.Collector.record_async(
+        lookup() |> with_root_layer(layer)
+      )
     end
-
-    Logger.info("\n\nStopping layer of type: #{layer.type} with name: #{layer.name}\n#{inspect layer}\n")
   end
 
   #################################
@@ -52,6 +50,7 @@ defmodule ScoutApm.TrackedRequest do
 
   defp new() do
     save(%{
+      root_layer: nil,
       layers: [],
       children: [],
     })
@@ -71,9 +70,12 @@ defmodule ScoutApm.TrackedRequest do
     |> Map.get(:layers)
   end
 
-  defp current_layer() do
-    layers()
-    |> List.first
+  def with_root_layer(tracked_request, l) do
+    tracked_request
+    |> Map.update!(:root_layer,
+                   fn nil -> l
+                      rl -> rl
+                   end)
   end
 
   defp push_layer(l) do
@@ -113,16 +115,10 @@ defmodule ScoutApm.TrackedRequest do
   # head is for its parent.
   defp record_child_of_current_layer(child) do
     lookup()
-    |> Map.update!(:children, fn children_stack ->
-      case children_stack do
-        # child was passed in
-        # children_stack is a nested list, one element for each layer "above" this one.
-        # layer_children is a list of Layer objects for the the parent of child
-        # cs is the rest of the ancestors, that we are not manipulating
+    |> Map.update!(:children, fn
         [layer_children | cs] -> [[child | layer_children] | cs]
         [] -> []
-      end
-    end)
+      end)
     |> save()
   end
 

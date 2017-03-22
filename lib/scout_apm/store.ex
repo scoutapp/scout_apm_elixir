@@ -3,6 +3,7 @@ defmodule ScoutApm.Store do
   import Logger
 
   alias ScoutApm.Internal.Layer
+  alias ScoutApm.Internal.Metric
 
   # 60 seconds
   @tick_interval 60_000
@@ -18,6 +19,14 @@ defmodule ScoutApm.Store do
       nil -> Logger.info("Couldn't find worker!?")
       pid ->
         GenServer.cast(pid, {:register_layer, layer})
+    end
+  end
+
+  def record_metric(%Metric{}=metric) do
+    case Process.whereis(__MODULE__) do
+      nil -> Logger.info("Couldn't find worker!?")
+      pid ->
+        GenServer.cast(pid, {:record_metric, metric})
     end
   end
 
@@ -38,6 +47,13 @@ defmodule ScoutApm.Store do
 
     new_state = %{state |
       metric_set: ScoutApm.MetricSet.absorb(state.metric_set, layer.type, layer.name, time_elapsed, %{})
+    }
+    {:noreply, new_state}
+  end
+
+  def handle_cast({:record_metric, %Metric{}=metric}, state) do
+    new_state = %{state |
+      metric_set: ScoutApm.MetricSet.absorb(state.metric_set, metric.type, metric.name, metric.exclusive_time, metric.scope)
     }
     {:noreply, new_state}
   end

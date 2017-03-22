@@ -1,12 +1,8 @@
 defmodule ScoutApm.Plugs.ControllerTimer do
-  require Logger
-
   def init(default), do: default
 
   def call(conn, _default) do
     ScoutApm.TrackedRequest.start_layer("Controller", action_name(conn))
-
-    Logger.info("#{inspect Process.info(self())}")
 
     conn
     |> Plug.Conn.register_before_send(&before_send/1)

@@ -29,9 +29,9 @@ defmodule ScoutApm.Config do
 
   def init(:ok) do
     initial_state = [
-      {ScoutApm.Config.Application, ScoutApm.Config.Application.load},
-      {ScoutApm.Config.Defaults, ScoutApm.Config.Defaults.load},
-      {ScoutApm.Config.Null, ScoutApm.Config.Null.load},
+      {ScoutApm.Config.Application, ScoutApm.Config.Application.load()},
+      {ScoutApm.Config.Defaults, ScoutApm.Config.Defaults.load()},
+      {ScoutApm.Config.Null, ScoutApm.Config.Null.load()},
     ]
 
     {:ok, initial_state}
