@@ -1,48 +1,41 @@
 defmodule ScoutApm.Payload do
-  import Logger, only: [info: 1]
+  require Logger
+
+  alias ScoutApm.MetricSet
+  alias ScoutApm.Internal.Metric
 
   defstruct metadata: %{},
             metrics: %{},
-            slow_transactions: %{},
+            slow_transactions: [],
             jobs: %{},
             slow_jobs: %{},
             histograms: %{}
 
-  def new(metric_set) do
+  def new(metric_set, traces) do
     %ScoutApm.Payload{
       metadata: ScoutApm.Payload.Metadata.new(),
-      metrics: metrics(metric_set)
+      metrics: metrics(metric_set),
+      slow_transactions: make_traces(traces)
     }
   end
 
-  def metrics(metric_set) do
+  def metrics(%MetricSet{}=metric_set) do
     metric_set
     |> ScoutApm.MetricSet.to_list
     |> Enum.map(fn metric -> make_metric(metric) end)
   end
 
-  def make_metric(metric) do
-    scope_map =
-      case metric.scope do
-        %{:type => type, :name => name} -> %{bucket: type, name: name}
-        _ -> %{}
-      end
+  def make_metric(%Metric{}=metric) do
+    ScoutApm.Payload.Metric.new(metric)
+  end
 
-    %{
-      key: %{
-        bucket: metric[:type],
-        name: metric[:name],
-        desc: nil,
-        extra: nil,
-        scope: scope_map,
-      },
-      call_count: metric[:call_count],
-      min_call_time: metric[:min_call_time],
-      max_call_time: metric[:max_call_time],
-      total_call_time: metric[:total_call_time],
-      total_exclusive_time: metric[:total_exclusive_time],
-      sum_of_squares: 0,
-    }
+  def make_traces(traces) do
+    traces
+      |> Enum.map(fn trace -> make_trace(trace) end)
+  end
+
+  def make_trace(trace) do
+    ScoutApm.Payload.SlowTransaction.new(trace)
   end
 
   def encode(payload) do

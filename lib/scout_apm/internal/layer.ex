@@ -1,23 +1,35 @@
 defmodule ScoutApm.Internal.Layer do
-  defstruct [:type, :name, :desc, :scope, :started_at, :stopped_at, :children]
+  @type t :: %__MODULE__{
+    type: String.t,
+    name: nil | String.t,
+    desc: nil | String.t,
+    started_at: number(),
+    stopped_at: nil | Integer,
+    children: list(%__MODULE__{})
+  }
+
+  defstruct [:type, :name, :desc, :started_at, :stopped_at, :children]
+
+  alias ScoutApm.Internal.Duration
 
   ##################
   #  Construction  #
   ##################
 
-  def new(%{type: type}) do
-    started_at = System.monotonic_time(:microseconds)
-    %__MODULE__{type: type, name: nil, desc: nil, started_at: started_at, children: []}
-  end
+  @spec new(map) :: __MODULE__.t
   def new(%{type: type, name: name}) do
     started_at = System.monotonic_time(:microseconds)
+    %__MODULE__{type: type, name: name, desc: nil, started_at: started_at, children: []}
+  end
+  def new(%{type: type, name: name, started_at: started_at}) do
     %__MODULE__{type: type, name: name, desc: nil, started_at: started_at, children: []}
   end
   def new(%{type: type, started_at: started_at}) do
     %__MODULE__{type: type, name: nil, desc: nil, started_at: started_at, children: []}
   end
-  def new(%{type: type, name: name, started_at: started_at}) do
-    %__MODULE__{type: type, name: name, desc: nil, started_at: started_at, children: []}
+  def new(%{type: type}) do
+    started_at = System.monotonic_time(:microseconds)
+    %__MODULE__{type: type, name: nil, desc: nil, started_at: started_at, children: []}
   end
 
   #######################
@@ -52,19 +64,18 @@ defmodule ScoutApm.Internal.Layer do
     layer.stopped_at != nil
   end
 
-  # TODO: Crashes when not stopped
   def total_time(layer) do
-    layer.stopped_at - layer.started_at
+    Duration.new(layer.stopped_at - layer.started_at, :microseconds)
   end
 
   def total_child_time(layer) do
-    Enum.reduce(layer.children, 0,
+    Enum.reduce(layer.children, Duration.zero(),
       fn(child, acc) ->
-        acc + total_time(child)
+        Duration.add(acc, total_time(child))
       end)
   end
 
   def total_exclusive_time(layer) do
-    total_time(layer) - total_child_time(layer)
+    Duration.subtract(total_time(layer), total_child_time(layer))
   end
 end

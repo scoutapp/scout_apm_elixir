@@ -9,7 +9,7 @@ defmodule ScoutApm.Payload.Metadata do
   ]
 
   def new do
-    %ScoutApm.Payload.Metadata{
+    %__MODULE__{
       app_root: System.cwd(),
       unique_id: ScoutApm.Utils.random_string(20),
       agent_version: ScoutApm.Utils.agent_version(),

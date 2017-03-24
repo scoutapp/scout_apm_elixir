@@ -43,7 +43,7 @@ defmodule ScoutApm.Mixfile do
 
       {:propcheck, "~> 0.0", only: [:dev, :test]},
       {:credo, "~> 0.5", only: [:dev, :test]},
-      # {:eqc_ex, "~> 1.4", only: [:dev, :test]}
+      {:dialyxir, "~> 0.5", only: [:dev], runtime: false},
     ]
   end
 end

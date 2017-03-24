@@ -1,33 +1,51 @@
 defmodule ScoutApm.MetricSet do
-  require Logger
-
   @moduledoc """
   A way to absorb & combine metrics into a single set, keeping track of min/max/count, etc.
 
   While this is just a map underneath, treat it like an opaque data type.
   """
 
+  @type t :: %__MODULE__{data: map, options: ScoutApm.MetricSet.options}
+  @type options :: %{collapse_all: boolean(), compare_desc: boolean()}
+
+  defstruct [
+    :options,
+    :data
+  ]
+
+  require Logger
+
+  alias ScoutApm.Internal.Metric
+
+
+  @spec new() :: ScoutApm.MetricSet.t
   def new do
-    %{}
+    new(%{collapse_all: false, compare_desc: false})
   end
 
-  def absorb(metric_set, type, name, time, scope) do
-    Logger.info("Absorbing #{type}, #{name}, scope: #{inspect scope}")
-    global_key = "#{type}/#{name}"
-    scoped_key = "#{global_key}/scope/#{scope[:type]}/#{scope[:name]}"
+  @spec new(ScoutApm.MetricSet.options) :: ScoutApm.MetricSet.t
+  def new(options) do
+    %__MODULE__{
+      options: options,
+      data: %{},
+    }
+  end
 
-     metric_set
-     |> Map.update(global_key,
-          new_metric(type, name, time),
-          fn metric -> update_metric(metric, time) end)
-     |> Map.update(scoped_key,
-          new_metric(type, name, time, scope),
-          fn metric -> update_metric(metric, time) end)
+  def absorb(%__MODULE__{} = metric_set, %Metric{} = metric) do
+    Logger.info("Absorbing #{metric.type}, #{metric.name}, scope: #{inspect metric.scope}")
+    {global_key, scoped_key} = keys(metric, metric_set.options)
+
+    new_data = Map.update(
+      metric_set.data, scoped_key, metric,
+      fn m2 -> Metric.merge(stripped_metric(metric, metric_set.options), m2) end)
+
+    %{ metric_set | data: new_data }
   end
 
   # Ditches the key part, and just returns the aggregate metric
-  def to_list(metric_set) do
-    metric_set
+  @spec to_list(__MODULE__.t) :: list(Metric.t)
+  def to_list(%__MODULE__{} = metric_set) do
+    metric_set.data
     |> Map.to_list
     |> Enum.map(fn {_,x} -> x end)
   end
@@ -36,28 +54,38 @@ defmodule ScoutApm.MetricSet do
   #  Private Helpers  #
   #####################
 
-  defp new_metric(type, name, time, scope \\ %{}) do
-    %{
-      type: type,
-      name: name,
-      scope: scope,
-
-      call_count: 1,
-      total_call_time: time,
-      total_exclusive_time: time,
-      min_call_time: time,
-      max_call_time: time
+  defp keys(%Metric{} = metric, %{} = options) do
+    {
+      global_key(metric, options),
+      scoped_key(metric, options),
     }
   end
 
-  defp update_metric(metric, time) do
-    %{
-      metric |
-      call_count: metric[:call_count] + 1,
-      total_call_time: metric[:total_call_time] + time,
-      total_exclusive_time: metric[:total_exclusive_time] + time,
-      min_call_time: Enum.min([metric[:min_call_time], time]),
-      max_call_time: Enum.max([metric[:max_call_time], time]),
-    }
+  defp global_key(metric, %{collapse_all: collapse_all}) do
+    case collapse_all do
+      false ->
+        "#{metric.type}/#{metric.name}"
+      true ->
+        "#{metric.type}/all"
+    end
+  end
+
+  # Always with the full key (type + name)
+  # Then optionally with the desc field too
+  defp scoped_key(metric, %{compare_desc: compare_desc}) do
+    case compare_desc do
+      true ->
+        "#{metric.type}/#{metric.name}/scope/#{metric.scope[:type]}/#{metric.scope[:name]}/desc/#{metric.desc}"
+      false ->
+        "#{metric.type}/#{metric.name}/scope/#{metric.scope[:type]}/#{metric.scope[:name]}"
+    end
+  end
+
+  defp stripped_metric(%Metric{} = metric, %{compare_desc: compare_desc}) do
+    case compare_desc do
+      true -> metric
+      false -> %Metric{metric | desc: nil}
+    end
   end
 end
+

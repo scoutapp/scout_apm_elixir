@@ -1,12 +1,14 @@
 defmodule ScoutApm.Store do
   use GenServer
-  import Logger
+  require Logger
 
-  alias ScoutApm.Internal.Layer
   alias ScoutApm.Internal.Metric
+  alias ScoutApm.Internal.Trace
+  alias ScoutApm.MetricSet
 
   # 60 seconds
   @tick_interval 60_000
+  # @tick_interval 5_000
 
   ## Client API
 
@@ -14,19 +16,19 @@ defmodule ScoutApm.Store do
     GenServer.start_link(__MODULE__, :ok, [name: __MODULE__])
   end
 
-  def register_layer(layer) do
-    case Process.whereis(__MODULE__) do
-      nil -> Logger.info("Couldn't find worker!?")
-      pid ->
-        GenServer.cast(pid, {:register_layer, layer})
-    end
-  end
-
   def record_metric(%Metric{}=metric) do
     case Process.whereis(__MODULE__) do
       nil -> Logger.info("Couldn't find worker!?")
       pid ->
         GenServer.cast(pid, {:record_metric, metric})
+    end
+  end
+
+  def record_trace(%Trace{}=trace) do
+    case Process.whereis(__MODULE__) do
+      nil -> Logger.info("Couldn't find worker!?")
+      pid ->
+        GenServer.cast(pid, {:record_trace, trace})
     end
   end
 
@@ -38,29 +40,24 @@ defmodule ScoutApm.Store do
   end
 
   def handle_call({_}, _from, _state) do
-    {:reply, nil}
-  end
-
-  # TODO: Scope should be on the layer
-  def handle_cast({:register_layer, layer}, state) do
-    time_elapsed = Layer.total_exclusive_time(layer)
-
-    new_state = %{state |
-      metric_set: ScoutApm.MetricSet.absorb(state.metric_set, layer.type, layer.name, time_elapsed, %{})
-    }
-    {:noreply, new_state}
+    {:noreply, nil}
   end
 
   def handle_cast({:record_metric, %Metric{}=metric}, state) do
     new_state = %{state |
-      metric_set: ScoutApm.MetricSet.absorb(state.metric_set, metric.type, metric.name, metric.exclusive_time, metric.scope)
+      metric_set: MetricSet.absorb(state.metric_set, metric)
     }
     {:noreply, new_state}
   end
 
+  def handle_cast({:record_trace, %Trace{}=trace}, state) do
+    new_state = %{state | traces: [trace | state.traces] }
+    {:noreply, new_state}
+  end
+
+
   def handle_info(:tick, state) do
-    state[:metric_set]
-    |> ScoutApm.Payload.new
+    ScoutApm.Payload.new(state.metric_set, state.traces)
     |> ScoutApm.Payload.encode
     |> log_payload()
     |> ScoutApm.Reporter.post
@@ -70,7 +67,8 @@ defmodule ScoutApm.Store do
 
   def initial_state do
     %{
-      metric_set: ScoutApm.MetricSet.new()
+      metric_set: MetricSet.new(),
+      traces: [], # TODO: Scored Trace Set
     }
   end
 

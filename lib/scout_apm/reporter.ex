@@ -2,6 +2,7 @@ defmodule ScoutApm.Reporter do
   import Logger
 
   def post(encoded_payload) do
+    IO.puts encoded_payload
     host = ScoutApm.Config.find(:host)
     name = ScoutApm.Config.find(:name)
     key = ScoutApm.Config.find(:key)
@@ -9,6 +10,8 @@ defmodule ScoutApm.Reporter do
     method = :post
     url = <<"#{host}/apps/checkin.scout?key=#{key}&name=#{name}">>
     options = []
+
+    Logger.info("Posting payload to #{url}")
 
     case :hackney.request(method, url, headers(), encoded_payload, options) do
       {:ok, status_code, _resp_headers, _client_ref} ->
@@ -20,14 +23,10 @@ defmodule ScoutApm.Reporter do
 
   def headers do
     [
-      {"Agent-Hostname", hostname()},
-      {"Content-Type", "application/json"},
+      {"Agent-Hostname", ScoutApm.Utils.hostname()},
       {"Agent-Version", ScoutApm.Utils.agent_version()},
+      {"Content-Type", "application/json"},
     ]
   end
 
-  def hostname do
-    {:ok, name} = :inet.gethostname()
-    name
-  end
 end
