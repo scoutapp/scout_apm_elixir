@@ -44,6 +44,9 @@ defmodule ScoutApm.Mixfile do
       {:propcheck, "~> 0.0", only: [:dev, :test]},
       {:credo, "~> 0.5", only: [:dev, :test]},
       {:dialyxir, "~> 0.5", only: [:dev], runtime: false},
+
+      # TODO: Should this be in the dev-only dependencies? It is needed for dialyzer to complete correctly.
+      {:phoenix, "~> 1.0", only: [:dev, :test]},
     ]
   end
 end
