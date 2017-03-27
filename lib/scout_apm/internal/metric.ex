@@ -37,8 +37,6 @@ defmodule ScoutApm.Internal.Metric do
     :max_time,
   ]
 
-  IO.puts (inspect Module.get_attribute(ScoutApm.Internal.Duration, :type))
-
   ##################
   #  Construction  #
   ##################
