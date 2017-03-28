@@ -83,8 +83,8 @@ defmodule ScoutApm.Collector do
   #
   # ignore_scope option is to skip attaching a scope to the root layer (a controller shouldn't be "scoped" under itself).
   # The recursive call resets it to not be skipped, so children layers all will be attached to the scope correctly.
-  def create_trace_metrics(layer, scope, ignore_scope, %MetricSet{} = metric_set) do
-    detail_metric = Metric.from_layer(layer, (if (ignore_scope), do: nil, else: scope))
+  defp create_trace_metrics(layer, scope, ignore_scope, %MetricSet{} = metric_set) do
+    detail_metric = Metric.from_layer(layer, (if ignore_scope, do: nil, else: scope))
     summary_metric = Metric.from_layer_as_summary(layer)
 
     # Absorb each child recursively

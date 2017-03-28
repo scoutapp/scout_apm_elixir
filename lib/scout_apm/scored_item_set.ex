@@ -86,6 +86,11 @@ defmodule ScoutApm.ScoredItemSet do
     Enum.map(set.data, fn {_, v} -> v end)
   end
 
+  @spec to_list(t, :without_scores) :: list(scored_item)
+  def to_list(%__MODULE__{} = set, :without_scores) do
+    Enum.map(set.data, fn {_, {_, v}} -> v end)
+  end
+
   @spec absorb_at_capacity(t, scored_item) :: t
   defp absorb_at_capacity(%__MODULE__{} = set, {{:score, score, key}, _} = scored_item) do
     {_, {{_, low_score, low_key}, _}} =

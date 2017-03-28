@@ -27,4 +27,16 @@ defmodule ScoutApm.Internal.Trace do
       hostname: hostname,
     }
   end
+
+  def as_scored_item(%__MODULE__{} = trace) do
+    {{:score, score(trace), key(trace)}, trace}
+  end
+
+  defp key(%__MODULE__{} = trace) do
+    trace.type <> "/" <> trace.name
+  end
+
+  def score(%__MODULE__{} = trace) do
+    trace.total_call_time
+  end
 end

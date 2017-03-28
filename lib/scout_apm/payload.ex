@@ -11,9 +11,9 @@ defmodule ScoutApm.Payload do
             slow_jobs: %{},
             histograms: %{}
 
-  def new(metric_set, traces) do
+  def new(timestamp, metric_set, traces) do
     %ScoutApm.Payload{
-      metadata: ScoutApm.Payload.Metadata.new(),
+      metadata: ScoutApm.Payload.Metadata.new(timestamp),
       metrics: metrics(metric_set),
       slow_transactions: make_traces(traces)
     }
