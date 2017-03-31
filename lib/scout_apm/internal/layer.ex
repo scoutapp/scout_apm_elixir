@@ -3,12 +3,13 @@ defmodule ScoutApm.Internal.Layer do
     type: String.t,
     name: nil | String.t,
     desc: nil | String.t,
+    backtrace: nil | list(any()),
     started_at: number(),
     stopped_at: nil | Integer,
     children: list(%__MODULE__{})
   }
 
-  defstruct [:type, :name, :desc, :started_at, :stopped_at, :children]
+  defstruct [:type, :name, :desc, :backtrace, :started_at, :stopped_at, :children]
 
   alias ScoutApm.Internal.Duration
 
@@ -19,17 +20,17 @@ defmodule ScoutApm.Internal.Layer do
   @spec new(map) :: __MODULE__.t
   def new(%{type: type, name: name}) do
     started_at = System.monotonic_time(:microseconds)
-    %__MODULE__{type: type, name: name, desc: nil, started_at: started_at, children: []}
+    %__MODULE__{type: type, name: name, desc: nil, backtrace: nil, started_at: started_at, children: []}
   end
   def new(%{type: type, name: name, started_at: started_at}) do
-    %__MODULE__{type: type, name: name, desc: nil, started_at: started_at, children: []}
+    %__MODULE__{type: type, name: name, desc: nil, backtrace: nil, started_at: started_at, children: []}
   end
   def new(%{type: type, started_at: started_at}) do
-    %__MODULE__{type: type, name: nil, desc: nil, started_at: started_at, children: []}
+    %__MODULE__{type: type, name: nil, desc: nil, backtrace: nil, started_at: started_at, children: []}
   end
   def new(%{type: type}) do
     started_at = System.monotonic_time(:microseconds)
-    %__MODULE__{type: type, name: nil, desc: nil, started_at: started_at, children: []}
+    %__MODULE__{type: type, name: nil, desc: nil, backtrace: nil, started_at: started_at, children: []}
   end
 
   #######################
@@ -51,6 +52,10 @@ defmodule ScoutApm.Internal.Layer do
 
   def update_desc(layer, desc) do
     %{layer | desc: desc}
+  end
+
+  def update_backtrace(layer, backtrace) do
+    %{layer | backtrace: backtrace}
   end
 
   #############
