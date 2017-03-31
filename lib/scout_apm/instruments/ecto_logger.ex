@@ -23,32 +23,4 @@ defmodule ScoutApm.Instruments.EctoLogger do
     Process.put(:ecto_log_entry, entry)
     entry
   end
-
-  def log(entry, level) do
-    Logger.info("Level: #{level}")
-    log(entry)
-  end
-
-  defp query_time(entry) do
-    raw_time = entry.query_time
-    System.convert_time_unit(raw_time, :native, :microsecond) / 1_000_000
-  end
-
-  defp name_query(entry) do
-    command = case entry.result do
-      {:ok, result} -> result.command
-      _ -> "Unknown"
-    end
-
-    table = entry.source
-
-    "#{command}##{table}"
-  end
-
-  defp num_rows(entry) do
-    case entry.result do
-      {:ok, result} -> result.num_rows
-      _ -> 0
-    end
-  end
 end

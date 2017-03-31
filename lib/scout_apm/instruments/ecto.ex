@@ -274,9 +274,11 @@ defmodule ScoutApm.Instruments.Ecto do
   end
 
   def annotate_layer_callback(layer, ecto_log) do
+    backtrace = Process.info(self(), :current_stacktrace)
+
     layer
     |> Layer.update_desc(ecto_log.query)
+    |> Layer.update_backtrace(backtrace)
   end
-
 end
 
