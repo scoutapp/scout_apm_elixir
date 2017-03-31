@@ -6,6 +6,7 @@ defmodule ScoutApm.Reporter do
     host = ScoutApm.Config.find(:host)
     name = ScoutApm.Config.find(:name)
     key = ScoutApm.Config.find(:key)
+    gzipped_payload = :zlib.gzip(encoded_payload)
 
     method = :post
     url = <<"#{host}/apps/checkin.scout?key=#{key}&name=#{name}">>
@@ -13,7 +14,7 @@ defmodule ScoutApm.Reporter do
 
     Logger.info("Posting payload to #{url}")
 
-    case :hackney.request(method, url, headers(), encoded_payload, options) do
+    case :hackney.request(method, url, headers(), gzipped_payload, options) do
       {:ok, status_code, _resp_headers, _client_ref} ->
         Logger.info("Ok, status: #{status_code}")
       {:error, ereason} ->
@@ -26,6 +27,7 @@ defmodule ScoutApm.Reporter do
       {"Agent-Hostname", ScoutApm.Utils.hostname()},
       {"Agent-Version", ScoutApm.Utils.agent_version()},
       {"Content-Type", "application/json"},
+      {"Content-Encoding", "gzip"},
     ]
   end
 
