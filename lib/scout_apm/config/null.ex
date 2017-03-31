@@ -7,11 +7,11 @@ defmodule ScoutApm.Config.Null do
     :null
   end
 
-  def contains?(_data, key) do
+  def contains?(_data, _key) do
     true
   end
 
-  def lookup(_data, key) do
+  def lookup(_data, _key) do
     nil
   end
 end
