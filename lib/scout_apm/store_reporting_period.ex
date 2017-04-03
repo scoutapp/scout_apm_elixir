@@ -1,4 +1,6 @@
 defmodule ScoutApm.StoreReportingPeriod do
+
+  alias ScoutApm.Internal.Duration
   alias ScoutApm.Internal.Metric
   alias ScoutApm.Internal.Trace
   alias ScoutApm.MetricSet
@@ -10,6 +12,7 @@ defmodule ScoutApm.StoreReportingPeriod do
         time: beginning_of_minute(timestamp),
         metric_set: MetricSet.new(),
         traces: ScoredItemSet.new(),
+        histograms: %{}, # a map of key => ApproximateHistogram
       }
     end)
   end
@@ -25,7 +28,19 @@ defmodule ScoutApm.StoreReportingPeriod do
   def record_metric(pid, metric) do
     Agent.update(pid,
       fn state ->
-        %{state | metric_set: MetricSet.absorb(state.metric_set, metric) }
+        %{state | metric_set: MetricSet.absorb(state.metric_set, metric)}
+      end
+    )
+  end
+
+  def record_timing(pid, key, %Duration{} = timing), do: record_timing(pid, key, Duration.as(timing, :seconds))
+  def record_timing(pid, key, timing) do
+    Agent.update(pid,
+      fn state ->
+        %{state | histograms:
+          Map.update(state.histograms, key, ApproximateHistogram.new(), fn histo ->
+            ApproximateHistogram.add(histo, timing)
+          end)}
       end
     )
   end
@@ -69,7 +84,11 @@ defmodule ScoutApm.StoreReportingPeriod do
 
     Agent.stop(pid)
 
-    ScoutApm.Payload.new(state.time, state.metric_set, ScoredItemSet.to_list(state.traces, :without_scores))
+    ScoutApm.Payload.new(state.time,
+                         state.metric_set,
+                         ScoredItemSet.to_list(state.traces, :without_scores),
+                         state.histograms
+                       )
     |> ScoutApm.Payload.encode
     |> ScoutApm.Reporter.post
   end

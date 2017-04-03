@@ -2,6 +2,7 @@ defmodule ScoutApm.Collector do
   require Logger
 
   alias ScoutApm.MetricSet
+  alias ScoutApm.Internal.Duration
   alias ScoutApm.Internal.Metric
   alias ScoutApm.Internal.Trace
   alias ScoutApm.Internal.Layer
@@ -16,12 +17,29 @@ defmodule ScoutApm.Collector do
     scope = request_scope(tracked_request)
     store_metrics(tracked_request.root_layer, scope)
     store_trace(tracked_request)
+    store_histograms(tracked_request)
   end
 
   # For now, scope is simply the root layer
   def request_scope(tracked_request) do
     rl = tracked_request.root_layer
     %{type: rl.type, name: rl.name}
+  end
+
+  ########################
+  #  Collect Histograms  #
+  ########################
+  def store_histograms(tracked_request) do
+    root_layer = tracked_request.root_layer
+    duration = Layer.total_time(root_layer)
+    key = "#{root_layer.type}/#{root_layer.name}"
+
+    # Store into this minute's histogram
+    ScoutApm.Store.record_per_minute_histogram(key, duration)
+    ScoutApm.Store.record_running_histogram(key, duration)
+
+    # Store into the long-running histogram
+    ScoutApm.PersistentHistogram.record_timing(key, Duration.as(duration, :seconds))
   end
 
   ####################

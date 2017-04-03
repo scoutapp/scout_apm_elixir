@@ -11,21 +11,22 @@ defmodule ScoutApm.Payload do
             slow_jobs: %{},
             histograms: %{}
 
-  def new(timestamp, metric_set, traces) do
+  def new(timestamp, metric_set, traces, histograms) do
     %ScoutApm.Payload{
       metadata: ScoutApm.Payload.Metadata.new(timestamp),
       metrics: metrics(metric_set),
-      slow_transactions: make_traces(traces)
+      slow_transactions: make_traces(traces),
+      histograms: make_histograms(histograms),
     }
   end
 
-  def metrics(%MetricSet{}=metric_set) do
+  def metrics(%MetricSet{} = metric_set) do
     metric_set
     |> ScoutApm.MetricSet.to_list
     |> Enum.map(fn metric -> make_metric(metric) end)
   end
 
-  def make_metric(%Metric{}=metric) do
+  def make_metric(%Metric{} = metric) do
     ScoutApm.Payload.Metric.new(metric)
   end
 
@@ -36,6 +37,18 @@ defmodule ScoutApm.Payload do
 
   def make_trace(trace) do
     ScoutApm.Payload.SlowTransaction.new(trace)
+  end
+
+  def make_histograms(%{} = histograms) do
+    Enum.map(histograms,
+             fn {key, histo} ->
+               %{
+                 name: key,
+                 histogram: histo
+                            |> ApproximateHistogram.to_list
+                            |> Enum.map(fn {val, count} -> [val, count] end),
+               }
+             end)
   end
 
   def encode(payload) do

@@ -11,6 +11,7 @@ defmodule ScoutApm.Application do
     children = [
       worker(ScoutApm.Store, []),
       worker(ScoutApm.Config, []),
+      worker(ScoutApm.PersistentHistogram, []),
     ]
 
     opts = [strategy: :one_for_one, name: ScoutApm.Supervisor]

@@ -3,6 +3,8 @@ defmodule ScoutApm.Internal.Trace do
   A record of a single trace.
   """
 
+  alias ScoutApm.Internal.Duration
+
   defstruct [
     :type,
     :name,
@@ -36,7 +38,44 @@ defmodule ScoutApm.Internal.Trace do
     trace.type <> "/" <> trace.name
   end
 
+  #####################
+  #  Scoring a trace  #
+  #####################
+
+  @point_multiplier_speed 0.25
+  @point_multiplier_percentile 1.0
+
   def score(%__MODULE__{} = trace) do
-    trace.total_call_time
+    duration_score(trace) + percentile_score(trace)
+  end
+
+  defp duration_score(%__MODULE__{} = trace) do
+    :math.log(1 + Duration.as(trace.total_call_time, :seconds)) * @point_multiplier_speed
+  end
+
+  defp percentile_score(%__MODULE__{} = trace) do
+    percentile = ScoutApm.PersistentHistogram.percentile_for_value(
+        key(trace),
+        Duration.as(trace.total_call_time, :seconds))
+
+    raw = cond do
+      # Don't put much emphasis on capturing low percentiles.
+      percentile < 40 ->
+        0.4 
+
+      # Higher here to get more "normal" mean traces
+      percentile < 60 ->
+        1.4
+
+      # Between 60 & 90% is fine.
+      percentile < 90 ->
+        0.7
+
+      # Highest here to get 90+%ile traces
+      percentile >= 90 ->
+        1.8
+    end
+
+    raw * @point_multiplier_percentile
   end
 end

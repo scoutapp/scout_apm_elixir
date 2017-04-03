@@ -38,6 +38,7 @@ defmodule ScoutApm.Mixfile do
       {:poison, "~> 2.0"},
       {:hackney, "~> 1.7"},
       {:timex, "~> 3.0"},
+      {:approximate_histogram, "~>0.1.0"},
 
       #########################
       # Dev & Testing Deps
