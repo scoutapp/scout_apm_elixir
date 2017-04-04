@@ -36,7 +36,6 @@ defmodule ScoutApm.Collector do
 
     # Store into this minute's histogram
     ScoutApm.Store.record_per_minute_histogram(key, duration)
-    ScoutApm.Store.record_running_histogram(key, duration)
 
     # Store into the long-running histogram
     ScoutApm.PersistentHistogram.record_timing(key, Duration.as(duration, :seconds))

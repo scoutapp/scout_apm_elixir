@@ -40,14 +40,6 @@ defmodule ScoutApm.Store do
     end
   end
 
-  def record_running_histogram(key, duration) do
-    case Process.whereis(__MODULE__) do
-      nil -> Logger.info("Couldn't find worker!?")
-      pid ->
-        GenServer.cast(pid, {:record_running_histogram, key, duration})
-    end
-  end
-
   ## Server Callbacks
 
   def init(:ok) do
@@ -81,12 +73,6 @@ defmodule ScoutApm.Store do
   def handle_cast({:record_per_minute_histogram, key, duration}, state) do
     {rp, new_state} = find_or_create_reporting_period(state)
     StoreReportingPeriod.record_timing(rp, key, duration)
-    {:noreply, new_state}
-  end
-
-  def handle_cast({:record_running_histogram, key, duration}, state) do
-    {rp, new_state} = find_or_create_reporting_period(state)
-    # TODO: Implement
     {:noreply, new_state}
   end
 

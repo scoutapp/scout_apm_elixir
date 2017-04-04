@@ -11,7 +11,7 @@ defmodule ScoutApm.PersistentHistogram do
                    fn histo ->
                      ApproximateHistogram.add(histo, timing)
                    end
-                 )
+                  )
       end
     )
   end
