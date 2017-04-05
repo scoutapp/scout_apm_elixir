@@ -1,7 +1,6 @@
 defmodule ScoutApm.StoreReportingPeriod do
 
   alias ScoutApm.Internal.Duration
-  alias ScoutApm.Internal.Metric
   alias ScoutApm.Internal.Trace
   alias ScoutApm.MetricSet
   alias ScoutApm.ScoredItemSet
