@@ -5,11 +5,12 @@ defmodule ScoutApm.Payload do
   alias ScoutApm.Internal.Metric
 
   defstruct metadata: %{},
-            metrics: %{},
+            metrics: [],
             slow_transactions: [],
-            jobs: %{},
-            slow_jobs: %{},
-            histograms: %{}
+            jobs: [],
+            slow_jobs: [],
+            histograms:[]
+
 
   def new(timestamp, metric_set, traces, histograms) do
     %ScoutApm.Payload{
