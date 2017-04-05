@@ -1,19 +1,9 @@
-# ScoutApm
+# ScoutApm Elixir Agent
 
-**TODO: Add description**
+A Ruby gem for detailed Rails application performance analysis. Metrics are
+reported to [Scout](https://scoutapp.com), a hosted application monitoring service.
 
-## Installation
-
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `scout_apm` to your list of dependencies in `mix.exs`:
-
-```elixir
-def deps do
-  [{:scout_apm, "~> 0.1.0"}]
-end
-```
-
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/scout_apm](https://hexdocs.pm/scout_apm).
+This agent is currently unreleased, pre-alpha. Sign up for our
+[beta list](https://apm.scoutapp.com/elixir) and we'll contact you as we start
+bringing people onto the beta.
 
