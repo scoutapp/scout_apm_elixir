@@ -38,10 +38,6 @@ defmodule ScoutApm.Instruments.Ecto do
           __trace(fn -> unquote(__MODULE__).all(a,b) end)
         end
 
-        def config() do
-          __trace(fn -> unquote(__MODULE__).config() end)
-        end
-
         def delete!(a) do
           __trace(fn -> unquote(__MODULE__).delete!(a) end)
         end
