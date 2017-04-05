@@ -9,7 +9,6 @@ defmodule ScoutApm.Config do
   """
 
   use GenServer
-  import Logger
 
   ## Client API
 
@@ -18,11 +17,8 @@ defmodule ScoutApm.Config do
   end
 
   def find(key) do
-    case Process.whereis(__MODULE__) do
-      nil -> Logger.info("Couldn't find config?")
-      pid ->
-        GenServer.call(pid, {:find, key})
-    end
+    pid = Process.whereis(__MODULE__)
+    GenServer.call(pid, {:find, key})
   end
 
   ## Server Callbacks
@@ -39,7 +35,7 @@ defmodule ScoutApm.Config do
 
   def handle_call({:find, key}, _from, state) do
     # Which config source wants to answer this?
-    { mod, data } = Enum.find(state, fn {mod, data} -> mod.contains?(data, key) end)
+    {mod, data} = Enum.find(state, fn {mod, data} -> mod.contains?(data, key) end)
 
     # If we found a source who knows, let it answer, if not, nil.
     val = mod.lookup(data, key)

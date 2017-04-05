@@ -1,5 +1,5 @@
 defmodule ScoutApm.Reporter do
-  import Logger
+  require Logger
 
   def post(encoded_payload) do
     IO.puts encoded_payload
