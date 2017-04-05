@@ -232,11 +232,12 @@ defmodule ScoutApm.Instruments.Ecto do
 
         defp __trace(f) do
           ScoutApm.TrackedRequest.start_layer("Ecto", nil)
-          f.()
+          ecto_result = f.()
           log_entry = Process.get(:ecto_log_entry)
           ScoutApm.TrackedRequest.stop_layer(
             ScoutApm.Instruments.Ecto.name_query(log_entry),
             fn layer -> ScoutApm.Instruments.Ecto.annotate_layer_callback(layer, log_entry) end)
+          ecto_result
         end
       end
 
