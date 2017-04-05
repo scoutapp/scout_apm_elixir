@@ -198,14 +198,6 @@ defmodule ScoutApm.Instruments.Ecto do
           __trace(fn -> unquote(__MODULE__).rollback(a) end)
         end
 
-        def stop(a) do
-          __trace(fn -> unquote(__MODULE__).stop(a) end)
-        end
-
-        def stop(a,b) do
-          __trace(fn -> unquote(__MODULE__).stop(a,b) end)
-        end
-
         def stream(a) do
           __trace(fn -> unquote(__MODULE__).stream(a) end)
         end
