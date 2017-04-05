@@ -6,6 +6,22 @@ defmodule ScoutApm.Instruments.Ecto do
       contents = quote do
         require Logger
 
+        # A handful of uninstrumented things:
+
+        def config() do
+          unquote(__MODULE__).config()
+        end
+
+        def start_link(opts \\ []) do
+          unquote(__MODULE__).start_link(opts)
+        end
+
+        def stop(pid, timeout \\ 5000) do
+          unquote(__MODULE__).stop(pid, timeout)
+        end
+
+        # The functions to wrap with tracing
+
         def aggregate(a,b,c) do
           __trace(fn -> unquote(__MODULE__).aggregate(a,b,c) end)
         end
