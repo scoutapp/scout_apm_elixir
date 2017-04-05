@@ -9,7 +9,7 @@ defmodule ScoutApm.Payload do
             slow_transactions: [],
             jobs: [],
             slow_jobs: [],
-            histograms:[]
+            histograms: []
 
 
   def new(timestamp, metric_set, traces, histograms) do
