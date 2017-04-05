@@ -2,6 +2,7 @@ defmodule ScoutApm.Payload.Metadata do
   defstruct [
     :app_root,
     :unique_id,
+    :payload_version,
     :agent_version,
     :agent_time,
     :agent_pid,
