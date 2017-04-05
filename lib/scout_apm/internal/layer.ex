@@ -4,12 +4,13 @@ defmodule ScoutApm.Internal.Layer do
     name: nil | String.t,
     desc: nil | String.t,
     backtrace: nil | list(any()),
+    uri: nil | String.t,
     started_at: number(),
     stopped_at: nil | Integer,
     children: list(%__MODULE__{})
   }
 
-  defstruct [:type, :name, :desc, :backtrace, :started_at, :stopped_at, :children]
+  defstruct [:type, :name, :desc, :backtrace, :uri, :started_at, :stopped_at, :children]
 
   alias ScoutApm.Internal.Duration
 
@@ -56,6 +57,10 @@ defmodule ScoutApm.Internal.Layer do
 
   def update_backtrace(layer, backtrace) do
     %{layer | backtrace: backtrace}
+  end
+
+  def update_uri(layer, uri) do
+    %{layer | uri: uri}
   end
 
   #############

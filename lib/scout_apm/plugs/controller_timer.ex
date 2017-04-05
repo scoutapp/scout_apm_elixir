@@ -1,4 +1,6 @@
 defmodule ScoutApm.Plugs.ControllerTimer do
+  alias ScoutApm.Internal.Layer
+
   def init(default), do: default
 
   def call(conn, _default) do
@@ -10,7 +12,15 @@ defmodule ScoutApm.Plugs.ControllerTimer do
 
   def before_send(conn) do
     full_name = action_name(conn)
+    # uri = conn.host <> ":" <> conn.port <> conn.request_path
+
     ScoutApm.TrackedRequest.stop_layer(full_name)
+      # fn layer -> 
+        # layer
+        # |> Layer.update_uri(uri)
+      # end
+    # )
+
     conn
   end
 

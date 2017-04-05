@@ -84,7 +84,7 @@ defmodule ScoutApm.Store do
     ready = List.wrap(categorized[:ready])
     not_ready = List.wrap(categorized[:not_ready])
 
-    # IO.puts("Tick has #{Enum.count ready} ready, and #{Enum.count not_ready} not ready")
+    IO.puts("Tick has #{Enum.count ready} ready, and #{Enum.count not_ready} not ready")
     # IO.puts("Ready: #{inspect Enum.map(ready, fn rp -> StoreReportingPeriod.time(rp) end)}")
     # IO.puts("Not Ready: #{inspect Enum.map(not_ready, fn rp -> StoreReportingPeriod.time(rp) end)}")
 
