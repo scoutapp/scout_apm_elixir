@@ -81,7 +81,6 @@ defmodule ScoutApm.Store do
   # Split reporting periods we have into ready & not ready. Ship the ready ones
   # (which stops their process), and next_state has the ones that weren't ready.
   def handle_info(:tick, state) do
-    raise "oh no"
     categorized = Enum.group_by(state.reporting_periods,
                   fn rp -> StoreReportingPeriod.ready_to_report?(rp) end)
     ready = List.wrap(categorized[:ready])
