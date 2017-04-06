@@ -23,7 +23,7 @@ defmodule ScoutApm.TrackedRequest do
   ###############
 
   def start_layer(type, name \\ nil) do
-    Logger.info("Starting layer of type: #{type} with name: #{name}")
+    # Logger.info("Starting layer of type: #{type} with name: #{name}")
     layer = Layer.new(%{type: type, name: name})
     push_layer(layer)
   end
@@ -39,7 +39,7 @@ defmodule ScoutApm.TrackedRequest do
     # We finished tracing this request, so go and record it.
     # TODO: don't count layers, just need to know if it has any elements at all.
     if Enum.count(layers()) == 0 do
-      Logger.info("Recording Trace")
+      # Logger.info("Recording Trace")
       ScoutApm.Collector.record_async(
         lookup() |> with_root_layer(layer)
       )

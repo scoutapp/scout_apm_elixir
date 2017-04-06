@@ -8,7 +8,7 @@ defmodule ScoutApm.Store do
 
   # 60 seconds
   # @tick_interval 60_000
-  @tick_interval 5_000
+  @tick_interval 1_000
 
   ## Client API
 
@@ -117,6 +117,7 @@ defmodule ScoutApm.Store do
   end
 
   defp schedule_tick() do
+    Logger.info("Scheduling a tick on #{inspect self()}")
     Process.send_after(self(), :tick, @tick_interval)
   end
 end

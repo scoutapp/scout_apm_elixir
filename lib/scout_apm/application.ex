@@ -12,6 +12,7 @@ defmodule ScoutApm.Application do
       worker(ScoutApm.Store, []),
       worker(ScoutApm.Config, []),
       worker(ScoutApm.PersistentHistogram, []),
+      # worker(ScoutApm.ApplicationLoadNotification, [restart: :transient])
     ]
 
     opts = [strategy: :one_for_one, name: ScoutApm.Supervisor]

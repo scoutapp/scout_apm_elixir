@@ -261,14 +261,18 @@ defmodule ScoutApm.Instruments.Ecto do
   end
 
   def name_query(entry) do
-    command = case entry.result do
-      {:ok, result} -> result.command
-      _ -> "Unknown"
+    case entry do
+      nil -> "Unknown"
+      _ ->
+        command = case entry.result do
+          {:ok, result} -> result.command
+          _ -> "Unknown"
+        end
+
+        table = entry.source
+
+        "#{command}##{table}"
     end
-
-    table = entry.source
-
-    "#{command}##{table}"
   end
 
   def num_rows(entry) do
