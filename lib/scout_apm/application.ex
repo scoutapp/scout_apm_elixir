@@ -13,9 +13,13 @@ defmodule ScoutApm.Application do
       worker(ScoutApm.Config, []),
       worker(ScoutApm.PersistentHistogram, []),
       # worker(ScoutApm.ApplicationLoadNotification, [restart: :transient])
+      worker(ScoutApm.Watcher, [ScoutApm.Store], id: :store_watcher),
+      worker(ScoutApm.Watcher, [ScoutApm.Config], id: :config_watcher),
+      worker(ScoutApm.Watcher, [ScoutApm.PersistentHistogram], id: :histogram_watcher),
     ]
 
-    opts = [strategy: :one_for_one, name: ScoutApm.Supervisor]
+    # Stupidly persistent. Really high max restarts for debugging
+    opts = [strategy: :one_for_all, max_restarts: 10000000, max_seconds: 1, name: ScoutApm.Supervisor]
     Supervisor.start_link(children, opts)
   end
 end
