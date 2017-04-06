@@ -18,7 +18,9 @@ defmodule ScoutApm.Reporter do
       {:ok, status_code, _resp_headers, _client_ref} ->
         Logger.info("Ok, status: #{status_code}")
       {:error, ereason} ->
-        Logger.info("Failed to Report: #{ereason}")
+        Logger.info("Failed to Report: #{inspect ereason}")
+      r ->
+        Logger.info("Unknown hackney response: #{inspect r}")
     end
   end
 
