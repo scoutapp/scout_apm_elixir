@@ -8,7 +8,7 @@ defmodule ScoutApm.Store do
 
   # 60 seconds
   # @tick_interval 60_000
-  @tick_interval 1_000
+  @tick_interval 10_000
 
   ## Client API
 
