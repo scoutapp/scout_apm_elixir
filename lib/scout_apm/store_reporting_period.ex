@@ -1,4 +1,5 @@
 defmodule ScoutApm.StoreReportingPeriod do
+  require Logger
 
   alias ScoutApm.Internal.Duration
   alias ScoutApm.Internal.Trace
@@ -79,17 +80,30 @@ defmodule ScoutApm.StoreReportingPeriod do
   # Then stops the underlying process holding that info.  This must be the last
   # call to this ReportingPeriod, it is a stopped process after this.
   def report!(pid) do
-    state = Agent.get(pid, fn state -> state end)
+    try do
+      state = Agent.get(pid, fn state -> state end)
+      Logger.info("Reporting: State obtained")
 
-    Agent.stop(pid)
+      Agent.stop(pid)
+      Logger.info("Reporting: Agent Stopped")
 
-    ScoutApm.Payload.new(state.time,
-                         state.metric_set,
-                         ScoredItemSet.to_list(state.traces, :without_scores),
-                         state.histograms
-                       )
-    |> ScoutApm.Payload.encode
-    |> ScoutApm.Reporter.post
+      payload = ScoutApm.Payload.new(
+        state.time,
+        state.metric_set,
+        ScoredItemSet.to_list(state.traces, :without_scores),
+        state.histograms
+      )
+      Logger.info("Reporting: Payload created")
+
+      encoded = ScoutApm.Payload.encode(payload)
+      Logger.info("Reporting: Payload encoded")
+
+      ScoutApm.Reporter.post(encoded)
+      Logger.info("Reporting: Posted")
+    rescue
+      e in RuntimeError -> Logger.info("Reporting runtime error: #{inspect e}")
+      e -> Logger.info("Reporting other error: #{inspect e}")
+    end
   end
 
   defp beginning_of_minute(datetime) do

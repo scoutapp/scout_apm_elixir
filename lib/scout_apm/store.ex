@@ -90,7 +90,11 @@ defmodule ScoutApm.Store do
     Logger.info("Ready: #{inspect Enum.map(ready, fn rp -> StoreReportingPeriod.time(rp) end)}")
     Logger.info("Not Ready: #{inspect Enum.map(not_ready, fn rp -> StoreReportingPeriod.time(rp) end)}")
 
-    Enum.each(ready, fn rp -> StoreReportingPeriod.report!(rp) end)
+    Enum.each(ready, fn rp ->
+      Task.start(fn ->
+        StoreReportingPeriod.report!(rp)
+      end)
+    end)
 
     schedule_tick()
 

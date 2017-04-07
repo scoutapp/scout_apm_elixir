@@ -2,26 +2,36 @@ defmodule ScoutApm.Reporter do
   require Logger
 
   def post(encoded_payload) do
-    IO.puts encoded_payload
+    # Logger.info("Post: Start with encoded payload: #{encoded_payload}")
+
+    Logger.info("Post: Starting post")
+
     host = ScoutApm.Config.find(:host)
     name = ScoutApm.Config.find(:name)
     key = ScoutApm.Config.find(:key)
+    Logger.info("Post: Got config values")
+
     gzipped_payload = :zlib.gzip(encoded_payload)
+    Logger.info("Post: Gzipped Payload")
 
     method = :post
     url = <<"#{host}/apps/checkin.scout?key=#{key}&name=#{name}">>
     options = []
 
-    Logger.info("Posting payload to #{url}")
+    header_list = headers()
+    Logger.info("Post: Headers: #{inspect header_list}")
 
-    case :hackney.request(method, url, headers(), gzipped_payload, options) do
+    Logger.info("Post: Calling Hackney - #{inspect method} to #{url}")
+    case :hackney.request(method, url, header_list , gzipped_payload, options) do
       {:ok, status_code, _resp_headers, _client_ref} ->
-        Logger.info("Ok, status: #{status_code}")
+        Logger.info("Post: Hackney Returned ok: status: #{inspect status_code}")
       {:error, ereason} ->
-        Logger.info("Failed to Report: #{inspect ereason}")
+        Logger.info("Post: Hackney Failed to Report: #{inspect ereason}")
       r ->
-        Logger.info("Unknown hackney response: #{inspect r}")
+        Logger.info("Post: Hackney Unknown hackney response: #{inspect r}")
     end
+
+    Logger.info("Post: Finished posting")
   end
 
   def headers do
