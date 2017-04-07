@@ -20,7 +20,7 @@ defmodule ScoutApm.Payload.Metric do
 
       call_count: metric.call_count,
       total_call_time: Duration.as(metric.total_time, :seconds),
-      total_exclusive_time:  Duration.as(metric.total_time, :seconds),
+      total_exclusive_time:  Duration.as(metric.exclusive_time, :seconds),
       min_call_time: Duration.as(metric.min_time, :seconds),
       max_call_time: Duration.as(metric.max_time, :seconds),
 

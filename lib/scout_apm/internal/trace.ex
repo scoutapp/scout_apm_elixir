@@ -30,10 +30,6 @@ defmodule ScoutApm.Internal.Trace do
     }
   end
 
-  def as_scored_item(%__MODULE__{} = trace) do
-    {{:score, score(trace), key(trace)}, trace}
-  end
-
   defp key(%__MODULE__{} = trace) do
     trace.type <> "/" <> trace.name
   end
@@ -44,6 +40,10 @@ defmodule ScoutApm.Internal.Trace do
 
   @point_multiplier_speed 0.25
   @point_multiplier_percentile 1.0
+
+  def as_scored_item(%__MODULE__{} = trace) do
+    {{:score, score(trace), key(trace)}, trace}
+  end
 
   def score(%__MODULE__{} = trace) do
     duration_score(trace) + percentile_score(trace)
