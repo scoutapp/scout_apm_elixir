@@ -52,6 +52,16 @@ defmodule ScoutApm.Payload do
              end)
   end
 
+  def total_call_count(%__MODULE__{}=payload) do
+    Enum.reduce(payload.metrics, 0, fn(met, acc) ->
+      case met.key.bucket do
+        "Controller" -> 
+          met.call_count + acc
+        _ -> acc
+      end
+    end)
+  end
+
   def encode(payload) do
     Poison.encode!(payload)
   end

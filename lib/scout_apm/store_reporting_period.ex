@@ -93,7 +93,7 @@ defmodule ScoutApm.StoreReportingPeriod do
         ScoredItemSet.to_list(state.traces, :without_scores),
         state.histograms
       )
-      Logger.info("Reporting: Payload created")
+      Logger.info("Reporting: Payload created with data from #{ScoutApm.Payload.total_call_count(payload)} requests.")
 
       encoded = ScoutApm.Payload.encode(payload)
       Logger.info("Reporting: Payload encoded")
