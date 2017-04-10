@@ -64,8 +64,7 @@ defmodule ScoutApm.Collector do
 
     duration = Layer.total_time(root_layer)
 
-    # TODO: extract this once we store it in tracked_request
-    uri = "http://example.com"
+    uri = root_layer.uri
 
     # TODO: extract this once we store it in tracked_request
     context = %{}
