@@ -6,19 +6,19 @@ defmodule ScoutApm.Instruments.Ecto do
       contents = quote do
         require Logger
 
-        # A handful of uninstrumented things:
+        # A handful of things that shouldn't be instrumented, so are passed straight through.
+        def config(), do: unquote(__MODULE__).config()
+        def start_link(opts \\ []), do: unquote(__MODULE__).start_link(opts)
+        def stop(pid, timeout \\ 5000), do: unquote(__MODULE__).stop(pid, timeout)
+        def rollback(a), do: unquote(__MODULE__).rollback(a)
+        def in_transaction?(), do: unquote(__MODULE__).in_transaction?()
+        def __adapter__(), do: unquote(__MODULE__).__adapter__()
+        def __query_cache__(), do: unquote(__MODULE__).__query_cache__()
+        def __repo__(), do: unquote(__MODULE__).__repo__()
+        def __pool__(), do: unquote(__MODULE__).__pool__()
+        def log(a), do: unquote(__MODULE__).log(a)
+        def load(a, b), do: unquote(__MODULE__).load(a, b)
 
-        def config() do
-          unquote(__MODULE__).config()
-        end
-
-        def start_link(opts \\ []) do
-          unquote(__MODULE__).start_link(opts)
-        end
-
-        def stop(pid, timeout \\ 5000) do
-          unquote(__MODULE__).stop(pid, timeout)
-        end
 
         # The functions to wrap with tracing
 
@@ -92,10 +92,6 @@ defmodule ScoutApm.Instruments.Ecto do
 
         def get_by(a,b,c) do
           __trace(fn -> unquote(__MODULE__).get_by(a,b,c) end)
-        end
-
-        def in_transaction?() do
-          __trace(fn -> unquote(__MODULE__).in_transaction?() end)
         end
 
         def insert!(a) do
@@ -188,10 +184,6 @@ defmodule ScoutApm.Instruments.Ecto do
 
         def query(a,b,c) do
           __trace(fn -> unquote(__MODULE__).query(a,b,c) end)
-        end
-
-        def rollback(a) do
-          __trace(fn -> unquote(__MODULE__).rollback(a) end)
         end
 
         def stream(a) do
