@@ -13,8 +13,6 @@ defmodule ScoutApm.MetricSet do
     :data
   ]
 
-  require Logger
-
   alias ScoutApm.Internal.Metric
 
   @spec new() :: ScoutApm.MetricSet.t
@@ -31,7 +29,6 @@ defmodule ScoutApm.MetricSet do
   end
 
   def absorb(%__MODULE__{} = metric_set, %Metric{} = metric) do
-    # Logger.info("Absorbing #{metric.type}, #{metric.name}, scope: #{inspect metric.scope}")
     scoped_key = scoped_key(metric, metric_set.options)
 
     new_data = Map.update(

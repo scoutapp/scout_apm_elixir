@@ -1,6 +1,4 @@
 defmodule ScoutApm.Collector do
-  require Logger
-
   alias ScoutApm.MetricSet
   alias ScoutApm.Internal.Duration
   alias ScoutApm.Internal.Metric
@@ -14,7 +12,6 @@ defmodule ScoutApm.Collector do
   # Determine scope. Then starting with the root layer, track
   # all the layers, recursing down the tree of children
   def record(tracked_request) do
-    Logger.info("Recording a tracked request")
     scope = request_scope(tracked_request)
     store_metrics(tracked_request.root_layer, scope)
     store_trace(tracked_request)

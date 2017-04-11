@@ -82,10 +82,7 @@ defmodule ScoutApm.StoreReportingPeriod do
   def report!(pid) do
     try do
       state = Agent.get(pid, fn state -> state end)
-      Logger.info("Reporting: State obtained")
-
       Agent.stop(pid)
-      Logger.info("Reporting: Agent Stopped")
 
       payload = ScoutApm.Payload.new(
         state.time,
@@ -96,10 +93,7 @@ defmodule ScoutApm.StoreReportingPeriod do
       Logger.info("Reporting: Payload created with data from #{ScoutApm.Payload.total_call_count(payload)} requests.")
 
       encoded = ScoutApm.Payload.encode(payload)
-      Logger.info("Reporting: Payload encoded")
-
       ScoutApm.Reporter.post(encoded)
-      Logger.info("Reporting: Posted")
     rescue
       e in RuntimeError -> Logger.info("Reporting runtime error: #{inspect e}")
       e -> Logger.info("Reporting other error: #{inspect e}")

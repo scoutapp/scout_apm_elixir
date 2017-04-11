@@ -1,6 +1,4 @@
 defmodule ScoutApm.Payload do
-  require Logger
-
   alias ScoutApm.MetricSet
   alias ScoutApm.Internal.Metric
 
@@ -52,7 +50,7 @@ defmodule ScoutApm.Payload do
              end)
   end
 
-  def total_call_count(%__MODULE__{}=payload) do
+  def total_call_count(%__MODULE__{} = payload) do
     Enum.reduce(payload.metrics, 0, fn(met, acc) ->
       case met.key.bucket do
         "Controller" -> 

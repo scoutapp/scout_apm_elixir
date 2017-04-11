@@ -4,7 +4,6 @@ defmodule ScoutApm.Instruments.Ecto do
   defmacro __using__(_args) do
     quote unquote: false do
       contents = quote do
-        require Logger
 
         # A handful of things that shouldn't be instrumented, so are passed straight through.
         def config(), do: unquote(__MODULE__).config()

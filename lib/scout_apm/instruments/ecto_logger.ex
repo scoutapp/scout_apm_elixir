@@ -1,6 +1,4 @@
 defmodule ScoutApm.Instruments.EctoLogger do
-  require Logger
-
   # [info] Entry:
   # %Ecto.LogEntry{
     # ansi_color: nil,

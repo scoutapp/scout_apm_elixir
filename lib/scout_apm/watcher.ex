@@ -1,7 +1,7 @@
-defmodule ScoutApm.Watcher do  
+defmodule ScoutApm.Watcher do
   @moduledoc """
-  A single module to log when a watched process fails. Only works on modules
-  currently, not arbitrary pids. See usage in application.ex
+  A simple module to log when a watched process fails. Only works to watch
+  module based workers currently, not arbitrary pids. See usage in application.ex
   """
 
   use GenServer

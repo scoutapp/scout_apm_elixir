@@ -18,7 +18,7 @@ defmodule ScoutApm.Store do
 
   def record_metric(%Metric{} = metric) do
     case Process.whereis(__MODULE__) do
-      nil -> Logger.info("Couldn't find worker!?")
+      nil -> Logger.info("Couldn't find ScoutAPM Store Process. :scout_apm application is likely not started.")
       pid ->
         GenServer.cast(pid, {:record_metric, metric})
     end
@@ -26,7 +26,7 @@ defmodule ScoutApm.Store do
 
   def record_trace(%Trace{} = trace) do
     case Process.whereis(__MODULE__) do
-      nil -> Logger.info("Couldn't find worker!?")
+      nil -> Logger.info("Couldn't find ScoutAPM Store Process. :scout_apm application is likely not started.")
       pid ->
         GenServer.cast(pid, {:record_trace, trace})
     end
