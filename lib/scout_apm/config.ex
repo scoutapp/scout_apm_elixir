@@ -37,7 +37,6 @@ defmodule ScoutApm.Config do
     # Which config source wants to answer this?
     {mod, data} = Enum.find(state, fn {mod, data} -> mod.contains?(data, key) end)
 
-    # If we found a source who knows, let it answer, if not, nil.
     val = mod.lookup(data, key)
 
     {:reply, val, state}
