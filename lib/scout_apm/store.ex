@@ -86,10 +86,6 @@ defmodule ScoutApm.Store do
     ready = List.wrap(categorized[:ready])
     not_ready = List.wrap(categorized[:not_ready])
 
-    Logger.info("Tick has #{Enum.count ready} ready, and #{Enum.count not_ready} not ready")
-    Logger.info("Ready: #{inspect Enum.map(ready, fn rp -> StoreReportingPeriod.time(rp) end)}")
-    Logger.info("Not Ready: #{inspect Enum.map(not_ready, fn rp -> StoreReportingPeriod.time(rp) end)}")
-
     Enum.each(ready, fn rp ->
       Task.start(fn ->
         StoreReportingPeriod.report!(rp)
@@ -121,7 +117,6 @@ defmodule ScoutApm.Store do
   end
 
   defp schedule_tick() do
-    Logger.info("Scheduling a tick on #{inspect self()}")
     Process.send_after(self(), :tick, @tick_interval)
   end
 end
