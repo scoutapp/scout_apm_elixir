@@ -14,8 +14,6 @@ defmodule ScoutApm.Plugs.ControllerTimer do
     full_name = action_name(conn)
     uri = "#{conn.scheme}://#{conn.host}#{conn.request_path}"
 
-    IO.puts(inspect conn.private)
-    IO.puts(inspect uri)
     ScoutApm.TrackedRequest.stop_layer(
       full_name,
       fn layer ->
@@ -38,4 +36,5 @@ defmodule ScoutApm.Plugs.ControllerTimer do
       |>  Enum.drop(2) # drop "Elixir.TestappPhoenix", leaving just ["PageController#index"]
       |>  Enum.join(".") # Probably just "joining" a 1 elem array, but recombine this way anyway in case of periods
   end
+
 end
