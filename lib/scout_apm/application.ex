@@ -5,9 +5,12 @@ defmodule ScoutApm.Application do
 
   use Application
 
+  require Logger
+
   def start(_type, _args) do
     import Supervisor.Spec, warn: false
 
+    Logger.info("Starting ScoutAPM")
     children = [
       worker(ScoutApm.Store, []),
       worker(ScoutApm.Config, []),
