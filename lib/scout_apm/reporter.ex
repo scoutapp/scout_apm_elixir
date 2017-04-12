@@ -17,7 +17,7 @@ defmodule ScoutApm.Reporter do
 
     case :hackney.request(method, url, header_list , gzipped_payload, options) do
       {:ok, status_code, _resp_headers, _client_ref} ->
-        Logger.debug("Reporting ScoutAPM Payload Succeeded")
+        Logger.info("Reporting ScoutAPM Payload Succeeded")
       {:error, ereason} ->
         Logger.info("Reporting ScoutAPM Payload Failed: Hackney Error: #{inspect ereason}")
       r ->
