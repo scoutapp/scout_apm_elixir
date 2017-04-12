@@ -19,6 +19,9 @@ defmodule ScoutApm.Mixfile do
      [
        :logger,
        :hackney,
+       :timex,
+       :plug,
+       :poison
      ],
      mod: {ScoutApm.Application, []}]
   end
