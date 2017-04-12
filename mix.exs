@@ -39,7 +39,7 @@ defmodule ScoutApm.Mixfile do
     [
       {:plug, "~>1.0"},
       {:poison, "~> 2.0"},
-      {:hackney, "~> 1.7"},
+      {:hackney, "~> 1.6"},
       {:timex, "~> 3.0"},
       {:approximate_histogram, "~>0.1.0"},
 
