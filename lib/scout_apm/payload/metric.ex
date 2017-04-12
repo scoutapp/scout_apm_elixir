@@ -7,7 +7,7 @@ defmodule ScoutApm.Payload.Metric do
         bucket: metric.type,
         name: metric.name,
         desc: metric.desc,
-        extra: nil,
+        extra: make_extra(metric),
         scope: case metric.scope do
           %{:type => type, :name => name} ->
             %{
@@ -27,4 +27,17 @@ defmodule ScoutApm.Payload.Metric do
       sum_of_squares: 0, # Unused, but still part of payload
     }
   end
+
+  defp make_extra(_metric) do
+    nil
+    # case metric.backtrace do
+      # nil -> nil
+      # backtrace ->
+        # %{backtrace: convert_backtrace(metric.backtrace)}
+    # end
+  end
+
+  # defp convert_backtrace(backtrace) do
+  #   nil
+  # end
 end
