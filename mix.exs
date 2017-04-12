@@ -7,7 +7,11 @@ defmodule ScoutApm.Mixfile do
      elixir: "~> 1.3",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
-     deps: deps()]
+     deps: deps(),
+     description: description(),
+     package: package(),
+   ]
+
   end
 
   # Configuration for the OTP application
@@ -53,5 +57,21 @@ defmodule ScoutApm.Mixfile do
       # TODO: Should this be in the dev-only dependencies? It is needed for dialyzer to complete correctly.
       {:phoenix, "~> 1.0", only: [:dev, :test]},
     ]
+  end
+
+  defp description() do
+    """
+    ScoutAPM agent for Phoenix & Elixir projects. For more information, visit https://apm.scoutapp.com/elixir.
+    """
+  end
+
+  defp package do
+    [# These are the default files included in the package
+     name: :scout_apm,
+     files: ["lib", "mix.exs", "README*", "LICENSE*"],
+     maintainers: ["Scout Team"],
+     licenses: ["Scout Software Agent License"],
+     links: %{"GitHub" => "https://github.com/scoutapp/scout_apm_elixir",
+              "Docs" => "http://help.apm.scoutapp.com/#elixir-agent"}]
   end
 end
