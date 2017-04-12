@@ -47,6 +47,9 @@ defmodule ScoutApm.Mixfile do
       {:timex, "~> 3.0"},
       {:approximate_histogram, "~>0.1.0"},
 
+      # Release Tools
+      {:ex_doc, ">= 0.0.0", only: :dev},
+
       #########################
       # Dev & Testing Deps
 
