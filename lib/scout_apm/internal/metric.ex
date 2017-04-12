@@ -16,7 +16,9 @@ defmodule ScoutApm.Internal.Metric do
     total_time: Duration.t,
     exclusive_time: Duration.t,
     min_time: Duration.t,
-    max_time: Duration.t}
+    max_time: Duration.t,
+    backtrace: nil | list(any()),
+  }
 
 
   defstruct [
@@ -35,6 +37,8 @@ defmodule ScoutApm.Internal.Metric do
 
     :min_time,
     :max_time,
+
+    :backtrace,
   ]
 
   ##################
@@ -74,6 +78,7 @@ defmodule ScoutApm.Internal.Metric do
       exclusive_time: Layer.total_exclusive_time(layer),
       min_time: total_time,
       max_time: total_time,
+      backtrace: layer.backtrace,
     }
   end
 
@@ -87,6 +92,7 @@ defmodule ScoutApm.Internal.Metric do
       name: m1.name,
       desc: m1.desc,
       scope: m1.scope,
+      backtrace: m1.backtrace,
 
       call_count: m1.call_count + m2.call_count,
       total_time: Duration.add(m1.total_time, m2.total_time),
