@@ -133,10 +133,6 @@ defmodule ScoutApm.Instruments.Ecto do
           __trace(fn -> unquote(__MODULE__).insert_or_update(a,b) end)
         end
 
-        def load(a,b) do
-          __trace(fn -> unquote(__MODULE__).load(a,b) end)
-        end
-
         def one!(a) do
           __trace(fn -> unquote(__MODULE__).one!(a) end)
         end
@@ -274,7 +270,12 @@ defmodule ScoutApm.Instruments.Ecto do
   end
 
   def annotate_layer_callback(layer, ecto_log) do
-    backtrace = Process.info(self(), :current_stacktrace)
+    backtrace = case Process.info(self(), :current_stacktrace) do
+      {:current_stacktrace, stack} ->
+        Enum.drop(stack, 4)
+      _ ->
+        nil
+    end
 
     layer
     |> Layer.update_desc(ecto_log.query)
