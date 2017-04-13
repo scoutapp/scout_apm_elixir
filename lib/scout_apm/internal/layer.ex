@@ -7,7 +7,7 @@ defmodule ScoutApm.Internal.Layer do
     uri: nil | String.t,
     started_at: number(),
     stopped_at: nil | Integer,
-    manual_duration: ScoutApm.Internal.Duration.t,
+    manual_duration: nil | ScoutApm.Internal.Duration.t,
     children: list(%__MODULE__{})
   }
 
