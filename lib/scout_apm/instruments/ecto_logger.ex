@@ -18,7 +18,40 @@ defmodule ScoutApm.Instruments.EctoLogger do
    #      },
     # source: "users"}
   def log(entry) do
-    Process.put(:ecto_log_entry, entry)
+    record(entry)
     entry
+  end
+
+  defp record(entry) do
+    ScoutApm.TrackedRequest.track_layer(
+      "Ecto",
+      query_name(entry),
+      query_time(entry),
+      fn layer ->
+        layer
+        |> ScoutApm.Internal.Layer.update_desc(entry.query)
+      end
+    )
+  end
+
+  def query_name(entry) do
+    case entry do
+      nil -> "Unknown"
+      _ ->
+        command = case entry.result do
+          {:ok, result} -> result.command
+          _ -> "Unknown"
+        end
+
+        table = entry.source
+
+        "#{command}##{table}"
+    end
+  end
+
+  def query_time(entry) do
+    raw_time = entry.query_time
+    microtime = System.convert_time_unit(raw_time, :native, :microseconds)
+    ScoutApm.Internal.Duration.new(microtime, :microseconds)
   end
 end

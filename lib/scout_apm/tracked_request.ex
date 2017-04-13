@@ -41,6 +41,17 @@ defmodule ScoutApm.TrackedRequest do
     end
   end
 
+  def track_layer(type, name, duration, callback \\ (fn x -> x end)) do
+    layer =
+      Layer.new(%{type: type, name: name})
+      |> Layer.update_stopped_at
+      |> Layer.set_manual_duration(duration)
+      |> callback.()
+
+    record_child_of_current_layer(layer)
+  end
+
+
   #################################
   #  Constructors & Manipulation  #
   #################################

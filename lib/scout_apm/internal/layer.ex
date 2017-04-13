@@ -7,10 +7,24 @@ defmodule ScoutApm.Internal.Layer do
     uri: nil | String.t,
     started_at: number(),
     stopped_at: nil | Integer,
+    manual_duration: ScoutApm.Internal.Duration.t,
     children: list(%__MODULE__{})
   }
 
-  defstruct [:type, :name, :desc, :backtrace, :uri, :started_at, :stopped_at, :children]
+  defstruct [
+   :type,
+   :name,
+   :desc,
+   :backtrace,
+   :uri,
+   :children,
+   :started_at,
+   :stopped_at,
+
+   # If this is set, ignore started_at -> stopped_at valuse when calculating
+   # how long this layer ran
+   :manual_duration,
+   ]
 
   alias ScoutApm.Internal.Duration
 
@@ -19,15 +33,15 @@ defmodule ScoutApm.Internal.Layer do
   ##################
 
   @spec new(map) :: __MODULE__.t
-  def new(%{type: type, name: name}) do
-    started_at = System.monotonic_time(:microseconds)
-    %__MODULE__{type: type, name: name, desc: nil, backtrace: nil, started_at: started_at, children: []}
-  end
   def new(%{type: type, name: name, started_at: started_at}) do
     %__MODULE__{type: type, name: name, desc: nil, backtrace: nil, started_at: started_at, children: []}
   end
   def new(%{type: type, started_at: started_at}) do
     %__MODULE__{type: type, name: nil, desc: nil, backtrace: nil, started_at: started_at, children: []}
+  end
+  def new(%{type: type, name: name}) do
+    started_at = System.monotonic_time(:microseconds)
+    %__MODULE__{type: type, name: name, desc: nil, backtrace: nil, started_at: started_at, children: []}
   end
   def new(%{type: type}) do
     started_at = System.monotonic_time(:microseconds)
@@ -63,19 +77,21 @@ defmodule ScoutApm.Internal.Layer do
     %{layer | uri: uri}
   end
 
+  def set_manual_duration(layer, %Duration{}=duration) do
+    %{layer | manual_duration: duration}
+  end
+
   #############
   #  Queries  #
   #############
 
-  def complete?(layer) do
-    layer.type != nil &&
-    layer.name != nil &&
-    layer.started_at != nil &&
-    layer.stopped_at != nil
-  end
-
   def total_time(layer) do
-    Duration.new(layer.stopped_at - layer.started_at, :microseconds)
+    case layer.manual_duration do
+      nil ->
+        Duration.new(layer.stopped_at - layer.started_at, :microseconds)
+      %Duration{} ->
+        layer.manual_duration
+    end
   end
 
   def total_child_time(layer) do

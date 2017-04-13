@@ -91,6 +91,7 @@ defmodule ScoutApm.StoreReportingPeriod do
         state.histograms
       )
       Logger.info("Reporting: Payload created with data from #{ScoutApm.Payload.total_call_count(payload)} requests.")
+      Logger.debug("Payload #{inspect payload}")
 
       encoded = ScoutApm.Payload.encode(payload)
       ScoutApm.Reporter.post(encoded)
