@@ -20,7 +20,6 @@ defmodule ScoutApm.Mixfile do
      [
        :logger,
        :hackney,
-       :timex,
        :plug,
        :poison
      ],
@@ -38,8 +37,6 @@ defmodule ScoutApm.Mixfile do
 
       # We only use `request/5` from hackney, which hasn't changed in the 1.0 line.
       {:hackney, "~> 1.0"},
-
-      {:timex, "~> 3.0"},
 
       {:approximate_histogram, "~>0.1.1"},
 
