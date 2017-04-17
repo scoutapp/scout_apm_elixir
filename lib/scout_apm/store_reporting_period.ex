@@ -47,7 +47,7 @@ defmodule ScoutApm.StoreReportingPeriod do
 
   def time(pid) do
     t = Agent.get(pid, fn state -> state.time end)
-    {:ok, str} = Timex.format(t, "{ISO:Extended}")
+    {:ok, str} = NaiveDateTime.to_iso8601(t)
     str
   end
 
@@ -55,7 +55,7 @@ defmodule ScoutApm.StoreReportingPeriod do
   def covers?(pid, timestamp) do
     t = Agent.get(pid, fn state -> state.time end)
 
-    Timex.compare(t, beginning_of_minute(timestamp)) == 0
+    NaiveDateTime.compare(t, beginning_of_minute(timestamp)) == :eq
   end
 
   # How many seconds from the "beginning of minute" time until we say that its
@@ -65,9 +65,9 @@ defmodule ScoutApm.StoreReportingPeriod do
   # Returns :ready | :not_ready depending on if this reporting periods time is now past
   def ready_to_report?(pid) do
     t = Agent.get(pid, fn state -> state.time end)
-    now = Timex.now()
+    now = NaiveDateTime.utc_now()
 
-    diff = Timex.diff(now, t, :seconds)
+    diff = NaiveDateTime.diff(now, t, :seconds)
 
     if diff > @reporting_age do
       :ready
@@ -100,9 +100,9 @@ defmodule ScoutApm.StoreReportingPeriod do
     end
   end
 
-  defp beginning_of_minute(datetime) do
-    datetime
-    |> Timex.set(second: 0)
-    |> Timex.set(microsecond: {0, 0})
+  def beginning_of_minute(datetime) do
+    {date, {hour, minute, _}} = NaiveDateTime.to_erl(datetime)
+    {:ok, beginning} = NaiveDateTime.from_erl({date, {hour, minute, 0}})
+    beginning
   end
 end

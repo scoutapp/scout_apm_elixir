@@ -19,7 +19,6 @@ defmodule ScoutApm.Mixfile do
      [
        :logger,
        :hackney,
-       :timex,
        :plug,
        :poison
      ],
@@ -38,10 +37,16 @@ defmodule ScoutApm.Mixfile do
   defp deps do
     [
       {:plug, "~>1.0"},
-      {:poison, "~> 2.0"},
-      {:hackney, "~> 1.6"},
-      {:timex, "~> 3.0"},
-      {:approximate_histogram, "~>0.1.0"},
+
+      # We only use `encode!(map)`, which has exited since the start of poison,
+      # so don't restrict the version of poison here. In the unlikely case that
+      # the encode! function is removed in a new version, we'll have to revisit.
+      {:poison, ">= 0.0.0"},
+
+      # We only use `request/5` from hackney, which hasn't changed in the 1.0 line.
+      {:hackney, "~> 1.0"},
+
+      {:approximate_histogram, "~>0.1.1"},
 
       #########################
       # Dev & Testing Deps
