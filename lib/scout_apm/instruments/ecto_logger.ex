@@ -35,17 +35,51 @@ defmodule ScoutApm.Instruments.EctoLogger do
   end
 
   def query_name(entry) do
-    case entry do
-      nil -> "Unknown"
-      _ ->
-        command = case entry.result do
-          {:ok, result} -> result.command
-          _ -> "Unknown"
-        end
+    try do
+      case entry.result do
+        nil -> "SQL"
 
-        table = entry.source
+        {:ok, %{__struct__: Postgrex.Result} = result} ->
+          query_name_postgrex(entry, result)
 
-        "#{command}##{table}"
+        {:ok, %{__struct__: Mariaex.Result} = result} ->
+          query_name_mariaex(entry, result)
+
+        _ ->
+          "SQL"
+      end
+    rescue
+      _ -> "SQL"
+    end
+  end
+
+  def query_name_postgrex(entry, result) do
+    command =
+      case Map.fetch(result, :command) do
+        {:ok, val} -> val
+        :error -> "SQL"
+      end
+
+    table = entry.source
+
+    case table do
+      nil -> "#{command}"
+      _ -> "#{command}##{table}"
+    end
+  end
+
+  def query_name_mariaex(entry, result) do
+    command =
+      case Map.fetch(result, :command) do
+        {:ok, val} -> val
+        :error -> "SQL"
+      end
+
+    table = entry.source
+
+    case table do
+      nil -> "#{command}"
+      _ -> "#{command}##{table}"
     end
   end
 
