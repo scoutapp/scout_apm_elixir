@@ -12,7 +12,7 @@ defmodule ScoutApm.Plugs.ControllerTimer do
 
   def before_send(conn) do
     full_name = action_name(conn)
-    uri = "#{conn.scheme}://#{conn.host}#{conn.request_path}"
+    uri = "#{conn.request_path}"
 
     ScoutApm.TrackedRequest.stop_layer(
       full_name,
