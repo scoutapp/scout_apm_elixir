@@ -96,7 +96,7 @@ defmodule ScoutApm.Internal.Metric do
 
       call_count: m1.call_count + m2.call_count,
       total_time: Duration.add(m1.total_time, m2.total_time),
-      exclusive_time: Duration.add(m1.total_time, m2.total_time),
+      exclusive_time: Duration.add(m1.exclusive_time, m2.exclusive_time),
       min_time: Duration.min(m1.min_time, m2.min_time),
       max_time: Duration.max(m1.max_time, m2.max_time),
     }
