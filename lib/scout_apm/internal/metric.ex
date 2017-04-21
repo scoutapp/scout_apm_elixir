@@ -25,7 +25,7 @@ defmodule ScoutApm.Internal.Metric do
     :type,
     :name,
 
-    # scope should be a 
+    # scope should be a
     :scope,
 
     :call_count,
@@ -79,6 +79,22 @@ defmodule ScoutApm.Internal.Metric do
       min_time: total_time,
       max_time: total_time,
       backtrace: layer.backtrace,
+    }
+  end
+
+  # Creates a metric with +type+, +name+, and +number+. +number+ is reported as-is in the payload w/o any unit conversion.
+  def from_sampler_value(type, name, number) do
+    duration = ScoutApm.Internal.Duration.new(number, :seconds) # ensures +number+ is reported as-is.
+
+    %__MODULE__{
+      type: type,
+      name: name,
+
+      call_count: 1,
+      total_time: duration,
+      exclusive_time: duration,
+      min_time: duration,
+      max_time: duration,
     }
   end
 
