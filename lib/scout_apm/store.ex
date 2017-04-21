@@ -81,20 +81,35 @@ defmodule ScoutApm.Store do
   # Split reporting periods we have into ready & not ready. Ship the ready ones
   # (which stops their process), and next_state has the ones that weren't ready.
   def handle_info(:tick, state) do
-    categorized = Enum.group_by(state.reporting_periods,
-                  fn rp -> StoreReportingPeriod.ready_to_report?(rp) end)
-    ready = List.wrap(categorized[:ready])
-    not_ready = List.wrap(categorized[:not_ready])
+    # Ensure a current reporting period is initialized. Otherwise, samplers won't run unless there is web throughput.
+    {_, new_state} = find_or_create_reporting_period(state)
 
-    Enum.each(ready, fn rp ->
+    Enum.each(categorized_reporting_periods(new_state, :ready), fn rp ->
       Task.start(fn ->
-        StoreReportingPeriod.report!(rp)
+        rp |> capture_samplers |> StoreReportingPeriod.report!
       end)
     end)
 
     schedule_tick()
 
-    {:noreply, %{state | reporting_periods: not_ready}}
+    {:noreply, %{new_state | reporting_periods: categorized_reporting_periods(new_state, :not_ready)}}
+  end
+
+  # Returns a List of reporting periods of +type+ (expected to be :ready or :not_ready).
+  defp categorized_reporting_periods(state, type) do
+    Enum.group_by(state.reporting_periods,
+      fn rp -> StoreReportingPeriod.ready_to_report?(rp) end)[type] |> List.wrap
+  end
+
+  # Runs samplers, which should run once per-minute just before reporting.
+  defp capture_samplers(reporting_period) do
+    Logger.debug("Capturing samplers")
+    Enum.each([ScoutApm.Instruments.Samplers.Memory], fn sampler ->
+      sampler.metrics |> Enum.each(fn metric ->
+        StoreReportingPeriod.record_metric(reporting_period, metric)
+      end)
+    end)
+    reporting_period
   end
 
   # Finds an existing reporting period record, or creates one, and adds it to
@@ -120,4 +135,3 @@ defmodule ScoutApm.Store do
     Process.send_after(self(), :tick, @tick_interval)
   end
 end
-
