@@ -1,6 +1,6 @@
 # Scout Elixir App Monitoring Agent
 
-An Elixir library for detailed Elixir application performance analysis. Metrics are
+A library for detailed Elixir application performance analysis. Metrics are
 reported to [Scout](https://scoutapp.com), a hosted application monitoring service.
 
 __The agent is currently in BETA.__
