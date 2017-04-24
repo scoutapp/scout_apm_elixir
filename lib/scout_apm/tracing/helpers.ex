@@ -2,7 +2,7 @@ defmodule ScoutApm.Tracing.Helpers do
   @moduledoc """
   Functions to time the execution of code.
 
-  __IMPORTANT__: We limit the arity of `type` to 10 per-reporting period. These are displayed in
+  __IMPORTANT__: We limit the arity of `type`. These are displayed in
   charts throughput the UI. These should not be generated dynamically and are designed to be higher-level
   categories (ie Postgres, Redis, HTTP, etc).
   """
