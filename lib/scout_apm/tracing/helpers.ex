@@ -26,11 +26,31 @@ defmodule ScoutApm.Tracing.Helpers do
           render conn, "index.html", layout: {PhoenixApp.LayoutView, "index.html"}
         end
   """
+  @spec instrument(String.t, String.t, function) :: any
   def instrument(type, name, function) when is_function(function) do
     ScoutApm.TrackedRequest.start_layer(type,name)
     result = function.()
     ScoutApm.TrackedRequest.stop_layer
     result
+  end
+
+  @doc """
+  Updates the description for the code executing within a call to `instrument/3`. The description is displayed
+  within a Scout trace in the UI.
+
+  This is useful for logging actual HTTP request URLs, SQL queries, etc.
+
+  ## Example Usage
+
+      instrument("HTTP", "httparrot", fn ->
+        update_desc("GET: http://httparrot.herokuapp.com/get")
+        HTTPoison.get! "http://httparrot.herokuapp.com/get"
+      end)
+  """
+  def update_desc(desc) do
+    ScoutApm.TrackedRequest.current_layer
+    |> ScoutApm.Internal.Layer.update_desc(desc)
+    |> ScoutApm.TrackedRequest.replace_current_layer
   end
 
   @doc """
@@ -42,7 +62,7 @@ defmodule ScoutApm.Tracing.Helpers do
 
   ## Example Usage
 
-      instrument("HTTP","get",300,:milliseconds)
+      track("HTTP","get",300,:milliseconds)
 
   ## The duration must have actually occured
 
@@ -51,7 +71,7 @@ defmodule ScoutApm.Tracing.Helpers do
 
     This naturally occurs when taking the output of Ecto log entries.
   """
-  def instrument(type, name, value, units) when is_number(value) do
+  def track(type, name, value, units) when is_number(value) do
     duration = ScoutApm.Internal.Duration.new(value, units)
     ScoutApm.TrackedRequest.track_layer(type, name, duration)
   end

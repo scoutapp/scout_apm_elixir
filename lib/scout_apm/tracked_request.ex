@@ -6,7 +6,7 @@
 # START Controller (this is scope.)
 #   START Ecto (got it!)
 #   STOP Ecto
-# 
+#
 #   START View
 #     START Partial View
 #     STOP Partial View
@@ -76,6 +76,19 @@ defmodule ScoutApm.TrackedRequest do
   defp layers() do
     lookup()
     |> Map.get(:layers)
+  end
+
+  def current_layer do
+    [current | _] = layers()
+    current
+  end
+
+  def replace_current_layer(new_current_layer) do
+    [_ | tail] = layers()
+
+    lookup()
+    |> Map.put(:layers, [ new_current_layer | tail])
+    |> save()
   end
 
   def with_root_layer(tracked_request, l) do
