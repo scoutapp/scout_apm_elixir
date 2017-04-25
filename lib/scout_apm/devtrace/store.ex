@@ -6,8 +6,7 @@ defmodule ScoutApm.DevTrace.Store do
   @trace_key :tracked_request
 
   def record(tracked_request) do
-    # TODO - only record if devtrace is enabled
-    Process.put(@trace_key, tracked_request)
+    if ScoutApm.DevTrace.enabled?, do: Process.put(@trace_key, tracked_request)
   end
 
   def get_tracked_request do

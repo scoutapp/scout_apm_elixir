@@ -5,8 +5,11 @@ defmodule ScoutApm.DevTrace.Plug do
   def init(default), do: default
 
   def call(conn, _) do
-    # TODO - add a config setting to only run if devtrace: true ... or possibly default to true in development.
-    before_send_inject_devtrace(conn)
+    if ScoutApm.DevTrace.enabled? do
+      before_send_inject_devtrace(conn)
+    else
+      conn
+    end
   end
 
   # Phoenix.LiveReloader is used as a base for much of the injection logic.
