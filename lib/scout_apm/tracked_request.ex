@@ -51,6 +51,15 @@ defmodule ScoutApm.TrackedRequest do
     record_child_of_current_layer(layer)
   end
 
+  def update_current_layer(fun) when is_function(fun) do
+    [current | rest] = layers()
+
+    new = fun.(current)
+
+    lookup()
+    |> Map.put(:layers, [new | rest])
+    |> save()
+  end
 
   #################################
   #  Constructors & Manipulation  #
@@ -78,23 +87,10 @@ defmodule ScoutApm.TrackedRequest do
     |> Map.get(:layers)
   end
 
-  def current_layer do
-    [current | _] = layers()
-    current
-  end
-
-  def replace_current_layer(new_current_layer) do
-    [_ | tail] = layers()
-
-    lookup()
-    |> Map.put(:layers, [ new_current_layer | tail])
-    |> save()
-  end
-
-  def with_root_layer(tracked_request, l) do
+  defp with_root_layer(tracked_request, layer) do
     tracked_request
     |> Map.update!(:root_layer,
-                   fn nil -> l
+                   fn nil -> layer
                       rl -> rl
                    end)
   end

@@ -11,7 +11,7 @@ defmodule ScoutApm.Instruments.EExEngine do
     quoted_template = Phoenix.Template.EExEngine.compile(path, name)
 
     quote do
-      ScoutApm.Tracing.Helpers.instrument("EEx", unquote(scout_name), fn -> unquote(quoted_template) end)
+      ScoutApm.Tracing.instrument("EEx", unquote(scout_name), fn -> unquote(quoted_template) end)
     end
   end
 end
