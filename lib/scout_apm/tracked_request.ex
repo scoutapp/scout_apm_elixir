@@ -6,7 +6,7 @@
 # START Controller (this is scope.)
 #   START Ecto (got it!)
 #   STOP Ecto
-# 
+#
 #   START View
 #     START Partial View
 #     STOP Partial View
@@ -35,8 +35,10 @@ defmodule ScoutApm.TrackedRequest do
 
     # We finished tracing this request, so go and record it.
     if Enum.count(layers()) == 0 do
+      with_root = lookup() |> with_root_layer(layer)
+      ScoutApm.DevTrace.Store.record(with_root)
       ScoutApm.Collector.record_async(
-        lookup() |> with_root_layer(layer)
+        with_root
       )
     end
   end

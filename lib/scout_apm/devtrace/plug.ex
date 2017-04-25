@@ -38,19 +38,19 @@ defmodule ScoutApm.DevTrace.Plug do
 
   defp head_tags do
     """
-    <link href='#{apm_host}/instant/scout_instant.css?cachebust=#{cachebust_time}' media='all' rel='stylesheet' />
+    <link href='#{apm_host()}/instant/scout_instant.css?cachebust=#{cachebust_time()}' media='all' rel='stylesheet' />
     """
   end
 
   defp body_tags do
     """
-    <script src="#{apm_host}/instant/scout_instant.js?cachebust=#{cachebust_time}"></script>
-    <script>var scoutInstantPageTrace=#{payload};window.scoutInstant=window.scoutInstant('#{apm_host}', scoutInstantPageTrace)</script>
+    <script src="#{apm_host()}/instant/scout_instant.js?cachebust=#{cachebust_time()}"></script>
+    <script>var scoutInstantPageTrace=#{payload()};window.scoutInstant=window.scoutInstant('#{apm_host()}', scoutInstantPageTrace)</script>
     """
   end
 
   defp payload do
-    # How to access the current transaction trace? How to format in JSON?
+    ScoutApm.DevTrace.Store.payload() |> ScoutApm.DevTrace.Store.encode()
   end
 
   # Direct from Phoenix.LiveReloader.inject?/2
