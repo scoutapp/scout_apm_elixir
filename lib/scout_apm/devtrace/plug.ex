@@ -74,9 +74,6 @@ defmodule ScoutApm.DevTrace.Plug do
   end
 
   defp async_request?(conn) do
-    Logger.info("http head: #{inspect(conn)}")
-    # Logger.info("http resp: #{inspect(response_headers(conn))}")
-
     ajax_request?(conn) || json_response?(conn)
   end
 
