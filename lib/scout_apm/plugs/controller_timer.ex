@@ -15,9 +15,9 @@ defmodule ScoutApm.Plugs.ControllerTimer do
     uri = "#{conn.request_path}"
 
     ScoutApm.TrackedRequest.stop_layer(
-      full_name,
       fn layer ->
         layer
+        |> Layer.update_name(full_name)
         |> Layer.update_uri(uri)
       end
     )
