@@ -13,9 +13,9 @@ defmodule ScoutApm.Collector do
   # all the layers, recursing down the tree of children
   def record(tracked_request) do
     scope = request_scope(tracked_request)
+    store_histograms(tracked_request)
     store_metrics(tracked_request.root_layer, scope)
     store_trace(tracked_request)
-    store_histograms(tracked_request)
   end
 
   # For now, scope is simply the root layer
