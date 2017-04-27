@@ -171,7 +171,7 @@ defmodule ScoutApm.TrackedRequest do
 
     popped_layer =
       cur_layer
-      |> Layer.update_children(children)
+      |> Layer.update_children(Enum.reverse(children))
 
     {popped_layer, new_tr}
   end

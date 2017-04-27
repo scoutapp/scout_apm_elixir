@@ -32,14 +32,36 @@ defmodule ScoutApm.TrackedRequestTest do
     pid = self()
     TrackedRequest.new(fn r -> send(pid, {:complete, r}) end)
     |> TrackedRequest.start_layer("foo", "bar")
-    |> TrackedRequest.start_layer("nested", "x")
-    |> TrackedRequest.stop_layer()
+      |> TrackedRequest.start_layer("nested", "x")
+      |> TrackedRequest.stop_layer()
     |> TrackedRequest.stop_layer()
 
     receive do
       {:complete, r} ->
         assert r.root_layer.type == "foo"
         assert r.root_layer.name == "bar"
+      _ ->
+        refute true, "Unexpected message"
+      after 1000 ->
+        refute true, "Timed out message"
+    end
+  end
+
+  test "the root layer has its direct children wired up" do
+    pid = self()
+    TrackedRequest.new(fn r -> send(pid, {:complete, r}) end)
+    |> TrackedRequest.start_layer("foo", "bar")
+      |> TrackedRequest.start_layer("nested", "x1")
+      |> TrackedRequest.stop_layer()
+      |> TrackedRequest.start_layer("nested", "x2")
+      |> TrackedRequest.stop_layer()
+    |> TrackedRequest.stop_layer()
+
+    receive do
+      {:complete, r} ->
+        [c1, c2] = r.root_layer.children
+        assert c1.name == "x1"
+        assert c2.name == "x2"
       _ ->
         refute true, "Unexpected message"
       after 1000 ->
