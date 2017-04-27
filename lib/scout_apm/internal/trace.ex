@@ -54,28 +54,32 @@ defmodule ScoutApm.Internal.Trace do
   end
 
   defp percentile_score(%__MODULE__{} = trace) do
-    percentile = ScoutApm.PersistentHistogram.percentile_for_value(
-        key(trace),
-        Duration.as(trace.total_call_time, :seconds))
+    with {:ok, percentile} <- ScoutApm.PersistentHistogram.percentile_for_value(
+                                key(trace),
+                                Duration.as(trace.total_call_time, :seconds))
+      do
+        raw = cond do
+          # Don't put much emphasis on capturing low percentiles.
+          percentile < 40 ->
+            0.4 
 
-    raw = cond do
-      # Don't put much emphasis on capturing low percentiles.
-      percentile < 40 ->
-        0.4 
+          # Higher here to get more "normal" mean traces
+          percentile < 60 ->
+            1.4
 
-      # Higher here to get more "normal" mean traces
-      percentile < 60 ->
-        1.4
+          # Between 60 & 90% is fine.
+          percentile < 90 ->
+            0.7
 
-      # Between 60 & 90% is fine.
-      percentile < 90 ->
-        0.7
+          # Highest here to get 90+%ile traces
+          percentile >= 90 ->
+            1.8
+        end
 
-      # Highest here to get 90+%ile traces
-      percentile >= 90 ->
-        1.8
+        raw * @point_multiplier_percentile
+    else
+      # If we failed to lookup the percentile, just give back a 0 score.
+      _ -> 0
     end
-
-    raw * @point_multiplier_percentile
   end
 end
