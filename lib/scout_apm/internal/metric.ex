@@ -105,6 +105,7 @@ defmodule ScoutApm.Internal.Metric do
   #  Updater Functions  #
   #######################
 
+  @spec merge(t, t) :: t
   def merge(%__MODULE__{} = m1, %__MODULE__{} = m2) do
     %__MODULE__{
       type: m1.type,

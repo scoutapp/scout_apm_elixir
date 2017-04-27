@@ -35,7 +35,7 @@ defmodule ScoutApm.Tracing do
   def instrument(type, name, function) when is_function(function) do
     TrackedRequest.start_layer(type, name)
     result = function.()
-    TrackedRequest.stop_layer
+    TrackedRequest.stop_layer()
     result
   end
 
@@ -77,8 +77,14 @@ defmodule ScoutApm.Tracing do
 
     This naturally occurs when taking the output of Ecto log entries.
   """
+  @spec track(String.t, String.t, number(), Duration.unit) :: :ok | :error
   def track(type, name, value, units) when is_number(value) do
-    duration = Duration.new(value, units)
-    TrackedRequest.track_layer(type, name, duration)
+    if value < 0 do
+      :error
+    else
+      duration = Duration.new(value, units)
+      TrackedRequest.track_layer(type, name, duration)
+      :ok
+    end
   end
 end
