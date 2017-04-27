@@ -3,6 +3,8 @@ defmodule ScoutApm.Internal.Trace do
   A record of a single trace.
   """
 
+  require Logger
+
   alias ScoutApm.Internal.Duration
 
   defstruct [
@@ -79,7 +81,9 @@ defmodule ScoutApm.Internal.Trace do
         raw * @point_multiplier_percentile
     else
       # If we failed to lookup the percentile, just give back a 0 score.
-      _ -> 0
+      err ->
+        Logger.debug("Failed to get percentile_score, error: #{err}")
+        0
     end
   end
 end

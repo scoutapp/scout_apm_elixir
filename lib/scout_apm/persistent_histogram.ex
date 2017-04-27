@@ -46,7 +46,7 @@ defmodule ScoutApm.PersistentHistogram do
       fn state ->
         case Map.fetch(state, key) do
           {:ok, histo} ->
-            ApproximateHistogram.percentile_for_value(histo, value)
+            {:ok, ApproximateHistogram.percentile_for_value(histo, value)}
 
           _ ->
             :error
