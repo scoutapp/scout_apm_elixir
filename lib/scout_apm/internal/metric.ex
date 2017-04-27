@@ -11,7 +11,7 @@ defmodule ScoutApm.Internal.Metric do
     type: String.t,
     name: String.t,
     scope: nil | %{},
-    call_count: Integer,
+    call_count: non_neg_integer(),
     desc: nil | String.t,
     total_time: Duration.t,
     exclusive_time: Duration.t,
@@ -45,6 +45,7 @@ defmodule ScoutApm.Internal.Metric do
   #  Construction  #
   ##################
 
+  @spec from_layer_as_summary(Layer.t) :: t
   def from_layer_as_summary(%Layer{} = layer) do
     total_time = Layer.total_time(layer)
 
@@ -59,11 +60,12 @@ defmodule ScoutApm.Internal.Metric do
       exclusive_time: Layer.total_exclusive_time(layer),
       min_time: total_time,
       max_time: total_time,
+      backtrace: nil,
     }
   end
 
-
   # Layers don't know their own scope, so you need to pass it in explicitly.
+  @spec from_layer(Layer.t, nil | map()) :: t
   def from_layer(%Layer{} = layer, scope) do
     total_time = Layer.total_time(layer)
 
@@ -83,6 +85,7 @@ defmodule ScoutApm.Internal.Metric do
   end
 
   # Creates a metric with +type+, +name+, and +number+. +number+ is reported as-is in the payload w/o any unit conversion.
+  @spec from_sampler_value(any, any, number()) :: t
   def from_sampler_value(type, name, number) do
     duration = ScoutApm.Internal.Duration.new(number, :seconds) # ensures +number+ is reported as-is.
 

@@ -5,8 +5,14 @@ defmodule ScoutApm.MetricSet do
   While this is just a map underneath, treat it like an opaque data type.
   """
 
-  @type t :: %__MODULE__{data: map, options: ScoutApm.MetricSet.options}
-  @type options :: %{collapse_all: boolean(), compare_desc: boolean()}
+  @type t :: %__MODULE__{
+    data: map,
+    options: ScoutApm.MetricSet.options
+  }
+  @type options :: %{
+    collapse_all: boolean(),
+    compare_desc: boolean()
+  }
 
   defstruct [
     :options,
@@ -17,10 +23,14 @@ defmodule ScoutApm.MetricSet do
 
   @spec new() :: ScoutApm.MetricSet.t
   def new do
-    new(%{collapse_all: false, compare_desc: false})
+    new(
+      %{
+        collapse_all: false,
+        compare_desc: false,
+      })
   end
 
-  @spec new(ScoutApm.MetricSet.options) :: ScoutApm.MetricSet.t
+  @spec new(options) :: t
   def new(options) do
     %__MODULE__{
       options: options,
@@ -28,6 +38,7 @@ defmodule ScoutApm.MetricSet do
     }
   end
 
+  @spec absorb(t, Metric.t) :: t
   def absorb(%__MODULE__{} = metric_set, %Metric{} = metric) do
     scoped_key = scoped_key(metric, metric_set.options)
 
@@ -39,7 +50,7 @@ defmodule ScoutApm.MetricSet do
   end
 
   # Ditches the key part, and just returns the aggregate metric
-  @spec to_list(__MODULE__.t) :: list(Metric.t)
+  @spec to_list(t) :: list(Metric.t)
   def to_list(%__MODULE__{} = metric_set) do
     metric_set.data
     |> Map.to_list
