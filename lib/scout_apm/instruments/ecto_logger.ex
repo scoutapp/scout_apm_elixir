@@ -10,10 +10,10 @@ defmodule ScoutApm.Instruments.EctoLogger do
     # queue_time: 36000,
     # result: {:ok,
     #    %Postgrex.Result{
-    #      columns: ["id", "name", "age"],
+    #      columns: ["id", "name", "age"], 
     #      command: :select,
     #      connection_id: 70629,
-    #      num_rows: 1,
+    #      num_rows: 1, 
     #      rows: [[%TestappPhoenix.User{__meta__: #Ecto.Schema.Metadata<:loaded, "users">, age: 32, id: 1, name: "chris"}]]}
    #      },
     # source: "users"}
@@ -27,7 +27,10 @@ defmodule ScoutApm.Instruments.EctoLogger do
       "Ecto",
       query_name(entry),
       query_time(entry),
-      desc: entry.query
+      fn layer ->
+        layer
+        |> ScoutApm.Internal.Layer.update_desc(entry.query)
+      end
     )
   end
 
