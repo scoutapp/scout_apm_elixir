@@ -31,8 +31,6 @@ defmodule ScoutApm.MetricSet do
 
   alias ScoutApm.Internal.Metric
 
-  require Logger
-
   @default_options %{
     collapse_all: false,
     compare_desc: false,
@@ -60,7 +58,7 @@ defmodule ScoutApm.MetricSet do
       |> register_type(metric.type)
     else
       # Don't actually absorb, this is over limit.
-      Logger.info("Skipping absorbing metric, over limit of #{metric_set.options.max_types} unique metric types. See http://help.apm.scoutapp.com/#elixir-agent for more details")
+      ScoutApm.AgentNote.note({:metric_type, :over_limit, metric_set.options.max_types})
       metric_set
     end
   end
