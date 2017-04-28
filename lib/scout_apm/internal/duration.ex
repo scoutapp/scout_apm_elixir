@@ -14,7 +14,7 @@ defmodule ScoutApm.Internal.Duration do
     %__MODULE__{value: normalize_value(value, unit)}
   end
 
-  @spec as(__MODULE__.t, unit) :: number()
+  @spec as(t, unit) :: number()
   def as(%__MODULE__{value: value}, :microseconds), do: value
   def as(%__MODULE__{value: value}, :milliseconds), do: value / 1_000
   def as(%__MODULE__{value: value}, :seconds), do: value / 1_000_000
