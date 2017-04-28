@@ -71,4 +71,9 @@ defmodule ScoutApm.TrackedRequestTest do
         refute true, "Timed out message"
     end
   end
+
+  test "Starting a layer w/o an explicit record saves it in the process dictionary" do
+    TrackedRequest.start_layer("foo", "bar")
+    assert ScoutApm.TrackedRequest == Process.get(:scout_apm_request).__struct__
+  end
 end

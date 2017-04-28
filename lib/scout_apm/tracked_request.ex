@@ -115,6 +115,11 @@ defmodule ScoutApm.TrackedRequest do
   defp build_collector_fn({module, fun}), do: fn request -> apply(module, fun, [request]) end
   defp build_collector_fn(_), do: fn request -> ScoutApm.Collector.record_async(request) end
 
+  def change_collector_fn(f), do: lookup() |> change_collector_fn(f) |> save()
+  def change_collector_fn(%__MODULE__{} = tr, f) do
+    %{tr | collector_fn = build_collector_fn(f)}
+  end
+
   defp lookup() do
     Process.get(:scout_apm_request) || new()
   end
