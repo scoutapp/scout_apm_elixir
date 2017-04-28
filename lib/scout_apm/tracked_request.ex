@@ -117,7 +117,7 @@ defmodule ScoutApm.TrackedRequest do
 
   def change_collector_fn(f), do: lookup() |> change_collector_fn(f) |> save()
   def change_collector_fn(%__MODULE__{} = tr, f) do
-    %{tr | collector_fn = build_collector_fn(f)}
+    %{tr | collector_fn: build_collector_fn(f)}
   end
 
   defp lookup() do
