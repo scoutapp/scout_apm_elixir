@@ -69,18 +69,18 @@ defmodule ScoutApm.TrackedRequest do
     tr2
   end
 
-  def track_layer(%__MODULE__{} = tr, type, name, duration, fields, callback) do
+  def track_layer(%__MODULE__{} = tr, type, name, duration, callback) do
     layer =
       Layer.new(%{type: type, name: name})
       |> Layer.update_stopped_at
       |> Layer.set_manual_duration(duration)
-      |> Layer.update_fields(fields)
       |> callback.()
 
     record_child_of_current_layer(tr, layer)
   end
-  def track_layer(type, name, duration, fields, callback \\ (fn x -> x end)) do
-    with_saved_tracked_request(fn tr -> track_layer(tr, type, name, duration, fields, callback) end)
+
+  def track_layer(type, name, duration, callback \\ (fn x -> x end)) do
+    with_saved_tracked_request(fn tr -> track_layer(tr, type, name, duration, callback) end)
   end
 
   @doc """
