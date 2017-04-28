@@ -82,7 +82,7 @@ defmodule ScoutApm.Tracing do
 
     This naturally occurs when taking the output of Ecto log entries.
   """
-  @spec track(String.t, String.t, number(), Duration.unit, List.t) :: :ok | :error
+  @spec track(String.t, String.t, number(), Duration.unit, keyword()) :: :ok | :error
   def track(type, name, value, units, opts \\ []) when is_number(value) do
     if value < 0 do
       :error
