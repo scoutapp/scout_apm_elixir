@@ -68,7 +68,12 @@ defmodule ScoutApm.Tracing do
 
   ## Example Usage
 
-      track("HTTP", "get", 300, :milliseconds)
+      track("Images", "resize", 200, :milliseconds)
+      track("HTTP", "get", 300, :milliseconds, desc: "HTTP GET http://api.github.com/")
+
+  ## Opts
+
+  A `desc` may be provided to add a detailed background of the event. These are viewable when accessing a trace in the UI.
 
   ## The duration must have actually occured
 
@@ -77,13 +82,13 @@ defmodule ScoutApm.Tracing do
 
     This naturally occurs when taking the output of Ecto log entries.
   """
-  @spec track(String.t, String.t, number(), Duration.unit) :: :ok | :error
-  def track(type, name, value, units) when is_number(value) do
+  @spec track(String.t, String.t, number(), Duration.unit, List.t) :: :ok | :error
+  def track(type, name, value, units, opts \\ []) when is_number(value) do
     if value < 0 do
       :error
     else
       duration = Duration.new(value, units)
-      TrackedRequest.track_layer(type, name, duration)
+      TrackedRequest.track_layer(type, name, duration, opts)
       :ok
     end
   end

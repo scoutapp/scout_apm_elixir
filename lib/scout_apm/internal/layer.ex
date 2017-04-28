@@ -1,4 +1,5 @@
 defmodule ScoutApm.Internal.Layer do
+
   @type t :: %__MODULE__{
     type: String.t,
     name: nil | String.t,
@@ -80,6 +81,21 @@ defmodule ScoutApm.Internal.Layer do
   def set_manual_duration(layer, %Duration{}=duration) do
     %{layer | manual_duration: duration}
   end
+
+  ##################
+  #  Update Fields #
+  ##################
+
+  # Updates Layer fields in bulk. See `update_field` functions for fields that permit updates.
+  def update_fields(layer,[]), do: layer
+  def update_fields(layer,fields) do
+    Enum.reduce(fields, layer, fn {key, value}, layer ->
+      update_field(layer, key, value)
+    end)
+  end
+
+  defp update_field(layer, :desc, value), do: update_desc(layer, value)
+  defp update_field(layer, :backtrace, value), do: update_backtrace(layer, value)
 
   #############
   #  Queries  #
