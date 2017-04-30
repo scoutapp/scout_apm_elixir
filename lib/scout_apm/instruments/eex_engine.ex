@@ -11,10 +11,7 @@ defmodule ScoutApm.Instruments.EExEngine do
     quoted_template = Phoenix.Template.EExEngine.compile(path, name)
 
     quote do
-      ScoutApm.TrackedRequest.start_layer("EEx", unquote(scout_name))
-      result = unquote(quoted_template)
-      ScoutApm.TrackedRequest.stop_layer
-      result
+      ScoutApm.Tracing.instrument("EEx", unquote(scout_name), fn -> unquote(quoted_template) end)
     end
   end
 end

@@ -18,7 +18,11 @@ defmodule ScoutApm.DevTrace.Store do
   end
 
   def transaction do
-    get_tracked_request() |> Trace.from_tracked_request |> SlowTransaction.new
+    if get_tracked_request() do
+      get_tracked_request() |> Trace.from_tracked_request |> SlowTransaction.new
+    else
+      %{}
+    end
   end
 
   def metadata do
