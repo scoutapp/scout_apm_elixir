@@ -9,6 +9,7 @@ defmodule ScoutApm.Reporter do
       post(encoded_payload)
     else
       # If monitor is set to false, just be silent.
+      Logger.debug("Skipping Reporting, Monitor configuration is false")
       :ok
     end
   end
