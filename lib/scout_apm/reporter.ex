@@ -4,6 +4,15 @@ defmodule ScoutApm.Reporter do
   @success_http_codes 200..299
   @error_http_codes 400..499
 
+  def report(encoded_payload) do
+    if ScoutApm.Config.find(:monitor) do
+      post(encoded_payload)
+    else
+      # If monitor is set to false, just be silent.
+      :ok
+    end
+  end
+
   def post(encoded_payload) do
     host = ScoutApm.Config.find(:host)
     name = ScoutApm.Config.find(:name)
