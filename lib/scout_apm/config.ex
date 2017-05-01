@@ -10,15 +10,20 @@ defmodule ScoutApm.Config do
 
   use GenServer
 
+  require Logger
+
+  alias ScoutApm.Config.Coercions
+
+  @name __MODULE__
+
   ## Client API
 
   def start_link do
-    GenServer.start_link(__MODULE__, :ok, [name: __MODULE__])
+    GenServer.start_link(@name, :ok, [name: @name])
   end
 
   def find(key) do
-    pid = Process.whereis(__MODULE__)
-    GenServer.call(pid, {:find, key})
+    GenServer.call(@name, {:find, key})
   end
 
   ## Server Callbacks
@@ -34,10 +39,20 @@ defmodule ScoutApm.Config do
   end
 
   def handle_call({:find, key}, _from, state) do
-    # Which config source wants to answer this?
-    {mod, data} = Enum.find(state, fn {mod, data} -> mod.contains?(data, key) end)
-
-    val = mod.lookup(data, key)
+    val = Enum.reduce_while(state, nil, fn {mod, data}, _acc ->
+      if mod.contains?(data, key) do
+        raw = mod.lookup(data, key)
+        case coercion(key).(raw) do
+          {:ok, c} ->
+            {:halt, c}
+          :error ->
+            Logger.info("Coercion of configuration #{key} failed. Ignoring")
+            {:cont, nil}
+        end
+      else
+        {:cont, nil}
+      end
+    end)
 
     {:reply, val, state}
   end
@@ -49,5 +64,8 @@ defmodule ScoutApm.Config do
   def handle_info(_msg, state) do
     {:noreply, state}
   end
+
+  defp coercion(:monitor), do: &Coercions.boolean/1
+  defp coercion(_), do: fn x -> {:ok, x} end
 end
 

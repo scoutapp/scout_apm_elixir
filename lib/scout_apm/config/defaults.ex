@@ -1,7 +1,8 @@
 defmodule ScoutApm.Config.Defaults do
   def load do
     %{
-      host: "https://checkin.scoutapp.com"
+      host: "https://checkin.scoutapp.com",
+      monitor: true
     }
   end
 
