@@ -17,6 +17,7 @@ defmodule ScoutApm.Context do
 
       {:ok, context} ->
         ScoutApm.TrackedRequest.record_context(context)
+        :ok
     end
   end
 end
