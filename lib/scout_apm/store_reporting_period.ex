@@ -88,7 +88,7 @@ defmodule ScoutApm.StoreReportingPeriod do
       Logger.debug("Payload #{inspect payload}")
 
       encoded = ScoutApm.Payload.encode(payload)
-      ScoutApm.Reporter.post(encoded)
+      ScoutApm.Reporter.report(encoded)
     rescue
       e in RuntimeError -> Logger.info("Reporting runtime error: #{inspect e}")
       e -> Logger.info("Reporting other error: #{inspect e}")
