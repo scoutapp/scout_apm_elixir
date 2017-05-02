@@ -16,10 +16,11 @@ defmodule ScoutApm.Internal.Trace do
     :context,
     :time,
     :hostname, # hack - we need to reset these server side.
+    :context,
     :score,
   ]
 
-  def new(type, name, duration, metrics, uri, context, time, hostname) do
+  def new(type, name, duration, metrics, uri, context, time, hostname, context) do
     %__MODULE__{
       type: type,
       name: name,
@@ -29,6 +30,7 @@ defmodule ScoutApm.Internal.Trace do
       context: context,
       time: time,
       hostname: hostname,
+      context: context,
     }
   end
 

@@ -21,6 +21,7 @@ defmodule ScoutApm.Payload.SlowTransaction do
     :hostname,
     :git_sha,
     :truncated_metrics,
+    :context,
   ]
 
   def new(%Trace{} = trace) do
@@ -30,10 +31,11 @@ defmodule ScoutApm.Payload.SlowTransaction do
         name: trace.name,
       },
 
+      context: ScoutApm.Payload.Context.new(trace.context),
+
       time: trace.time,
       total_call_time: Duration.as(trace.total_call_time, :seconds),
       uri: trace.uri,
-      context: trace.context,
 
       metrics: trace.metrics |> Enum.map(fn m -> ScoutApm.Payload.Metric.new(m) end),
 
