@@ -5,12 +5,32 @@ defmodule ScoutApm.Reporter do
   @error_http_codes 400..499
 
   def report(encoded_payload) do
-    if ScoutApm.Config.find(:monitor) do
-      post(encoded_payload)
-    else
-      # If monitor is set to false, just be silent.
-      Logger.debug("Skipping Reporting, Monitor configuration is false")
-      :ok
+    monitor = ScoutApm.Config.find(:monitor)
+    key = ScoutApm.Config.find(:key)
+
+    case {monitor, key} do
+      {nil, nil} ->
+        Logger.debug("Skipping Reporting, both monitor and key settings are missing")
+        :ok
+
+      {true, nil} ->
+        Logger.debug("Skipping Reporting, key is nil")
+        :ok
+
+      {true, ""} ->
+        Logger.debug("Skipping Reporting, key is empty")
+        :ok
+
+      {nil, _} ->
+        Logger.debug("Skipping Reporting, monitor is nil")
+        :ok
+
+      {false, _} ->
+        Logger.debug("Skipping Reporting, monitor is false")
+        :ok
+
+      _ ->
+        post(encoded_payload)
     end
   end
 
@@ -51,6 +71,8 @@ defmodule ScoutApm.Reporter do
       r ->
         Logger.info("Reporting ScoutAPM Payload Failed: Unknown Hackney Error: #{inspect r}")
     end
+
+    :ok
   end
 
   def headers do
