@@ -61,5 +61,4 @@ defmodule ScoutApm.Collector do
     |> ScoutApm.Store.record_trace()
   end
 
-
 end

@@ -16,22 +16,22 @@ defmodule ScoutApm.Internal.Trace do
     :total_call_time,
     :metrics, # A metric set? Needs to distinguish between different `desc` fields
     :uri,
-    :context,
     :time,
     :hostname, # hack - we need to reset these server side.
+    :contexts,
     :score,
   ]
 
-  def new(type, name, duration, metrics, uri, context, time, hostname) do
+  def new(type, name, duration, metrics, uri, contexts, time, hostname) do
     %__MODULE__{
       type: type,
       name: name,
       total_call_time: duration,
       metrics: metrics,
       uri: uri,
-      context: context,
       time: time,
       hostname: hostname,
+      contexts: contexts,
     }
   end
 
@@ -43,8 +43,8 @@ defmodule ScoutApm.Internal.Trace do
 
     uri = root_layer.uri
 
-    # TODO: extract this once we store it in tracked_request
-    context = %{}
+    contexts = tracked_request.contexts
+    Logger.info("contexts: #{inspect(contexts)}")
 
     time = DateTime.utc_now() |> DateTime.to_iso8601()
     hostname = ScoutApm.Utils.hostname()
@@ -56,7 +56,7 @@ defmodule ScoutApm.Internal.Trace do
       true,
       MetricSet.new(%{compare_desc: true, collapse_all: true}))
 
-    __MODULE__.new(root_layer.type, root_layer.name, duration, MetricSet.to_list(metric_set), uri, context, time, hostname)
+    __MODULE__.new(root_layer.type, root_layer.name, duration, MetricSet.to_list(metric_set), uri, contexts, time, hostname)
   end
 
   # Each layer creates two Trace metrics:

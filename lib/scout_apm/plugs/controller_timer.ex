@@ -1,6 +1,8 @@
 defmodule ScoutApm.Plugs.ControllerTimer do
   alias ScoutApm.Internal.Layer
 
+  require Logger
+
   def init(default), do: default
 
   def call(conn, _default) do
@@ -13,6 +15,8 @@ defmodule ScoutApm.Plugs.ControllerTimer do
   def before_send(conn) do
     full_name = action_name(conn)
     uri = "#{conn.request_path}"
+
+    add_ip_context(conn)
 
     ScoutApm.TrackedRequest.stop_layer(
       fn layer ->
@@ -37,4 +41,24 @@ defmodule ScoutApm.Plugs.ControllerTimer do
       |>  Enum.join(".") # Probably just "joining" a 1 elem array, but recombine this way anyway in case of periods
   end
 
+  defp add_ip_context(conn) do
+    try do
+      remote_ips = Plug.Conn.get_req_header(conn, "x-forwarded-for")
+      forwarded_ip = List.first(remote_ips)
+
+      remote_ip =
+        if forwarded_ip do
+          forwarded_ip
+        else
+          conn.remote_ip
+          |> Tuple.to_list
+          |> Enum.join(".")
+        end
+
+      ScoutApm.Context.add_user(:ip, remote_ip)
+    rescue
+      err ->
+        Logger.debug("Failed adding IP context: #{inspect err}")
+    end
+  end
 end
