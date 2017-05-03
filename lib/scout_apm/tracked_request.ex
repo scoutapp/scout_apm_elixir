@@ -20,8 +20,9 @@ defmodule ScoutApm.TrackedRequest do
   """
 
   alias ScoutApm.Internal.Layer
+  require Logger
 
-  defstruct [:root_layer, :layers, :children, :context, :collector_fn]
+  defstruct [:root_layer, :layers, :children, :contexts, :collector_fn]
 
   ###############
   #  Interface  #
@@ -83,10 +84,10 @@ defmodule ScoutApm.TrackedRequest do
     with_saved_tracked_request(fn tr -> track_layer(tr, type, name, duration, fields, callback) end)
   end
 
-  def record_context(%__MODULE__{} = tr, %ScoutApm.Internal.Context{} = new_context),
-    do: %{tr | context: [new_context | tr.context] }
-  def record_context(%ScoutApm.Internal.Context{} = new_context),
-    do: with_saved_tracked_request(fn tr -> record_context(tr, new_context) end)
+  def record_context(%__MODULE__{} = tr, %ScoutApm.Internal.Context{} = context),
+    do: %{tr | contexts: [context | tr.contexts] }
+  def record_context(%ScoutApm.Internal.Context{} = context),
+    do: with_saved_tracked_request(fn tr -> record_context(tr, context) end)
 
   @doc """
   Not intended for public use. Applies a function that takes an Layer, and
@@ -112,7 +113,7 @@ defmodule ScoutApm.TrackedRequest do
       root_layer: nil,
       layers: [],
       children: [],
-      context: [],
+      contexts: [],
       collector_fn: build_collector_fn(custom_collector),
     })
   end
