@@ -63,8 +63,7 @@ defmodule ScoutApm.Collector do
 
     uri = root_layer.uri
 
-    # TODO: extract this once we store it in tracked_request
-    context = %{}
+    contexts = tracked_request.contexts
 
     time = DateTime.utc_now() |> DateTime.to_iso8601()
     hostname = ScoutApm.Utils.hostname()
@@ -76,7 +75,7 @@ defmodule ScoutApm.Collector do
       true,
       MetricSet.new(%{compare_desc: true, collapse_all: true}))
 
-    trace = Trace.new(root_layer.type, root_layer.name, duration, MetricSet.to_list(metric_set), uri, context, time, hostname)
+    trace = Trace.new(root_layer.type, root_layer.name, duration, MetricSet.to_list(metric_set), uri, contexts, time, hostname)
     ScoutApm.Store.record_trace(trace)
   end
 
