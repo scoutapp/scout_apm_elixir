@@ -44,7 +44,6 @@ defmodule ScoutApm.Internal.Trace do
     uri = root_layer.uri
 
     contexts = tracked_request.contexts
-    Logger.info("contexts: #{inspect(contexts)}")
 
     time = DateTime.utc_now() |> DateTime.to_iso8601()
     hostname = ScoutApm.Utils.hostname()

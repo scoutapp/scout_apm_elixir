@@ -64,7 +64,6 @@ defmodule ScoutApm.TrackedRequest do
     # We finished tracing this request, so go and record it.
     if Enum.count(layers(tr2)) == 0 do
       request = tr2 |> with_root_layer(updated_layer)
-      ScoutApm.DevTrace.Store.record(request)
       request.collector_fn.(request)
     end
 
@@ -121,7 +120,10 @@ defmodule ScoutApm.TrackedRequest do
 
   defp build_collector_fn(f) when is_function(f), do: f
   defp build_collector_fn({module, fun}), do: fn request -> apply(module, fun, [request]) end
-  defp build_collector_fn(_), do: fn request -> ScoutApm.Collector.record_async(request) end
+  defp build_collector_fn(_), do: fn request ->
+    ScoutApm.Collector.record_async(request)
+    ScoutApm.DevTrace.Store.record(request) 
+  end
 
   def change_collector_fn(f), do: lookup() |> change_collector_fn(f) |> save()
   def change_collector_fn(%__MODULE__{} = tr, f) do

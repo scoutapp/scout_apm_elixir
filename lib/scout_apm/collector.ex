@@ -1,5 +1,4 @@
 defmodule ScoutApm.Collector do
-  alias ScoutApm.MetricSet
   alias ScoutApm.Internal.Duration
   alias ScoutApm.Internal.Metric
   alias ScoutApm.Internal.Trace
