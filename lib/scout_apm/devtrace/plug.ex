@@ -22,7 +22,7 @@ defmodule ScoutApm.DevTrace.Plug do
       resp_body = to_string(conn.resp_body)
       cond do
         async_request?(conn) ->
-          add_sync_header(conn)
+          add_async_header(conn)
         inject?(conn, resp_body) ->
           inject_js(conn,resp_body)
         true ->
@@ -31,7 +31,7 @@ defmodule ScoutApm.DevTrace.Plug do
     end
   end
 
-  defp add_sync_header(conn) do
+  defp add_async_header(conn) do
     conn
     |> put_resp_header("X-scoutapminstant", payload())
   end
