@@ -31,9 +31,9 @@ defmodule ScoutApm.Tracing do
           render conn, "index.html"
         end
   """
-  @spec instrument(String.t, String.t, function) :: any
-  def instrument(type, name, function) when is_function(function) do
-    TrackedRequest.start_layer(type, name)
+  @spec instrument(String.t, String.t, any, function) :: any
+  def instrument(type, name, opts \\ [], function) when is_function(function) do
+    TrackedRequest.start_layer(type, name, opts)
     result = function.()
     TrackedRequest.stop_layer()
     result

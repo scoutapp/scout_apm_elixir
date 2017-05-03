@@ -28,8 +28,8 @@ defmodule ScoutApm.TrackedRequest do
   #  Interface  #
   ###############
 
-  def start_layer(%__MODULE__{} = tr, type, name) do
-    layer = Layer.new(%{type: type, name: name})
+  def start_layer(%__MODULE__{} = tr, type, name, opts \\ []) do
+    layer = Layer.new(%{type: type, name: name, opts: opts})
     push_layer(tr, layer)
   end
 
