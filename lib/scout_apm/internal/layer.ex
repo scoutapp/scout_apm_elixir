@@ -1,4 +1,9 @@
 defmodule ScoutApm.Internal.Layer do
+  @moduledoc """
+  Internal to the ScoutAPM agent.
+
+  Represents a single layer during a TrackedRequest
+  """
 
   @type t :: %__MODULE__{
     type: String.t,
@@ -8,6 +13,7 @@ defmodule ScoutApm.Internal.Layer do
     uri: nil | String.t,
     started_at: number(),
     stopped_at: nil | Integer,
+    scopable: boolean,
     manual_duration: nil | ScoutApm.Internal.Duration.t,
     children: list(%__MODULE__{})
   }
@@ -18,13 +24,15 @@ defmodule ScoutApm.Internal.Layer do
    :desc,
    :backtrace,
    :uri,
-   :children,
    :started_at,
    :stopped_at,
 
    # If this is set, ignore started_at -> stopped_at valuse when calculating
    # how long this layer ran
    :manual_duration,
+
+   scopable: true,
+   children: [],
    ]
 
   alias ScoutApm.Internal.Duration
@@ -34,19 +42,17 @@ defmodule ScoutApm.Internal.Layer do
   ##################
 
   @spec new(map) :: __MODULE__.t
-  def new(%{type: type, name: name, started_at: started_at}) do
-    %__MODULE__{type: type, name: name, desc: nil, backtrace: nil, started_at: started_at, children: []}
-  end
-  def new(%{type: type, started_at: started_at}) do
-    %__MODULE__{type: type, name: nil, desc: nil, backtrace: nil, started_at: started_at, children: []}
-  end
-  def new(%{type: type, name: name}) do
-    started_at = System.monotonic_time(:microseconds)
-    %__MODULE__{type: type, name: name, desc: nil, backtrace: nil, started_at: started_at, children: []}
-  end
-  def new(%{type: type}) do
-    started_at = System.monotonic_time(:microseconds)
-    %__MODULE__{type: type, name: nil, desc: nil, backtrace: nil, started_at: started_at, children: []}
+  def new(%{type: type, opts: opts} = data) do
+    started_at = data[:started_at] || System.monotonic_time(:microseconds)
+    name = data[:name]
+    scopable = Keyword.get(opts, :scopable)
+
+    %__MODULE__{
+      type: type,
+      name: name,
+      started_at: started_at,
+      scopable: scopable,
+    }
   end
 
   #######################
@@ -78,7 +84,7 @@ defmodule ScoutApm.Internal.Layer do
     %{layer | uri: uri}
   end
 
-  def set_manual_duration(layer, %Duration{}=duration) do
+  def set_manual_duration(layer, %Duration{} = duration) do
     %{layer | manual_duration: duration}
   end
 
