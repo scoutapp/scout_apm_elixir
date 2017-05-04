@@ -1,4 +1,14 @@
 defmodule ScoutApm.ScopeStack do
+  @moduledoc """
+  Internal to ScoutApm agent.
+
+  Used as a helper to track the current scope a layer is under, as we
+  build up a trace.
+
+  This doesn't have any way to pop, since it's used in a recursive call,
+  and coppies should just be tossed as the call stack finishes
+  """
+
   alias ScoutApm.Internal.Layer
 
   @max_depth 2

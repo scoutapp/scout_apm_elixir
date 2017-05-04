@@ -1,6 +1,8 @@
 defmodule ScoutApm.Instruments.EExEngine do
   @behaviour Phoenix.Template.Engine
 
+  require Logger
+
   # TODO: Make this name correctly for other template locations
   # Currently it assumes too much about being located under `web/templates`
   def compile(path, name) do

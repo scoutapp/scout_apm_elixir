@@ -45,7 +45,7 @@ defmodule ScoutApm.Internal.Layer do
   def new(%{type: type, opts: opts} = data) do
     started_at = data[:started_at] || System.monotonic_time(:microseconds)
     name = data[:name]
-    scopable = Keyword.get(opts, :scopable)
+    scopable = Keyword.get(opts, :scopable, true)
 
     %__MODULE__{
       type: type,
