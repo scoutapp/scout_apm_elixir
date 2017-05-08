@@ -63,10 +63,5 @@ defmodule ScoutApm.Payload do
   def encode(payload) do
     Poison.encode!(payload)
   end
-
-  ## Just a handy thing to not lose
-  def application_details do
-    Application.spec(:my_app, :vsn)
-  end
 end
 
