@@ -1,4 +1,8 @@
 defmodule ScoutApm.Collector do
+  @moduledoc """
+  Takes a TrackedRequest, and routes it onward to the correct Store
+  """
+
   alias ScoutApm.Internal.Duration
   alias ScoutApm.Internal.Metric
   alias ScoutApm.Internal.Trace
@@ -14,7 +18,7 @@ defmodule ScoutApm.Collector do
     scope = request_scope(tracked_request)
     store_histograms(tracked_request)
     store_metrics(tracked_request.root_layer, scope)
-    store_trace(tracked_request)
+    store_web_trace(tracked_request)
   end
 
   # For now, scope is simply the root layer
@@ -44,7 +48,7 @@ defmodule ScoutApm.Collector do
 
   def store_metrics(layer, scope) do
     # Track self
-    ScoutApm.Store.record_metric(Metric.from_layer(layer, scope))
+    ScoutApm.Store.record_web_metric(Metric.from_layer(layer, scope))
 
     # Recurse into any children.
     # This isn't tail recursive, probably no biggie
@@ -55,9 +59,9 @@ defmodule ScoutApm.Collector do
   #  Collect Trace  #
   ###################
 
-  def store_trace(tracked_request) do
+  def store_web_trace(tracked_request) do
     Trace.from_tracked_request(tracked_request)
-    |> ScoutApm.Store.record_trace()
+    |> ScoutApm.Store.record_web_trace()
   end
 
 end

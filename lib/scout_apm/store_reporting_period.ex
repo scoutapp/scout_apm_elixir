@@ -10,25 +10,29 @@ defmodule ScoutApm.StoreReportingPeriod do
     Agent.start_link(fn ->
       %{
         time: beginning_of_minute(timestamp),
-        metric_set: MetricSet.new(),
-        traces: ScoredItemSet.new(),
+        web_metric_set: MetricSet.new(),
+        web_traces: ScoredItemSet.new(),
         histograms: %{}, # a map of key => ApproximateHistogram
       }
     end)
   end
 
-  def record_trace(pid, trace) do
+  def record_web_trace(pid, trace) do
     Agent.update(pid,
       fn state ->
-        %{state | traces: ScoredItemSet.absorb(state.traces, Trace.as_scored_item(trace))}
+        %{state | web_traces: ScoredItemSet.absorb(state.web_traces, Trace.as_scored_item(trace))}
       end
     )
   end
 
-  def record_metric(pid, metric) do
+  # This just passes through to web_metric, but leave it as a function
+  # so we can reroute it later.
+  def record_sampler_metric(pid, metric), do: record_web_metric(pid, metric)
+
+  def record_web_metric(pid, metric) do
     Agent.update(pid,
       fn state ->
-        %{state | metric_set: MetricSet.absorb(state.metric_set, metric)}
+        %{state | web_metric_set: MetricSet.absorb(state.web_metric_set, metric)}
       end
     )
   end
@@ -80,8 +84,8 @@ defmodule ScoutApm.StoreReportingPeriod do
 
       payload = ScoutApm.Payload.new(
         state.time,
-        state.metric_set,
-        ScoredItemSet.to_list(state.traces, :without_scores),
+        state.web_metric_set,
+        ScoredItemSet.to_list(state.web_traces, :without_scores),
         state.histograms
       )
       Logger.info("Reporting: Payload created with data from #{ScoutApm.Payload.total_call_count(payload)} requests.")
