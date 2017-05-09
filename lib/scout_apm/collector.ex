@@ -60,7 +60,8 @@ defmodule ScoutApm.Collector do
   ###################
 
   def store_web_trace(tracked_request) do
-    Trace.from_tracked_request(tracked_request)
+    tracked_request
+    |> Trace.from_tracked_request()
     |> ScoutApm.Store.record_web_trace()
   end
 
