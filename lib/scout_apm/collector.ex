@@ -17,7 +17,7 @@ defmodule ScoutApm.Collector do
   def record(tracked_request) do
     scope = request_scope(tracked_request)
     store_histograms(tracked_request)
-    store_metrics(tracked_request.root_layer, scope)
+    store_web_metrics(tracked_request.root_layer, scope)
     store_web_trace(tracked_request)
   end
 
@@ -46,13 +46,13 @@ defmodule ScoutApm.Collector do
   #  Collect Metric  #
   ####################
 
-  def store_metrics(layer, scope) do
+  def store_web_metrics(layer, scope) do
     # Track self
     ScoutApm.Store.record_web_metric(Metric.from_layer(layer, scope))
 
     # Recurse into any children.
     # This isn't tail recursive, probably no biggie
-    Enum.each(layer.children, fn child -> store_metrics(child, scope) end)
+    Enum.each(layer.children, fn child -> store_web_metrics(child, scope) end)
   end
 
   ###################
