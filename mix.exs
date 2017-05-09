@@ -62,7 +62,7 @@ defmodule ScoutApm.Mixfile do
   defp package do
     [# These are the default files included in the package
      name: :scout_apm,
-     files: ["lib", "mix.exs", "README*", "LICENSE*"],
+     files: ["lib", "priv", "mix.exs", "README*", "LICENSE*"],
      maintainers: ["Scout Team"],
      licenses: ["Scout Software Agent License"],
      links: %{"GitHub" => "https://github.com/scoutapp/scout_apm_elixir",
