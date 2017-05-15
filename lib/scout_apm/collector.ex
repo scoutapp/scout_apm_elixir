@@ -6,7 +6,9 @@ defmodule ScoutApm.Collector do
   alias ScoutApm.Internal.Duration
   alias ScoutApm.Internal.Metric
   alias ScoutApm.Internal.Trace
+  alias ScoutApm.Internal.JobTrace
   alias ScoutApm.Internal.Layer
+  alias ScoutApm.Internal.JobRecord
 
   def record_async(tracked_request) do
     Task.start(fn -> record(tracked_request) end)
@@ -17,8 +19,23 @@ defmodule ScoutApm.Collector do
   def record(tracked_request) do
     scope = request_scope(tracked_request)
     store_histograms(tracked_request)
-    store_web_metrics(tracked_request.root_layer, scope)
-    store_web_trace(tracked_request)
+
+    case categorize(tracked_request) do
+      :web ->
+        store_web_metrics(tracked_request.root_layer, scope)
+        store_web_trace(tracked_request)
+        :ok
+
+      :job ->
+        store_job_metrics(tracked_request.root_layer, scope)
+        store_job_trace(tracked_request)
+        :ok
+
+      # If it's something else, I don't know what to do with it.  This,
+      # or categorize will likely need to be smarter in the future
+      _ ->
+        :skipped
+    end
   end
 
   # For now, scope is simply the root layer
@@ -55,6 +72,12 @@ defmodule ScoutApm.Collector do
     Enum.each(layer.children, fn child -> store_web_metrics(child, scope) end)
   end
 
+  # Create a JobRecord, and store that?
+  def store_job_metrics(layer, scope) do
+    JobRecord.from_layer(layer, scope)
+    |> ScoutApm.Store.record_job_record()
+  end
+
   ###################
   #  Collect Trace  #
   ###################
@@ -63,6 +86,24 @@ defmodule ScoutApm.Collector do
     tracked_request
     |> Trace.from_tracked_request()
     |> ScoutApm.Store.record_web_trace()
+  end
+
+  def store_job_trace(tracked_request) do
+    tracked_request
+    |> JobTrace.from_tracked_request()
+    |> ScoutApm.Store.record_job_trace()
+  end
+
+  #############
+  #  Helpers  #
+  #############
+
+  defp categorize(tracked_request) do
+    case tracked_request.root_layer.type do
+      "Controller" -> :web
+      "Job" -> :job
+      _ -> :unknown
+    end
   end
 
 end

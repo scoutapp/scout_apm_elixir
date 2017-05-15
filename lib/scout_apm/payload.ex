@@ -10,12 +10,14 @@ defmodule ScoutApm.Payload do
             histograms: []
 
 
-  def new(timestamp, web_metric_set, web_traces, histograms) do
+  def new(timestamp, web_metric_set, web_traces, histograms, jobs, job_traces) do
     %ScoutApm.Payload{
       metadata: ScoutApm.Payload.Metadata.new(timestamp),
       metrics: metrics(web_metric_set),
       slow_transactions: make_traces(web_traces),
       histograms: make_histograms(histograms),
+      jobs: ScoutApm.Payload.Jobs.new(jobs),
+      slow_jobs: ScoutApm.Payload.SlowJobs.new(job_traces),
     }
   end
 

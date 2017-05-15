@@ -13,6 +13,8 @@ defmodule ScoutApm.Store do
 
   alias ScoutApm.Internal.Metric
   alias ScoutApm.Internal.Trace
+  alias ScoutApm.Internal.JobRecord
+  alias ScoutApm.Internal.JobTrace
   alias ScoutApm.StoreReportingPeriod
 
   # 60 seconds
@@ -41,6 +43,23 @@ defmodule ScoutApm.Store do
     end
   end
 
+  def record_job_record(%JobRecord{} = job_record) do
+    case Process.whereis(__MODULE__) do
+      nil -> Logger.info("Couldn't find ScoutAPM Store Process. :scout_apm application is likely not started.")
+      pid ->
+        GenServer.cast(pid, {:record_job_record, job_record})
+    end
+  end
+
+  def record_job_trace(%JobTrace{} = job_trace) do
+    case Process.whereis(__MODULE__) do
+      nil -> Logger.info("Couldn't find ScoutAPM Store Process. :scout_apm application is likely not started.")
+      pid ->
+        GenServer.cast(pid, {:record_job_trace, job_trace})
+    end
+  end
+
+
   def record_per_minute_histogram(key, duration) do
     case Process.whereis(__MODULE__) do
       nil -> Logger.info("Couldn't find worker!?")
@@ -65,6 +84,7 @@ defmodule ScoutApm.Store do
     {:noreply, nil}
   end
 
+  # TODO: All the handle_cast blocks end up looking the same, we can combine them.
   def handle_cast({:record_web_metric, %Metric{} = metric}, state) do
     {rp, new_state} = find_or_create_reporting_period(state)
     StoreReportingPeriod.record_web_metric(rp, metric)
@@ -74,10 +94,21 @@ defmodule ScoutApm.Store do
 
   # TODO: Lazy-generate trace (ie, this should take a thunk that evaluates into a trace)
   # TODO: Score the thunk, so we can determine if the set wants to even bother resolving the trace
-  # TODO: Callback for "time since last-seen" score
   def handle_cast({:record_web_trace, %Trace{} = trace}, state) do
     {rp, new_state} = find_or_create_reporting_period(state)
     StoreReportingPeriod.record_web_trace(rp, trace)
+    {:noreply, new_state}
+  end
+
+  def handle_cast({:record_job_record, %JobRecord{} = job_record}, state) do
+    {rp, new_state} = find_or_create_reporting_period(state)
+    StoreReportingPeriod.record_job_record(rp, job_record)
+    {:noreply, new_state}
+  end
+
+  def handle_cast({:record_job_trace, %JobTrace{} = trace}, state) do
+    {rp, new_state} = find_or_create_reporting_period(state)
+    StoreReportingPeriod.record_job_trace(rp, trace)
     {:noreply, new_state}
   end
 

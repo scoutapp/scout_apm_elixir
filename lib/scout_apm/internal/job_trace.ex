@@ -1,99 +1,92 @@
-defmodule ScoutApm.Internal.Trace do
-  @moduledoc """
-  A record of a single trace.
-  """
-
+defmodule ScoutApm.Internal.JobTrace do
   require Logger
 
-  alias ScoutApm.MetricSet
+  alias ScoutApm.Internal.Context
   alias ScoutApm.Internal.Duration
   alias ScoutApm.Internal.Metric
   alias ScoutApm.Internal.Layer
-  alias ScoutApm.Internal.Context
+  alias ScoutApm.MetricSet
 
   defstruct [
-    :type,
-    :name,
-    :total_call_time,
-    :metrics,
-    :uri,
+    :queue_name,
+    :job_name,
+
+    # When did this job occur
     :time,
-    :hostname, # hack - we need to reset these server side.
+
+    # What else interesting did we learn?
     :contexts,
 
-    # TODO: Does anybody ever set this Score field?
+    :total_time,
+    :exclusive_time,
+
+    :metrics,
+
+    :hostname,
     :score,
   ]
 
   @type t :: %__MODULE__{
-    type: String.t,
-    name: String.t,
-    total_call_time: Duration.t,
-    metrics: list(Metric.t),
-    uri: nil | String.t,
+    queue_name: String.t,
+    job_name: String.t,
+
+    # When did this job occur
     time: any,
+
+    # What else interesting did we learn?
+    contexts: list(Context.t),
+    total_time: Duration.t,
+    exclusive_time: Duration.t,
+    metrics: MetricSet.t,
     hostname: String.t,
-    contexts: Context.t,
     score: number(),
   }
 
-  # @spec new(String.t, String.t, Duration.t, list(Metric.t), String.t, Context.t, any, String.t) :: t
-  def new(type, name, duration, metrics, uri, contexts, time, hostname) do
+  @spec new(String.t, String.t, any, list(Context.t), Duration.t, Duration.t, MetricSet.t, String.t) :: t
+  def new(queue_name, job_name, time, contexts, total_time, exclusive_time, metrics, hostname) do
     %__MODULE__{
-      type: type,
-      name: name,
-      total_call_time: duration,
-      metrics: metrics,
-      uri: uri,
+      queue_name: queue_name,
+      job_name: job_name,
       time: time,
-      hostname: hostname,
       contexts: contexts,
+      total_time: total_time,
+      exclusive_time: exclusive_time,
+      metrics: metrics,
+      hostname: hostname,
 
-      # TODO: Store the trace's own score
-      score: 0,
+      # TODO: Update the trace w/ the score?
+      score: 0
     }
   end
 
-  # Creates a Trace struct from a `TracedRequest`.
+  @spec from_tracked_request(any) :: t
   def from_tracked_request(tracked_request) do
     root_layer = tracked_request.root_layer
 
     duration = Layer.total_time(root_layer)
-
-    uri = root_layer.uri
-
-    contexts = tracked_request.contexts
-
+    job_name = root_layer.name
+    queue_name = "default"
     time = DateTime.utc_now() |> DateTime.to_iso8601()
     hostname = ScoutApm.Utils.hostname()
-
-    # Metrics scoped & stuff. Distinguished by type, name, scope, desc
+    contexts = tracked_request.contexts
     metric_set = create_trace_metrics(
       root_layer,
       ScoutApm.Collector.request_scope(tracked_request),
       true,
       MetricSet.new(%{compare_desc: true, collapse_all: true}))
 
-    __MODULE__.new(root_layer.type, root_layer.name, duration, MetricSet.to_list(metric_set), uri, contexts, time, hostname)
+    new(
+      queue_name,
+      job_name,
+      time,
+      contexts,
+      duration,
+      duration, # exclusive time isn't used?
+      metric_set,
+      hostname
+    )
   end
 
-  # Each layer creates two Trace metrics:
-  # - a detailed one distinguished by type/name/scope/desc
-  # - a summary one distinguished only by type
-  #
-  # TODO:
-  #   Layers inside of Layers isn't scoped fully here. The recursive call
-  #   should figure out if we need to update the scope we're passing down the
-  #   tree.
-  #
-  #   In ruby land, that would be a situation like:
-  #   Controller
-  #     DB         <-- scoped under controller
-  #     View
-  #       DB       <-- scoped under View
-  #
-  # ignore_scope option is to skip attaching a scope to the root layer (a controller shouldn't be "scoped" under itself).
-  # The recursive call resets it to not be skipped, so children layers all will be attached to the scope correctly.
   defp create_trace_metrics(layer, scope, ignore_scope, %MetricSet{} = metric_set) do
     detail_metric = Metric.from_layer(layer, (if ignore_scope, do: nil, else: scope))
     summary_metric = Metric.from_layer_as_summary(layer)
@@ -105,10 +98,6 @@ defmodule ScoutApm.Internal.Trace do
     |> MetricSet.absorb(summary_metric)
   end
 
-  defp key(%__MODULE__{} = trace) do
-    trace.type <> "/" <> trace.name
-  end
-
   #####################
   #  Scoring a trace  #
   #####################
@@ -117,7 +106,11 @@ defmodule ScoutApm.Internal.Trace do
   @point_multiplier_percentile 1.0
 
   def as_scored_item(%__MODULE__{} = trace) do
-    {{:score, score(trace), key(trace)}, trace}
+    {{:score, score(trace), score_key(trace)}, trace}
+  end
+
+  defp score_key(%__MODULE__{} = trace) do
+    "Job/" <> trace.queue_name <> "/" <> trace.job_name
   end
 
   def score(%__MODULE__{} = trace) do
@@ -125,13 +118,13 @@ defmodule ScoutApm.Internal.Trace do
   end
 
   defp duration_score(%__MODULE__{} = trace) do
-    :math.log(1 + Duration.as(trace.total_call_time, :seconds)) * @point_multiplier_speed
+    :math.log(1 + Duration.as(trace.total_time, :seconds)) * @point_multiplier_speed
   end
 
   defp percentile_score(%__MODULE__{} = trace) do
     with {:ok, percentile} <- ScoutApm.PersistentHistogram.percentile_for_value(
-                                key(trace),
-                                Duration.as(trace.total_call_time, :seconds))
+                                score_key(trace),
+                                Duration.as(trace.total_time, :seconds))
       do
         raw = cond do
           # Don't put much emphasis on capturing low percentiles.
