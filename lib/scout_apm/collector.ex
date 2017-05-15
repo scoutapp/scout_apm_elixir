@@ -27,7 +27,7 @@ defmodule ScoutApm.Collector do
         :ok
 
       :job ->
-        store_job_metrics(tracked_request.root_layer, scope)
+        store_job_metrics(tracked_request.root_layer, ScopeStack.layer_to_scope(tracked_request.root_layer))
         store_job_trace(tracked_request)
         :ok
 

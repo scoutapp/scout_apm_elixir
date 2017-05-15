@@ -6,6 +6,7 @@ defmodule ScoutApm.Internal.JobTrace do
   alias ScoutApm.Internal.Metric
   alias ScoutApm.Internal.Layer
   alias ScoutApm.MetricSet
+  alias ScoutApm.ScopeStack
 
   defstruct [
     :queue_name,
