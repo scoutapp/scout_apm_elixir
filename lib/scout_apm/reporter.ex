@@ -49,7 +49,7 @@ defmodule ScoutApm.Reporter do
 
     header_list = headers()
 
-    Logger.info("Reporting ScoutAPM Payload to #{url}")
+    Logger.debug("Reporting ScoutAPM Payload to #{url}")
     Logger.debug("Payload Size. JSON: #{inspect :erlang.iolist_size(encoded_payload)}, Gzipped: #{inspect :erlang.iolist_size(gzipped_payload)}")
     # Logger.debug("JSON Payload: #{inspect encoded_payload}")
     # Logger.debug("Headers: #{inspect header_list}")
@@ -60,7 +60,7 @@ defmodule ScoutApm.Reporter do
         Logger.info("Reporting ScoutAPM Payload Failed with #{status_code}. Response Headers: #{inspect resp_headers}")
 
       {:ok, status_code, _resp_headers, _client_ref} when status_code in @success_http_codes ->
-        Logger.info("Reporting ScoutAPM Payload Succeeded. Status: #{inspect status_code}")
+        Logger.debug("Reporting ScoutAPM Payload Succeeded. Status: #{inspect status_code}")
 
       {:ok, status_code, _resp_headers, _client_ref} ->
         Logger.info("Reporting ScoutAPM Payload Unexpected Status: #{inspect status_code}")

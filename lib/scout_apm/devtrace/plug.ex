@@ -48,7 +48,7 @@ defmodule ScoutApm.DevTrace.Plug do
   end
 
   defp apm_host do
-    ScoutApm.Config.find(:host)
+    ScoutApm.Config.find(:direct_host)
   end
 
   defp cachebust_time do

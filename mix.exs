@@ -3,7 +3,7 @@ defmodule ScoutApm.Mixfile do
 
   def project do
     [app: :scout_apm,
-     version: "0.2.9",
+     version: "0.2.11",
      elixir: "~> 1.3",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
@@ -62,7 +62,7 @@ defmodule ScoutApm.Mixfile do
   defp package do
     [# These are the default files included in the package
      name: :scout_apm,
-     files: ["lib", "mix.exs", "README*", "LICENSE*"],
+     files: ["lib", "priv", "mix.exs", "README*", "LICENSE*"],
      maintainers: ["Scout Team"],
      licenses: ["Scout Software Agent License"],
      links: %{"GitHub" => "https://github.com/scoutapp/scout_apm_elixir",

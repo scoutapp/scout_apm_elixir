@@ -13,12 +13,15 @@ defmodule ScoutApm.Application do
     Logger.info("Starting ScoutAPM")
     children = [
       worker(ScoutApm.Store, []),
-      worker(ScoutApm.Config, []),
-      worker(ScoutApm.PersistentHistogram, []),
-      # worker(ScoutApm.ApplicationLoadNotification, [restart: :transient])
       worker(ScoutApm.Watcher, [ScoutApm.Store], id: :store_watcher),
+
+      worker(ScoutApm.Config, []),
       worker(ScoutApm.Watcher, [ScoutApm.Config], id: :config_watcher),
+
+      worker(ScoutApm.PersistentHistogram, []),
       worker(ScoutApm.Watcher, [ScoutApm.PersistentHistogram], id: :histogram_watcher),
+
+      worker(ScoutApm.ApplicationLoadNotification, [], [restart: :temporary])
     ]
 
     # Stupidly persistent. Really high max restarts for debugging

@@ -9,6 +9,7 @@ defmodule ScoutApm.Collector do
   alias ScoutApm.Internal.JobTrace
   alias ScoutApm.Internal.Layer
   alias ScoutApm.Internal.JobRecord
+  alias ScoutApm.ScopeStack
 
   def record_async(tracked_request) do
     Task.start(fn -> record(tracked_request) end)
@@ -17,12 +18,11 @@ defmodule ScoutApm.Collector do
   # Determine scope. Then starting with the root layer, track
   # all the layers, recursing down the tree of children
   def record(tracked_request) do
-    scope = request_scope(tracked_request)
     store_histograms(tracked_request)
 
     case categorize(tracked_request) do
       :web ->
-        store_web_metrics(tracked_request.root_layer, scope)
+        store_web_metrics(tracked_request.root_layer, ScopeStack.layer_to_scope(tracked_request.root_layer))
         store_web_trace(tracked_request)
         :ok
 
@@ -36,12 +36,6 @@ defmodule ScoutApm.Collector do
       _ ->
         :skipped
     end
-  end
-
-  # For now, scope is simply the root layer
-  def request_scope(tracked_request) do
-    rl = tracked_request.root_layer
-    %{type: rl.type, name: rl.name}
   end
 
   ########################
@@ -105,5 +99,4 @@ defmodule ScoutApm.Collector do
       _ -> :unknown
     end
   end
-
 end

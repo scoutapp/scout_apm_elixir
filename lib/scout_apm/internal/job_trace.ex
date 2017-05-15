@@ -71,8 +71,7 @@ defmodule ScoutApm.Internal.JobTrace do
     contexts = tracked_request.contexts
     metric_set = create_trace_metrics(
       root_layer,
-      ScoutApm.Collector.request_scope(tracked_request),
-      true,
+      ScopeStack.new(),
       MetricSet.new(%{compare_desc: true, collapse_all: true}))
 
     new(
@@ -87,12 +86,14 @@ defmodule ScoutApm.Internal.JobTrace do
     )
   end
 
-  defp create_trace_metrics(layer, scope, ignore_scope, %MetricSet{} = metric_set) do
-    detail_metric = Metric.from_layer(layer, (if ignore_scope, do: nil, else: scope))
+  defp create_trace_metrics(layer, scope_stack, %MetricSet{} = metric_set) do
+    detail_metric = Metric.from_layer(layer, ScopeStack.current_scope(scope_stack))
     summary_metric = Metric.from_layer_as_summary(layer)
 
+    new_scope_stack = ScopeStack.push_scope(scope_stack, layer)
+
     # Absorb each child recursively
-    Enum.reduce(layer.children, metric_set, fn child, set -> create_trace_metrics(child, scope, false, set) end)
+    Enum.reduce(layer.children, metric_set, fn child, set -> create_trace_metrics(child, new_scope_stack, set) end)
     # Then absorb this layer's 2 metrics
     |> MetricSet.absorb(detail_metric)
     |> MetricSet.absorb(summary_metric)

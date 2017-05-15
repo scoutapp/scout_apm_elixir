@@ -125,7 +125,7 @@ defmodule ScoutApm.StoreReportingPeriod do
         ScoredItemSet.to_list(state.job_traces, :without_scores)
       )
 
-      Logger.info("Reporting: Payload created with data from #{ScoutApm.Payload.total_call_count(payload)} requests.")
+      Logger.debug("Reporting: Payload created with data from #{ScoutApm.Payload.total_call_count(payload)} requests.")
       Logger.debug("Payload #{inspect payload}")
 
       encoded = ScoutApm.Payload.encode(payload)

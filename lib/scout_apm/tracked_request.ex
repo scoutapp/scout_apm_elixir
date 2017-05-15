@@ -28,13 +28,13 @@ defmodule ScoutApm.TrackedRequest do
   #  Interface  #
   ###############
 
-  def start_layer(%__MODULE__{} = tr, type, name) do
-    layer = Layer.new(%{type: type, name: name})
+  def start_layer(%__MODULE__{} = tr, type, name, opts) do
+    layer = Layer.new(%{type: type, name: name, opts: opts || []})
     push_layer(tr, layer)
   end
 
-  def start_layer(type, name \\ nil) do
-    with_saved_tracked_request(fn tr -> start_layer(tr, type, name) end)
+  def start_layer(type, name, opts \\ []) do
+    with_saved_tracked_request(fn tr -> start_layer(tr, type, name, opts) end)
   end
 
   def stop_layer() do
@@ -73,7 +73,7 @@ defmodule ScoutApm.TrackedRequest do
 
   def track_layer(%__MODULE__{} = tr, type, name, duration, fields, callback) do
     layer =
-      Layer.new(%{type: type, name: name})
+      Layer.new(%{type: type, name: name, opts: []})
       |> Layer.update_stopped_at
       |> Layer.set_manual_duration(duration)
       |> Layer.update_fields(fields)
@@ -86,7 +86,7 @@ defmodule ScoutApm.TrackedRequest do
   end
 
   def record_context(%__MODULE__{} = tr, %ScoutApm.Internal.Context{} = context),
-    do: %{tr | contexts: [context | tr.contexts] }
+    do: %{tr | contexts: [context | tr.contexts]}
   def record_context(%ScoutApm.Internal.Context{} = context),
     do: with_saved_tracked_request(fn tr -> record_context(tr, context) end)
 

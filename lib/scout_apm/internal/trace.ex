@@ -10,6 +10,7 @@ defmodule ScoutApm.Internal.Trace do
   alias ScoutApm.Internal.Metric
   alias ScoutApm.Internal.Layer
   alias ScoutApm.Internal.Context
+  alias ScoutApm.ScopeStack
 
   defstruct [
     :type,
@@ -70,11 +71,10 @@ defmodule ScoutApm.Internal.Trace do
     # Metrics scoped & stuff. Distinguished by type, name, scope, desc
     metric_set = create_trace_metrics(
       root_layer,
-      ScoutApm.Collector.request_scope(tracked_request),
-      true,
+      ScopeStack.new(),
       MetricSet.new(%{compare_desc: true, collapse_all: true}))
 
-    __MODULE__.new(root_layer.type, root_layer.name, duration, MetricSet.to_list(metric_set), uri, contexts, time, hostname)
+    new(root_layer.type, root_layer.name, duration, MetricSet.to_list(metric_set), uri, contexts, time, hostname)
   end
 
   # Each layer creates two Trace metrics:
@@ -91,22 +91,17 @@ defmodule ScoutApm.Internal.Trace do
   #     DB         <-- scoped under controller
   #     View
   #       DB       <-- scoped under View
-  #
-  # ignore_scope option is to skip attaching a scope to the root layer (a controller shouldn't be "scoped" under itself).
-  # The recursive call resets it to not be skipped, so children layers all will be attached to the scope correctly.
-  defp create_trace_metrics(layer, scope, ignore_scope, %MetricSet{} = metric_set) do
-    detail_metric = Metric.from_layer(layer, (if ignore_scope, do: nil, else: scope))
+  defp create_trace_metrics(layer, scope_stack, %MetricSet{} = metric_set) do
+    detail_metric = Metric.from_layer(layer, ScopeStack.current_scope(scope_stack))
     summary_metric = Metric.from_layer_as_summary(layer)
 
+    new_scope_stack = ScopeStack.push_scope(scope_stack, layer)
+
     # Absorb each child recursively
-    Enum.reduce(layer.children, metric_set, fn child, set -> create_trace_metrics(child, scope, false, set) end)
+    Enum.reduce(layer.children, metric_set, fn child, set -> create_trace_metrics(child, new_scope_stack, set) end)
     # Then absorb this layer's 2 metrics
     |> MetricSet.absorb(detail_metric)
     |> MetricSet.absorb(summary_metric)
-  end
-
-  defp key(%__MODULE__{} = trace) do
-    trace.type <> "/" <> trace.name
   end
 
   #####################
@@ -115,6 +110,10 @@ defmodule ScoutApm.Internal.Trace do
 
   @point_multiplier_speed 0.25
   @point_multiplier_percentile 1.0
+
+  defp key(%__MODULE__{} = trace) do
+    trace.type <> "/" <> trace.name
+  end
 
   def as_scored_item(%__MODULE__{} = trace) do
     {{:score, score(trace), key(trace)}, trace}
