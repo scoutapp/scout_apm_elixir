@@ -5,7 +5,7 @@ defmodule ScoutApm.Collector do
 
   alias ScoutApm.Internal.Duration
   alias ScoutApm.Internal.Metric
-  alias ScoutApm.Internal.Trace
+  alias ScoutApm.Internal.WebTrace
   alias ScoutApm.Internal.JobTrace
   alias ScoutApm.Internal.Layer
   alias ScoutApm.Internal.JobRecord
@@ -41,9 +41,12 @@ defmodule ScoutApm.Collector do
   ########################
   #  Collect Histograms  #
   ########################
+
   def store_histograms(tracked_request) do
     root_layer = tracked_request.root_layer
     duration = Layer.total_time(root_layer)
+
+    # TODO: This knowledge of how to build a key is here, and in score_key of WebTrace & JobTrace modules
     key = "#{root_layer.type}/#{root_layer.name}"
 
     # Store into this minute's histogram
@@ -78,7 +81,7 @@ defmodule ScoutApm.Collector do
 
   def store_web_trace(tracked_request) do
     tracked_request
-    |> Trace.from_tracked_request()
+    |> WebTrace.from_tracked_request()
     |> ScoutApm.Store.record_web_trace()
   end
 

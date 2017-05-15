@@ -12,7 +12,7 @@ defmodule ScoutApm.Store do
   require Logger
 
   alias ScoutApm.Internal.Metric
-  alias ScoutApm.Internal.Trace
+  alias ScoutApm.Internal.WebTrace
   alias ScoutApm.Internal.JobRecord
   alias ScoutApm.Internal.JobTrace
   alias ScoutApm.StoreReportingPeriod
@@ -35,7 +35,7 @@ defmodule ScoutApm.Store do
     end
   end
 
-  def record_web_trace(%Trace{} = trace) do
+  def record_web_trace(%WebTrace{} = trace) do
     case Process.whereis(__MODULE__) do
       nil -> Logger.info("Couldn't find ScoutAPM Store Process. :scout_apm application is likely not started.")
       pid ->
@@ -94,7 +94,7 @@ defmodule ScoutApm.Store do
 
   # TODO: Lazy-generate trace (ie, this should take a thunk that evaluates into a trace)
   # TODO: Score the thunk, so we can determine if the set wants to even bother resolving the trace
-  def handle_cast({:record_web_trace, %Trace{} = trace}, state) do
+  def handle_cast({:record_web_trace, %WebTrace{} = trace}, state) do
     {rp, new_state} = find_or_create_reporting_period(state)
     StoreReportingPeriod.record_web_trace(rp, trace)
     {:noreply, new_state}

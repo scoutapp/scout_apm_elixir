@@ -111,8 +111,9 @@ defmodule ScoutApm.Internal.JobTrace do
     {{:score, score(trace), score_key(trace)}, trace}
   end
 
+  # TODO: Re-add the queue name to the trace key
   defp score_key(%__MODULE__{} = trace) do
-    "Job/" <> trace.queue_name <> "/" <> trace.job_name
+    "Job/" <> trace.job_name
   end
 
   def score(%__MODULE__{} = trace) do

@@ -2,7 +2,7 @@ defmodule ScoutApm.StoreReportingPeriod do
   require Logger
 
   alias ScoutApm.Internal.Duration
-  alias ScoutApm.Internal.Trace
+  alias ScoutApm.Internal.WebTrace
   alias ScoutApm.Internal.JobRecord
   alias ScoutApm.Internal.JobTrace
   alias ScoutApm.MetricSet
@@ -28,7 +28,7 @@ defmodule ScoutApm.StoreReportingPeriod do
   def record_web_trace(pid, trace) do
     Agent.update(pid,
       fn state ->
-        %{state | web_traces: ScoredItemSet.absorb(state.web_traces, Trace.as_scored_item(trace))}
+        %{state | web_traces: ScoredItemSet.absorb(state.web_traces, WebTrace.as_scored_item(trace))}
       end
     )
   end

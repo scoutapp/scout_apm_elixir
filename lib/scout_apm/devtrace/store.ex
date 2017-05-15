@@ -1,5 +1,5 @@
 defmodule ScoutApm.DevTrace.Store do
-  alias ScoutApm.Internal.Trace
+  alias ScoutApm.Internal.WebTrace
   alias ScoutApm.Payload.SlowTransaction
   require Logger
 
@@ -19,7 +19,7 @@ defmodule ScoutApm.DevTrace.Store do
 
   def transaction do
     if get_tracked_request() do
-      get_tracked_request() |> Trace.from_tracked_request |> SlowTransaction.new
+      get_tracked_request() |> WebTrace.from_tracked_request |> SlowTransaction.new
     else
       %{}
     end

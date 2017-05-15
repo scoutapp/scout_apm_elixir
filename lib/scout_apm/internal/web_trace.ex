@@ -1,4 +1,4 @@
-defmodule ScoutApm.Internal.Trace do
+defmodule ScoutApm.Internal.WebTrace do
   @moduledoc """
   A record of a single trace.
   """
