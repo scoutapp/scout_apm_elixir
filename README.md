@@ -1,6 +1,6 @@
 # Scout Elixir App Monitoring Agent
 
-A library for detailed Elixir application performance analysis. Metrics are
+Scout monitors the performance of Elixir applications in production and provides an in-browser profiler during development. Metrics are
 reported to [Scout](https://scoutapp.com), a hosted application monitoring service.
 
 __The agent is currently in BETA.__
@@ -22,7 +22,7 @@ DevTrace, Scout's in-browser development profiler, may be used without signup.
 
 To use:
 
-1. [Follow the same installation steps as monitoring](http://help.apm.scoutapp.com/#installation22), but skip downloading the config file.
+1. [Follow the same installation steps as monitoring](http://help.apm.scoutapp.com/#elixir-install), but skip downloading the config file.
 2. In your `config/dev.exs` file, add:
 ```elixir
 # config/dev.exs
