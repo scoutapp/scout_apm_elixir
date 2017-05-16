@@ -1,4 +1,4 @@
-# Scout Elixir App Monitoring Agent
+# Scout Elixir App Monitoring & Development Profiler
 
 Scout monitors the performance of Elixir applications in production and provides an in-browser profiler during development. Metrics are
 reported to [Scout](https://scoutapp.com), a hosted application monitoring service.
