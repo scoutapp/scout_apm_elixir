@@ -30,7 +30,7 @@ defmodule ScoutApm.Mixfile do
     [
       {:plug, "~>1.0"},
 
-      # We only use `encode!(map)`, which has exited since the start of poison,
+      # We only use `encode!(map)`, which has existed since the start of poison,
       # so don't restrict the version of poison here. In the unlikely case that
       # the encode! function is removed in a new version, we'll have to revisit.
       {:poison, ">= 0.0.0"},
