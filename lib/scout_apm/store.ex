@@ -1,9 +1,20 @@
 defmodule ScoutApm.Store do
+  @moduledoc """
+  Singleton that manages the state of the Agent's data.  Mostly just
+  routes data to the correct per-minute data structure
+
+  Also is the core "tick" of the system, so each X seconds, the data
+  collected is checked to see if it's ready to be reported. If so, the
+  reporting process is kicked off.
+  """
+
   use GenServer
   require Logger
 
   alias ScoutApm.Internal.Metric
-  alias ScoutApm.Internal.Trace
+  alias ScoutApm.Internal.WebTrace
+  alias ScoutApm.Internal.JobRecord
+  alias ScoutApm.Internal.JobTrace
   alias ScoutApm.StoreReportingPeriod
 
   # 60 seconds
@@ -16,21 +27,38 @@ defmodule ScoutApm.Store do
     GenServer.start_link(__MODULE__, :ok, [name: __MODULE__])
   end
 
-  def record_metric(%Metric{} = metric) do
+  def record_web_metric(%Metric{} = metric) do
     case Process.whereis(__MODULE__) do
       nil -> Logger.info("Couldn't find ScoutAPM Store Process. :scout_apm application is likely not started.")
       pid ->
-        GenServer.cast(pid, {:record_metric, metric})
+        GenServer.cast(pid, {:record_web_metric, metric})
     end
   end
 
-  def record_trace(%Trace{} = trace) do
+  def record_web_trace(%WebTrace{} = trace) do
     case Process.whereis(__MODULE__) do
       nil -> Logger.info("Couldn't find ScoutAPM Store Process. :scout_apm application is likely not started.")
       pid ->
-        GenServer.cast(pid, {:record_trace, trace})
+        GenServer.cast(pid, {:record_web_trace, trace})
     end
   end
+
+  def record_job_record(%JobRecord{} = job_record) do
+    case Process.whereis(__MODULE__) do
+      nil -> Logger.info("Couldn't find ScoutAPM Store Process. :scout_apm application is likely not started.")
+      pid ->
+        GenServer.cast(pid, {:record_job_record, job_record})
+    end
+  end
+
+  def record_job_trace(%JobTrace{} = job_trace) do
+    case Process.whereis(__MODULE__) do
+      nil -> Logger.info("Couldn't find ScoutAPM Store Process. :scout_apm application is likely not started.")
+      pid ->
+        GenServer.cast(pid, {:record_job_trace, job_trace})
+    end
+  end
+
 
   def record_per_minute_histogram(key, duration) do
     case Process.whereis(__MODULE__) do
@@ -56,19 +84,31 @@ defmodule ScoutApm.Store do
     {:noreply, nil}
   end
 
-  def handle_cast({:record_metric, %Metric{} = metric}, state) do
-    { rp, new_state } = find_or_create_reporting_period(state)
-    StoreReportingPeriod.record_metric(rp, metric)
+  # TODO: All the handle_cast blocks end up looking the same, we can combine them.
+  def handle_cast({:record_web_metric, %Metric{} = metric}, state) do
+    {rp, new_state} = find_or_create_reporting_period(state)
+    StoreReportingPeriod.record_web_metric(rp, metric)
 
     {:noreply, new_state}
   end
 
   # TODO: Lazy-generate trace (ie, this should take a thunk that evaluates into a trace)
   # TODO: Score the thunk, so we can determine if the set wants to even bother resolving the trace
-  # TODO: Callback for "time since last-seen" score
-  def handle_cast({:record_trace, %Trace{} = trace}, state) do
+  def handle_cast({:record_web_trace, %WebTrace{} = trace}, state) do
     {rp, new_state} = find_or_create_reporting_period(state)
-    StoreReportingPeriod.record_trace(rp, trace)
+    StoreReportingPeriod.record_web_trace(rp, trace)
+    {:noreply, new_state}
+  end
+
+  def handle_cast({:record_job_record, %JobRecord{} = job_record}, state) do
+    {rp, new_state} = find_or_create_reporting_period(state)
+    StoreReportingPeriod.record_job_record(rp, job_record)
+    {:noreply, new_state}
+  end
+
+  def handle_cast({:record_job_trace, %JobTrace{} = trace}, state) do
+    {rp, new_state} = find_or_create_reporting_period(state)
+    StoreReportingPeriod.record_job_trace(rp, trace)
     {:noreply, new_state}
   end
 
@@ -106,7 +146,7 @@ defmodule ScoutApm.Store do
     Logger.debug("Capturing samplers")
     Enum.each([ScoutApm.Instruments.Samplers.Memory], fn sampler ->
       sampler.metrics |> Enum.each(fn metric ->
-        StoreReportingPeriod.record_metric(reporting_period, metric)
+        StoreReportingPeriod.record_sampler_metric(reporting_period, metric)
       end)
     end)
     reporting_period

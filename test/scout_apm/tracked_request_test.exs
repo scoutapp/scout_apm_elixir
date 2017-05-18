@@ -15,7 +15,7 @@ defmodule ScoutApm.TrackedRequestTest do
   test "starting a layer, then stopping calls the track function" do
     pid = self()
     TrackedRequest.new(fn r -> send(pid, {:complete, r}) end)
-    |> TrackedRequest.start_layer("foo", "bar")
+    |> TrackedRequest.start_layer("foo", "bar", [])
     |> TrackedRequest.stop_layer()
 
     receive do
@@ -31,8 +31,8 @@ defmodule ScoutApm.TrackedRequestTest do
   test "the root layer is whichever layer was started first" do
     pid = self()
     TrackedRequest.new(fn r -> send(pid, {:complete, r}) end)
-    |> TrackedRequest.start_layer("foo", "bar")
-      |> TrackedRequest.start_layer("nested", "x")
+    |> TrackedRequest.start_layer("foo", "bar", [])
+      |> TrackedRequest.start_layer("nested", "x", [])
       |> TrackedRequest.stop_layer()
     |> TrackedRequest.stop_layer()
 
@@ -50,12 +50,12 @@ defmodule ScoutApm.TrackedRequestTest do
   test "children get attached correctly" do
     pid = self()
     TrackedRequest.new(fn r -> send(pid, {:complete, r}) end)
-    |> TrackedRequest.start_layer("foo", "bar")
-      |> TrackedRequest.start_layer("nested", "x1")
-        |> TrackedRequest.start_layer("nested2", "y")
+    |> TrackedRequest.start_layer("foo", "bar", [])
+      |> TrackedRequest.start_layer("nested", "x1", [])
+        |> TrackedRequest.start_layer("nested2", "y", [])
         |> TrackedRequest.stop_layer()
       |> TrackedRequest.stop_layer()
-      |> TrackedRequest.start_layer("nested", "x2")
+      |> TrackedRequest.start_layer("nested", "x2", [])
       |> TrackedRequest.stop_layer()
     |> TrackedRequest.stop_layer()
 

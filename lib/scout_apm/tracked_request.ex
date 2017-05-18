@@ -65,9 +65,10 @@ defmodule ScoutApm.TrackedRequest do
     if Enum.count(layers(tr2)) == 0 do
       request = tr2 |> with_root_layer(updated_layer)
       request.collector_fn.(request)
+      request
+    else
+      tr2
     end
-
-    tr2
   end
 
   def track_layer(%__MODULE__{} = tr, type, name, duration, fields, callback) do

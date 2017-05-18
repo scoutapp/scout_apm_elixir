@@ -6,6 +6,15 @@ defmodule ScoutApm.Internal.Context do
 
   defstruct [:type, :key, :value]
 
+  @valid_types [:user, :extra]
+  @type context_types :: :user | :extra
+
+  @type t :: %__MODULE__{
+    type: context_types,
+    key: String.t,
+    value: number | boolean | String.t,
+  }
+
   def new(type, key, value) do
     case {valid_type?(type), valid_key?(key), valid_value?(value)} do
       {false, _, _} ->
@@ -22,8 +31,7 @@ defmodule ScoutApm.Internal.Context do
     end
   end
 
-  @types [:user, :extra]
-  defp valid_type?(t) when t in @types, do: true
+  defp valid_type?(t) when t in @valid_types, do: true
   defp valid_type?(_), do: false
 
   defp valid_key?(key) when is_binary(key), do: String.printable?(key)

@@ -2,7 +2,9 @@ defmodule ScoutApm.StoreReportingPeriod do
   require Logger
 
   alias ScoutApm.Internal.Duration
-  alias ScoutApm.Internal.Trace
+  alias ScoutApm.Internal.WebTrace
+  alias ScoutApm.Internal.JobRecord
+  alias ScoutApm.Internal.JobTrace
   alias ScoutApm.MetricSet
   alias ScoutApm.ScoredItemSet
 
@@ -10,25 +12,58 @@ defmodule ScoutApm.StoreReportingPeriod do
     Agent.start_link(fn ->
       %{
         time: beginning_of_minute(timestamp),
-        metric_set: MetricSet.new(),
-        traces: ScoredItemSet.new(),
-        histograms: %{}, # a map of key => ApproximateHistogram
+        web_metric_set: MetricSet.new(),
+        web_traces: ScoredItemSet.new(),
+
+        # key is JobRecord.key(), value is a single Merged JobRecord
+        jobs: %{},
+        job_traces: ScoredItemSet.new(),
+
+        # a map of key => ApproximateHistogram
+        histograms: %{},
       }
     end)
   end
 
-  def record_trace(pid, trace) do
+  def record_web_trace(pid, trace) do
     Agent.update(pid,
       fn state ->
-        %{state | traces: ScoredItemSet.absorb(state.traces, Trace.as_scored_item(trace))}
+        %{state | web_traces: ScoredItemSet.absorb(state.web_traces, WebTrace.as_scored_item(trace))}
       end
     )
   end
 
-  def record_metric(pid, metric) do
+  # This just passes through to web_metric, but leave it as a function
+  # so we can reroute it later.
+  def record_sampler_metric(pid, metric), do: record_web_metric(pid, metric)
+
+  def record_web_metric(pid, metric) do
     Agent.update(pid,
       fn state ->
-        %{state | metric_set: MetricSet.absorb(state.metric_set, metric)}
+        %{state | web_metric_set: MetricSet.absorb(state.web_metric_set, metric)}
+      end
+    )
+  end
+
+  def record_job_record(pid, job_record) do
+    Agent.update(pid,
+      fn state ->
+        %{state |
+            jobs: Map.update(
+              state.jobs,
+              JobRecord.key(job_record),
+              job_record,
+              fn existing -> JobRecord.merge(job_record, existing) end
+            )
+         }
+      end
+    )
+  end
+
+  def record_job_trace(pid, trace) do
+    Agent.update(pid,
+      fn state ->
+        %{state | job_traces: ScoredItemSet.absorb(state.job_traces, JobTrace.as_scored_item(trace))}
       end
     )
   end
@@ -80,14 +115,23 @@ defmodule ScoutApm.StoreReportingPeriod do
 
       payload = ScoutApm.Payload.new(
         state.time,
-        state.metric_set,
-        ScoredItemSet.to_list(state.traces, :without_scores),
-        state.histograms
+
+        state.web_metric_set,
+        ScoredItemSet.to_list(state.web_traces, :without_scores),
+
+        state.histograms,
+
+        Map.values(state.jobs),
+        ScoredItemSet.to_list(state.job_traces, :without_scores)
       )
+
       Logger.debug("Reporting: Payload created with data from #{ScoutApm.Payload.total_call_count(payload)} requests.")
       Logger.debug("Payload #{inspect payload}")
 
       encoded = ScoutApm.Payload.encode(payload)
+
+      Logger.debug("Encoded Payload: #{inspect encoded}")
+
       ScoutApm.Reporter.report(encoded)
     rescue
       e in RuntimeError -> Logger.info("Reporting runtime error: #{inspect e}")

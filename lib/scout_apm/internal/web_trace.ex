@@ -1,4 +1,4 @@
-defmodule ScoutApm.Internal.Trace do
+defmodule ScoutApm.Internal.WebTrace do
   @moduledoc """
   A record of a single trace.
   """
@@ -9,20 +9,36 @@ defmodule ScoutApm.Internal.Trace do
   alias ScoutApm.Internal.Duration
   alias ScoutApm.Internal.Metric
   alias ScoutApm.Internal.Layer
+  alias ScoutApm.Internal.Context
   alias ScoutApm.ScopeStack
 
   defstruct [
     :type,
     :name,
     :total_call_time,
-    :metrics, # A metric set? Needs to distinguish between different `desc` fields
+    :metrics,
     :uri,
     :time,
     :hostname, # hack - we need to reset these server side.
     :contexts,
+
+    # TODO: Does anybody ever set this Score field?
     :score,
   ]
 
+  @type t :: %__MODULE__{
+    type: String.t,
+    name: String.t,
+    total_call_time: Duration.t,
+    metrics: list(Metric.t),
+    uri: nil | String.t,
+    time: any,
+    hostname: String.t,
+    contexts: Context.t,
+    score: number(),
+  }
+
+  # @spec new(String.t, String.t, Duration.t, list(Metric.t), String.t, Context.t, any, String.t) :: t
   def new(type, name, duration, metrics, uri, contexts, time, hostname) do
     %__MODULE__{
       type: type,
@@ -33,6 +49,9 @@ defmodule ScoutApm.Internal.Trace do
       time: time,
       hostname: hostname,
       contexts: contexts,
+
+      # TODO: Store the trace's own score
+      score: 0,
     }
   end
 

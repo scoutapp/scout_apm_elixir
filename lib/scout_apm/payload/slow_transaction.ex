@@ -3,7 +3,7 @@ defmodule ScoutApm.Payload.SlowTransaction do
   The payload structure for a single SlowTransaction / Trace.
   """
 
-  alias ScoutApm.Internal.Trace
+  alias ScoutApm.Internal.WebTrace
   alias ScoutApm.Internal.Duration
 
   defstruct [
@@ -23,7 +23,7 @@ defmodule ScoutApm.Payload.SlowTransaction do
     :truncated_metrics,
   ]
 
-  def new(%Trace{} = trace) do
+  def new(%WebTrace{} = trace) do
     %__MODULE__{
       key: %{
         bucket: trace.type,

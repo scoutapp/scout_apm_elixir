@@ -51,6 +51,16 @@ defmodule ScoutApm.MetricSet do
   end
 
   @spec absorb(t, Metric.t) :: t
+  @doc """
+  Add this metric to this metric set.
+
+  As a safety valve in the agent,
+  this skips adding if we've reached the limit of unique 'type' values
+  in this set.  Since 'type' is something like 'Ecto' or 'Controller',
+  it's very unlikely that this safety valve ever gets hit in normal
+  practice, but instead is designed to protect people from accidentally
+  varying their custom instrumentation types.
+  """
   def absorb(%__MODULE__{} = metric_set, %Metric{} = metric) do
     if under_type_limit?(metric_set) do
       metric_set
@@ -61,6 +71,19 @@ defmodule ScoutApm.MetricSet do
       ScoutApm.AgentNote.note({:metric_type, :over_limit, metric_set.options.max_types})
       metric_set
     end
+  end
+
+  @spec absorb_all(t, list(Metric.t)) :: t
+  def absorb_all(%__MODULE__{} = metric_set, metrics) when is_list(metrics) do
+    Enum.reduce(
+      metrics,
+      metric_set,
+      fn metric, set -> absorb(set, metric) end)
+  end
+
+  @spec merge(t, t) :: t
+  def merge(%__MODULE__{} = set1, %__MODULE__{} = set2) do
+    absorb_all(set1, to_list(set2))
   end
 
   # Ditches the key part, and just returns the aggregate metric

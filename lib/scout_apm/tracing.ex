@@ -40,6 +40,29 @@ defmodule ScoutApm.Tracing do
   end
 
   @doc """
+  Instruments a background job
+
+  ## Example Usage:
+
+      defmodule SendEmailJob do
+        import ScoutApm.Tracing
+
+        def perform() do
+          ScoutApm.Tracing.track_job("SendEmail", fn ->
+            # ... your job's work
+          end)
+        end
+      end
+  """
+  @spec track_job(String.t, any, function) :: any
+  def track_job(name, opts \\ [], function) when is_function(function) do
+    TrackedRequest.start_layer("Job", name, opts)
+    result = function.()
+    TrackedRequest.stop_layer()
+    result
+  end
+
+  @doc """
   Updates the description for the code executing within a call to `instrument/3`. The description is displayed
   within a Scout trace in the UI.
 

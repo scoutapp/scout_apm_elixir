@@ -68,6 +68,40 @@ defmodule ScoutApm.MetricSetTest do
     end
   end
 
+  describe "absorb_all" do
+    test "adds to metrics" do
+      set =
+        MetricSet.new
+        |> MetricSet.absorb_all([
+             make_metric("Ecto", "select"),
+             make_metric("Controller", "foo/bar"),
+             make_metric("EEx", "pages/index.html"),
+           ])
+
+      assert 3 == Enum.count(MetricSet.to_list(set))
+    end
+  end
+
+  describe "merge" do
+    test "merges the two sets of metrics" do
+      set1 = MetricSet.new |> MetricSet.absorb_all([
+        make_metric("Ecto", "select"),
+        make_metric("Controller", "foo/bar"),
+        make_metric("EEx", "pages/index.html"),
+      ])
+
+      set2 = MetricSet.new |> MetricSet.absorb_all([
+        make_metric("Ecto", "select"),
+        make_metric("Ecto", "delete"),
+        make_metric("EEx", "pages/layout.html"),
+      ])
+
+      merged = MetricSet.merge(set1, set2)
+
+      assert 5 == Enum.count(MetricSet.to_list(merged))
+    end
+  end
+
   defp make_metric(type, name, timing \\ 7.5) do
     Metric.from_sampler_value(type, name, timing)
   end

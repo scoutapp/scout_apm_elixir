@@ -12,6 +12,6 @@ defmodule ScoutApm.Utils do
 
   def hostname do
     {:ok, name} = :inet.gethostname()
-    name
+    to_string(name)
   end
 end
