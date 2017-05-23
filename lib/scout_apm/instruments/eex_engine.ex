@@ -20,7 +20,8 @@ defmodule ScoutApm.Instruments.EExEngine do
     quoted_template = Phoenix.Template.EExEngine.compile(path, name)
 
     quote do
-      ScoutApm.Tracing.instrument("EEx", unquote(scout_name), [scopable: !unquote(is_layout)], fn -> unquote(quoted_template) end)
+      require ScoutApm.Tracing
+      ScoutApm.Tracing.timing("EEx", unquote(scout_name), [scopable: !unquote(is_layout)], do: unquote(quoted_template))
     end
   end
 end
