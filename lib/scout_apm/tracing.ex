@@ -159,6 +159,10 @@ defmodule ScoutApm.Tracing do
       TrackedRequest.start_layer(unquote(internal_layer_type(type)), unquote(name), unquote(opts))
       try do
         (fn -> unquote(block) end).()
+      rescue
+        e in RuntimeError ->
+          # TODO - Add real error tracking
+          raise e
       after # ensure we record the transaction if it throws an error
         TrackedRequest.stop_layer()
       end
