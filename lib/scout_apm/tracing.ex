@@ -157,9 +157,11 @@ defmodule ScoutApm.Tracing do
   defmacro transaction(type, name, opts \\ [], do: block) do
     quote do
       TrackedRequest.start_layer(unquote(internal_layer_type(type)), unquote(name), unquote(opts))
-      result = (fn -> unquote(block) end).()
-      TrackedRequest.stop_layer()
-      result
+      try do
+        (fn -> unquote(block) end).()
+      after # ensure we record the transaction if it throws an error
+        TrackedRequest.stop_layer()
+      end
     end
   end
 
@@ -185,9 +187,11 @@ defmodule ScoutApm.Tracing do
   defmacro timing(category, name, opts \\ [], do: block) do
     quote do
       TrackedRequest.start_layer(unquote(category), unquote(name), unquote(opts))
-      result = (fn -> unquote(block) end).()
-      TrackedRequest.stop_layer()
-      result
+      try do
+        (fn -> unquote(block) end).()
+      after # ensure we record the metric if the timed block throws an error
+        TrackedRequest.stop_layer()
+      end
     end
   end
 
