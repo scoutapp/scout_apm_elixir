@@ -2,9 +2,7 @@ defmodule ScoutApm.Payload.Jobs do
   @moduledoc """
   """
 
-  alias ScoutApm.MetricSet
   alias ScoutApm.Internal.JobRecord
-  alias ScoutApm.Internal.Duration
 
   @spec new(list(JobRecord.t)) :: list(map)
   def new(jobs) do
