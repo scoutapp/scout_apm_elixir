@@ -159,7 +159,7 @@ defmodule ScoutApm.Store do
     now = if time do
       time
     else
-      NaiveDateTime.utc_now()
+      ScoutApm.Internal.Time.now()
     end
 
     case Enum.find(state.reporting_periods, fn rp -> StoreReportingPeriod.covers?(rp, now) end) do
