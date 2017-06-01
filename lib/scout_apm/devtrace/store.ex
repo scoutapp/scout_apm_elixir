@@ -1,7 +1,6 @@
 defmodule ScoutApm.DevTrace.Store do
   alias ScoutApm.Internal.WebTrace
   alias ScoutApm.Payload.SlowTransaction
-  require Logger
 
   @trace_key :tracked_request
 
@@ -14,7 +13,7 @@ defmodule ScoutApm.DevTrace.Store do
   end
 
   def payload do
-    Map.merge(transaction(),%{metadata: metadata()})
+    Map.merge(transaction(), %{metadata: metadata()})
   end
 
   def transaction do

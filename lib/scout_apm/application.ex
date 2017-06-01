@@ -1,27 +1,23 @@
 defmodule ScoutApm.Application do
-  # See http://elixir-lang.org/docs/stable/elixir/Application.html
-  # for more information on OTP Applications
   @moduledoc false
 
   use Application
 
-  require Logger
-
   def start(_type, _args) do
     import Supervisor.Spec, warn: false
 
-    Logger.info("Starting ScoutAPM")
     children = [
       worker(ScoutApm.Store, []),
-      worker(ScoutApm.Watcher, [ScoutApm.Store], id: :store_watcher),
-
       worker(ScoutApm.Config, []),
-      worker(ScoutApm.Watcher, [ScoutApm.Config], id: :config_watcher),
-
       worker(ScoutApm.PersistentHistogram, []),
-      worker(ScoutApm.Watcher, [ScoutApm.PersistentHistogram], id: :histogram_watcher),
+      worker(ScoutApm.Logger, []),
 
-      worker(ScoutApm.ApplicationLoadNotification, [], [restart: :temporary])
+      worker(ScoutApm.ApplicationLoadNotification, [], [restart: :temporary]),
+
+      worker(ScoutApm.Watcher, [ScoutApm.Store], id: :store_watcher),
+      worker(ScoutApm.Watcher, [ScoutApm.Config], id: :config_watcher),
+      worker(ScoutApm.Watcher, [ScoutApm.PersistentHistogram], id: :histogram_watcher),
+      worker(ScoutApm.Watcher, [ScoutApm.Logger], id: :logger_watcher),
     ]
 
     # Stupidly persistent. Really high max restarts for debugging
@@ -31,6 +27,8 @@ defmodule ScoutApm.Application do
 
     ScoutApm.Watcher.start_link(ScoutApm.Supervisor)
 
+    ScoutApm.Logger.reconfigure_from_config()
+    ScoutApm.Logger.info("ScoutAPM Started")
     {:ok, pid}
   end
 end

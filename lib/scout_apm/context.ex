@@ -6,8 +6,6 @@ defmodule ScoutApm.Context do
   since the correct underlying TrackedRequest is looked up that way.
   """
 
-  require Logger
-
   @doc """
   Returns :ok on success
   Returns {:error, {:arg, reason}} on failure

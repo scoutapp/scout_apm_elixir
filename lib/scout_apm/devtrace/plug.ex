@@ -1,6 +1,5 @@
 defmodule ScoutApm.DevTrace.Plug do
   import Plug.Conn
-  require Logger
 
   # This monkey-patches XMLHttpRequest. It could possibly be part of the main scout_instant.js too. This is placed in the HTML HEAD so it loads as soon as possible.
   xml_http_script_path  = Application.app_dir(:scout_apm, "priv/static/devtrace/xml_http_script.html")
