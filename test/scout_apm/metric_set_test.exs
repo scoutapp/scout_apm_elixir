@@ -55,17 +55,6 @@ defmodule ScoutApm.MetricSetTest do
 
       assert 3 == Enum.count(MetricSet.to_list(set))
     end
-
-    test "logs if skipping metrics due to max_types" do
-      assert capture_log(fn ->
-        MetricSet.new(%{max_types: 3})
-        |> MetricSet.absorb(make_metric("A", "select"))
-        |> MetricSet.absorb(make_metric("B", "select"))
-        |> MetricSet.absorb(make_metric("C", "select"))
-        |> MetricSet.absorb(make_metric("D", "select")) # skipped
-        |> MetricSet.absorb(make_metric("E", "select")) # skipped
-      end) =~ "Skipping absorbing metric"
-    end
   end
 
   describe "absorb_all" do
