@@ -5,7 +5,6 @@ defmodule ScoutApm.Watcher do
   """
 
   use GenServer
-  require Logger
 
   @server __MODULE__
 
@@ -20,12 +19,16 @@ defmodule ScoutApm.Watcher do
 
   def init(mod) do
     Process.monitor(mod)
-    Logger.info("Setup ScoutApm.Watcher on #{inspect mod}")
+    ScoutApm.Logger.info("Setup ScoutApm.Watcher on #{inspect mod}")
     {:ok, :ok}
   end
 
+  # If the logger itself is the one that died on us, we probably will
+  # not log that. Also, I'm not sure of the order of events. Say that
+  # `Store` crashes, both the supervisor and this watcher get notified,
+  # but the supervisor will shut down and restart this process as well.
   def handle_info({:DOWN, _, _, {what, _node}, reason}, state) do
-    Logger.info("ScoutAPM Watcher: #{inspect what} Stopped: #{inspect reason}")
+    ScoutApm.Logger.info("ScoutAPM Watcher: #{inspect what} Stopped: #{inspect reason}")
     {:stop, :normal, state}
   end
 end

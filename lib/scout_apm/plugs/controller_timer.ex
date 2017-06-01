@@ -1,8 +1,6 @@
 defmodule ScoutApm.Plugs.ControllerTimer do
   alias ScoutApm.Internal.Layer
 
-  require Logger
-
   def init(default), do: default
 
   def call(conn, _default) do
@@ -58,7 +56,7 @@ defmodule ScoutApm.Plugs.ControllerTimer do
       ScoutApm.Context.add_user(:ip, remote_ip)
     rescue
       err ->
-        Logger.debug("Failed adding IP context: #{inspect err}")
+        ScoutApm.Logger.debug("Failed adding IP context: #{inspect err}")
     end
   end
 end

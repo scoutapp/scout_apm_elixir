@@ -1,6 +1,5 @@
 defmodule ScoutApm.ApplicationLoadNotification do
   use GenServer
-  require Logger
 
   @name __MODULE__
 
@@ -40,7 +39,7 @@ defmodule ScoutApm.ApplicationLoadNotification do
         {:stop, :normal, state}
       :error ->
         if retries < 1 do
-          Logger.info("Failed to send AppServerLoad, aborting.")
+          ScoutApm.Logger.info("Failed to send AppServerLoad, aborting.")
           {:stop, :normal, state}
         else
           :timer.sleep(@wait_between_retries)
@@ -60,23 +59,23 @@ defmodule ScoutApm.ApplicationLoadNotification do
 
     case {monitor, key} do
       {nil, nil} ->
-        Logger.debug("Skipping AppServerLoad, both monitor and key settings are missing")
+        ScoutApm.Logger.debug("Skipping AppServerLoad, both monitor and key settings are missing")
         :ok
 
       {true, nil} ->
-        Logger.debug("Skipping AppServerLoad, key is nil")
+        ScoutApm.Logger.debug("Skipping AppServerLoad, key is nil")
         :ok
 
       {true, ""} ->
-        Logger.debug("Skipping AppServerLoad, key is empty")
+        ScoutApm.Logger.debug("Skipping AppServerLoad, key is empty")
         :ok
 
       {nil, _} ->
-        Logger.debug("Skipping AppServerLoad, monitor is nil")
+        ScoutApm.Logger.debug("Skipping AppServerLoad, monitor is nil")
         :ok
 
       {false, _} ->
-        Logger.debug("Skipping AppServerLoad, monitor is false")
+        ScoutApm.Logger.debug("Skipping AppServerLoad, monitor is false")
         :ok
 
       _ ->
@@ -97,23 +96,23 @@ defmodule ScoutApm.ApplicationLoadNotification do
 
     case :hackney.request(method, url, header_list , encoded_payload, options) do
       {:ok, status_code, _resp_headers, _client_ref} when status_code in @success_http_codes ->
-        Logger.info("AppServerLoad Report Succeeded. Status: #{inspect status_code}")
+        ScoutApm.Logger.info("AppServerLoad Report Succeeded. Status: #{inspect status_code}")
         :ok
 
       {:ok, status_code, resp_headers, _client_ref} when status_code in @error_http_codes ->
-        Logger.info("AppServerLoad Report Failed with #{status_code}. Response Headers: #{inspect resp_headers}")
+        ScoutApm.Logger.info("AppServerLoad Report Failed with #{status_code}. Response Headers: #{inspect resp_headers}")
         :error
 
       {:ok, status_code, _resp_headers, _client_ref} ->
-        Logger.info("AppServerLoad Report Unexpected Status: #{inspect status_code}")
+        ScoutApm.Logger.info("AppServerLoad Report Unexpected Status: #{inspect status_code}")
         :error
 
       {:error, ereason} ->
-        Logger.info("AppServerLoad Report Failed: Hackney Error: #{inspect ereason}")
+        ScoutApm.Logger.info("AppServerLoad Report Failed: Hackney Error: #{inspect ereason}")
         :error
 
       r ->
-        Logger.info("AppServerLoad Report Failed: Unknown Hackney Error: #{inspect r}")
+        ScoutApm.Logger.info("AppServerLoad Report Failed: Unknown Hackney Error: #{inspect r}")
         :error
     end
   end

@@ -1,6 +1,4 @@
 defmodule ScoutApm.Internal.JobTrace do
-  require Logger
-
   alias ScoutApm.Internal.Context
   alias ScoutApm.Internal.Duration
   alias ScoutApm.Internal.Metric
@@ -151,7 +149,7 @@ defmodule ScoutApm.Internal.JobTrace do
     else
       # If we failed to lookup the percentile, just give back a 0 score.
       err ->
-        Logger.debug("Failed to get percentile_score, error: #{err}")
+        ScoutApm.Logger.debug("Failed to get percentile_score, error: #{err}")
         0
     end
   end

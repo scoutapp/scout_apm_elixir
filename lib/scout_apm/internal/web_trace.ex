@@ -3,8 +3,6 @@ defmodule ScoutApm.Internal.WebTrace do
   A record of a single trace.
   """
 
-  require Logger
-
   alias ScoutApm.MetricSet
   alias ScoutApm.Internal.Duration
   alias ScoutApm.Internal.Metric
@@ -154,7 +152,7 @@ defmodule ScoutApm.Internal.WebTrace do
     else
       # If we failed to lookup the percentile, just give back a 0 score.
       err ->
-        Logger.debug("Failed to get percentile_score, error: #{err}")
+        ScoutApm.Logger.debug("Failed to get percentile_score, error: #{err}")
         0
     end
   end

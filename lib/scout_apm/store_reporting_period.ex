@@ -1,6 +1,4 @@
 defmodule ScoutApm.StoreReportingPeriod do
-  require Logger
-
   alias ScoutApm.Internal.Duration
   alias ScoutApm.Internal.WebTrace
   alias ScoutApm.Internal.JobRecord
@@ -125,17 +123,17 @@ defmodule ScoutApm.StoreReportingPeriod do
         ScoredItemSet.to_list(state.job_traces, :without_scores)
       )
 
-      Logger.debug("Reporting: Payload created with data from #{ScoutApm.Payload.total_call_count(payload)} requests.")
-      Logger.debug("Payload #{inspect payload}")
+      ScoutApm.Logger.debug("Reporting: Payload created with data from #{ScoutApm.Payload.total_call_count(payload)} requests.")
+      ScoutApm.Logger.debug("Payload #{inspect payload}")
 
       encoded = ScoutApm.Payload.encode(payload)
 
-      Logger.debug("Encoded Payload: #{inspect encoded}")
+      ScoutApm.Logger.debug("Encoded Payload: #{inspect encoded}")
 
       ScoutApm.Reporter.report(encoded)
     rescue
-      e in RuntimeError -> Logger.info("Reporting runtime error: #{inspect e}")
-      e -> Logger.info("Reporting other error: #{inspect e}")
+      e in RuntimeError -> ScoutApm.Logger.info("Reporting runtime error: #{inspect e}")
+      e -> ScoutApm.Logger.info("Reporting other error: #{inspect e}")
     end
   end
 

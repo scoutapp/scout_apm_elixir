@@ -10,8 +10,6 @@ defmodule ScoutApm.Config do
 
   use GenServer
 
-  require Logger
-
   alias ScoutApm.Config.Coercions
 
   @name __MODULE__
@@ -46,7 +44,7 @@ defmodule ScoutApm.Config do
           {:ok, c} ->
             {:halt, c}
           :error ->
-            Logger.info("Coercion of configuration #{key} failed. Ignoring")
+            ScoutApm.Logger.info("Coercion of configuration #{key} failed. Ignoring")
             {:cont, nil}
         end
       else

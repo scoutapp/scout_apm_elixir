@@ -20,7 +20,6 @@ defmodule ScoutApm.TrackedRequest do
   """
 
   alias ScoutApm.Internal.Layer
-  require Logger
 
   defstruct [:root_layer, :layers, :children, :contexts, :collector_fn]
 
