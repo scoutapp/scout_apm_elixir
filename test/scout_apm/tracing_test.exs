@@ -52,8 +52,19 @@ defmodule ScoutApm.TracingTest do
         def bar(2) do
           2
         end
+
+        @transaction(type: "background", name: "XXX")
+        def bar(x) do
+          x
+        end
       end
       """)
+
+      assert [
+        {:transaction, :bar, [1]},
+        {:transaction, :bar, [2]},
+        {:transaction, :bar, [{:x, _, _}]}
+      ] = TracingAnnotationTestModule.__info__(:attributes)[:scout_instrumented]
     end
   end
 
@@ -101,8 +112,19 @@ defmodule ScoutApm.TracingTest do
         def bar(2) do
           2
         end
+
+        @timing(category: "Test", name: "barXXX")
+        def bar(x) do
+          x
+        end
       end
       """)
+
+      assert [
+        {:timing, :bar, [1]},
+        {:timing, :bar, [2]},
+        {:timing, :bar, [{:x, _, _}]}
+      ] = TracingAnnotationTestModule.__info__(:attributes)[:scout_instrumented]
     end
   end
 end

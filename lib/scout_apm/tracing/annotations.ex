@@ -43,7 +43,6 @@ defmodule ScoutApm.Tracing.Annotations do
                               name: transaction_info[:name]
                              )
                           )
-
       Module.delete_attribute(mod, :transaction)
     end
   end
@@ -82,6 +81,11 @@ defmodule ScoutApm.Tracing.Annotations do
           Module.make_overridable(mod, [override])
         end
 
+        # Records the fact we overrode this
+        attrs = Module.get_attribute(mod, :scout_instrumented) || []
+        new_attrs = [{:transaction, transaction_data.function_name, transaction_data.args}] ++ Enum.reverse(attrs)
+        Module.put_attribute(mod, :scout_instrumented, Enum.reverse(new_attrs))
+
         body = build_transaction_body(transaction_data)
         if length(transaction_data.guards) > 0 do
           quote do
@@ -119,6 +123,12 @@ defmodule ScoutApm.Tracing.Annotations do
           if !Module.overridable?(mod, override) do
             Module.make_overridable(mod, [override])
           end
+
+          # Records the fact we overrode this
+          attrs = Module.get_attribute(mod, :scout_instrumented) || []
+          new_attrs = [{:timing, timing_data.function_name, timing_data.args}] ++ Enum.reverse(attrs)
+          Module.put_attribute(mod, :scout_instrumented, Enum.reverse(new_attrs))
+
 
           body = build_timing_body(timing_data)
           if length(timing_data.guards) > 0 do
