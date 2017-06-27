@@ -72,28 +72,32 @@ defmodule ScoutApm.Tracing.Annotations do
   ### Transaction Instrumentation ###
 
   defp instrument_transactions(mod) do
-    Module.get_attribute(mod, :scout_transactions)
-      |> Enum.reverse
-      |> Enum.map(
-        fn(%ScoutApm.Tracing.Annotations.Transaction{} = transaction_data) ->
-          Module.make_overridable(mod,[{transaction_data.function_name, length(transaction_data.args)}])
+    mod
+    |> Module.get_attribute(:scout_transactions)
+    |> Enum.reverse
+    |> Enum.map(
+      fn(%ScoutApm.Tracing.Annotations.Transaction{} = transaction_data) ->
+        override = {transaction_data.function_name, length(transaction_data.args)}
+        if !Module.overridable?(mod, override) do
+          Module.make_overridable(mod, [override])
+        end
 
-          body = build_transaction_body(transaction_data)
-          if length(transaction_data.guards) > 0 do
-            quote do
-              def unquote(transaction_data.function_name)(unquote_splicing(transaction_data.args)) when unquote_splicing(transaction_data.guards) do
-                unquote(body)
-              end
-            end
-          else
-            quote do
-              def unquote(transaction_data.function_name)(unquote_splicing(transaction_data.args))  do
-                unquote(body)
-              end
+        body = build_transaction_body(transaction_data)
+        if length(transaction_data.guards) > 0 do
+          quote do
+            def unquote(transaction_data.function_name)(unquote_splicing(transaction_data.args)) when unquote_splicing(transaction_data.guards) do
+              unquote(body)
             end
           end
+        else
+          quote do
+            def unquote(transaction_data.function_name)(unquote_splicing(transaction_data.args))  do
+              unquote(body)
+            end
+          end
+        end
 
-        end)
+      end)
   end
 
   defp build_transaction_body(%ScoutApm.Tracing.Annotations.Transaction{} = transaction_data) do
@@ -111,7 +115,10 @@ defmodule ScoutApm.Tracing.Annotations do
       |> Enum.reverse
       |> Enum.map(
         fn(%ScoutApm.Tracing.Annotations.Timing{} = timing_data) ->
-          Module.make_overridable(mod,[{timing_data.function_name, length(timing_data.args)}])
+          override = {timing_data.function_name, length(timing_data.args)}
+          if !Module.overridable?(mod, override) do
+            Module.make_overridable(mod, [override])
+          end
 
           body = build_timing_body(timing_data)
           if length(timing_data.guards) > 0 do
