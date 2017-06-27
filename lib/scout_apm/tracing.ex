@@ -122,6 +122,8 @@ defmodule ScoutApm.Tracing do
       # See `ScoutApm.Tracing.Annotations`.
       Module.register_attribute(__MODULE__, :scout_transactions, accumulate: true)
       Module.register_attribute(__MODULE__, :scout_timings, accumulate: true)
+      Module.register_attribute(__MODULE__, :scout_instrumented, accumulate: false, persist: true)
+
       @on_definition {ScoutApm.Tracing.Annotations, :on_definition}
       @before_compile {ScoutApm.Tracing.Annotations, :before_compile}
     end
