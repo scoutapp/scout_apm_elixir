@@ -29,3 +29,7 @@ config :scout_apm,
 ```
 3. Restart your app.
 4. Refresh your browser window and look for the speed badge.
+
+## Instrumentation
+
+See [our docs](http://help.apm.scoutapp.com/#elixir-instrumented-libaries) for information on libraries we auto-instrument (like Phoenix controller-actions) and guides for instrumenting Phoenix channels, Task, HTTPoison, GenServer, and more.
