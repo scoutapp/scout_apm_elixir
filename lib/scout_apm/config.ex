@@ -11,6 +11,7 @@ defmodule ScoutApm.Config do
   use GenServer
 
   alias ScoutApm.Config.Coercions
+  alias ScoutApm.Config.Env
 
   @name __MODULE__
 
@@ -39,7 +40,7 @@ defmodule ScoutApm.Config do
   def handle_call({:find, key}, _from, state) do
     val = Enum.reduce_while(state, nil, fn {mod, data}, _acc ->
       if mod.contains?(data, key) do
-        raw = mod.lookup(data, key)
+        raw = Env.parse(mod.lookup(data, key))
         case coercion(key).(raw) do
           {:ok, c} ->
             {:halt, c}
@@ -66,4 +67,3 @@ defmodule ScoutApm.Config do
   defp coercion(:monitor), do: &Coercions.boolean/1
   defp coercion(_), do: fn x -> {:ok, x} end
 end
-
