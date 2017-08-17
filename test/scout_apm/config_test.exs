@@ -9,13 +9,20 @@ defmodule ScoutApm.ConfigTest do
     assert key == "abc123"
   end
 
-  test "find/1 with ENV variable" do
-    System.put_env("SCOUT_API_KEY", "xyz123")
-    Mix.Config.persist(scout_apm: [key: {:system, "SCOUT_API_KEY"}])
+  test "find/1 with application defined ENV variable" do
+    System.put_env("APM_API_KEY", "xyz123")
+    Mix.Config.persist(scout_apm: [key: {:system, "APM_API_KEY"}])
 
     key = ScoutApm.Config.find(:key)
-    System.delete_env("SCOUT_API_KEY")
+    System.delete_env("APM_API_KEY")
 
     assert key == "xyz123"
+  end
+
+  test "find/1 with SCOUT_* ENV variables" do
+    System.put_env("SCOUT_KEY", "zxc")
+    key = ScoutApm.Config.find(:key)
+    assert key == "zxc"
+    System.delete_env("SCOUT_KEY")
   end
 end
