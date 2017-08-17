@@ -28,6 +28,7 @@ defmodule ScoutApm.Config do
 
   def init(:ok) do
     initial_state = [
+      {ScoutApm.Config.Env, ScoutApm.Config.Env.load()},
       {ScoutApm.Config.Application, ScoutApm.Config.Application.load()},
       {ScoutApm.Config.Defaults, ScoutApm.Config.Defaults.load()},
       {ScoutApm.Config.Null, ScoutApm.Config.Null.load()},
@@ -66,4 +67,3 @@ defmodule ScoutApm.Config do
   defp coercion(:monitor), do: &Coercions.boolean/1
   defp coercion(_), do: fn x -> {:ok, x} end
 end
-
