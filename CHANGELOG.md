@@ -1,3 +1,7 @@
+# 0.3.3
+
+* Fix bug serializing histograms in certain cases
+
 # 0.3.0
 
 * Added ability to instrument background job transactions
