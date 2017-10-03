@@ -30,8 +30,13 @@ defmodule ScoutApm.Payload.NewMetrics do
              min_call_time: Duration.as(metric.min_time, :seconds),
              max_call_time: Duration.as(metric.max_time, :seconds),
 
-             total_histogram: [Duration.as(metric.total_time, :seconds)/ metric.call_count, metric.call_count],
-             exclusive_histogram: [Duration.as(metric.exclusive_time, :seconds) / metric.call_count, metric.call_count],
+             total_histogram: [
+               [ Duration.as(metric.total_time, :seconds)/ metric.call_count, metric.call_count ]
+             ],
+
+             exclusive_histogram: [
+               [ Duration.as(metric.exclusive_time, :seconds) / metric.call_count, metric.call_count ]
+             ],
 
              detail: %{
                desc: metric.desc,
