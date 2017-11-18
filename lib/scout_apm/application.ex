@@ -5,6 +5,7 @@ defmodule ScoutApm.Application do
 
   def start(_type, _args) do
     import Supervisor.Spec, warn: false
+    DeferredConfig.populate(:scout_apm)
 
     children = [
       worker(ScoutApm.Store, []),

@@ -40,6 +40,8 @@ defmodule ScoutApm.Mixfile do
 
       {:approximate_histogram, "~>0.1.1"},
 
+      {:deferred_config, "~> 0.1.1"},
+
       #########################
       # Dev & Testing Deps
 
