@@ -48,6 +48,16 @@ defmodule ScoutApm.TrackedRequest do
     stop_layer(tr, fn x -> x end)
   end
 
+  def stop_layer(%__MODULE__{layers: []} = tracked_request, callback) when is_function(callback) do
+    ScoutApm.Logger.warn("Scout Layer mismatch when stopping layer in #{inspect(tracked_request)}")
+    :error
+  end
+
+  def stop_layer(%__MODULE__{children: []} = tracked_request, callback) when is_function(callback) do
+    ScoutApm.Logger.warn("Scout Layer mismatch when stopping layer in #{inspect(tracked_request)}")
+    :error
+  end
+
   def stop_layer(%__MODULE__{} = tr, callback) when is_function(callback) do
     {popped_layer, tr1} = pop_layer(tr)
 

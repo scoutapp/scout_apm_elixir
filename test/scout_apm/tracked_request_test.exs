@@ -1,5 +1,6 @@
 defmodule ScoutApm.TrackedRequestTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
+  import ExUnit.CaptureLog
   alias ScoutApm.TrackedRequest
 
   describe "new/0" do
@@ -75,5 +76,15 @@ defmodule ScoutApm.TrackedRequestTest do
   test "Starting a layer w/o an explicit record saves it in the process dictionary" do
     TrackedRequest.start_layer("foo", "bar")
     assert ScoutApm.TrackedRequest == Process.get(:scout_apm_request).__struct__
+  end
+
+  test "Correctly discards and logs warning when layer is not stopped" do
+    pid = self()
+    assert capture_log(fn ->
+    TrackedRequest.new(fn r -> send(pid, {:complete, r}) end)
+    |> TrackedRequest.start_layer("foo", "bar", [])
+    |> TrackedRequest.stop_layer()
+    |> TrackedRequest.stop_layer()
+    end) =~ "Scout Layer mismatch"
   end
 end
