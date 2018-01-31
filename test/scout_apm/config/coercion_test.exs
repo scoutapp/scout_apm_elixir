@@ -20,4 +20,11 @@ defmodule ScoutApm.Config.CoercionsTest do
     assert :error = Coercions.boolean("anything else")
     assert :error = Coercions.boolean(20)
   end
+
+  test "json/1" do
+    assert {:ok, ["list", "list"]} = Coercions.json(~s/["list", "list"]/)
+    assert {:ok, %{"key" => "value"}} = Coercions.json(~s/{"key": "value"}/)
+    assert :error = Coercions.json(1)
+    assert :error = Coercions.json("notjson")
+  end
 end
