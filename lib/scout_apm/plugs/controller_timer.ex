@@ -4,10 +4,14 @@ defmodule ScoutApm.Plugs.ControllerTimer do
   def init(default), do: default
 
   def call(conn, _default) do
-    ScoutApm.TrackedRequest.start_layer("Controller", action_name(conn))
+    if !ignore_uri?(conn.request_path) do
+      ScoutApm.TrackedRequest.start_layer("Controller", action_name(conn))
 
-    conn
-    |> Plug.Conn.register_before_send(&before_send/1)
+      conn
+      |> Plug.Conn.register_before_send(&before_send/1)
+    else
+      conn
+    end
   end
 
   def before_send(conn) do
@@ -25,6 +29,14 @@ defmodule ScoutApm.Plugs.ControllerTimer do
     )
 
     conn
+  end
+
+  @spec ignore_uri?(String.t()) :: boolean()
+  def ignore_uri?(uri) do
+    ScoutApm.Config.find(:ignore)
+    |> Enum.any?(fn(prefix) ->
+      String.starts_with?(uri, prefix)
+    end)
   end
 
   # Takes a connection, extracts the phoenix controller & action, then manipulates & cleans it up.

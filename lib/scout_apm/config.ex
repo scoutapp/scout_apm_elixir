@@ -65,5 +65,6 @@ defmodule ScoutApm.Config do
   end
 
   defp coercion(:monitor), do: &Coercions.boolean/1
+  defp coercion(:ignore), do: &Coercions.json/1
   defp coercion(_), do: fn x -> {:ok, x} end
 end
