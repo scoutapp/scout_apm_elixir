@@ -40,8 +40,9 @@ defmodule ScoutApm.Logger do
   def log(level, chardata_or_fun, metadata \\ []) when level in @valid_levels do
     log_level = ScoutApm.Config.find(:log_level) || @default_level
     enabled = ScoutApm.Config.find(:monitor)
+    key = ScoutApm.Config.find(:key)
 
-    with {:ok, levels} <- enabled && Map.fetch(@log_levels, level),
+    with {:ok, levels} <- enabled && key && Map.fetch(@log_levels, level),
          true <- log_level in levels
     do
       Logger.log(level, chardata_or_fun, metadata)

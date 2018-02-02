@@ -57,4 +57,14 @@ defmodule ScoutApm.LoggerTest do
     Application.delete_env(:scout_apm, :log_level)
     Application.delete_env(:scout_apm, :key)
   end
+
+  test "never logs if key is not configured" do
+    Mix.Config.persist(scout_apm: [monitor: true, key: nil, log_level: :debug])
+    assert capture_log(fn ->
+      ScoutApm.Logger.log(:error, "Log")
+    end) == ""
+
+    Application.delete_env(:scout_apm, :monitor)
+    Application.delete_env(:scout_apm, :log_level)
+  end
 end
