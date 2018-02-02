@@ -123,17 +123,17 @@ defmodule ScoutApm.StoreReportingPeriod do
         ScoredItemSet.to_list(state.job_traces, :without_scores)
       )
 
-      ScoutApm.Logger.debug("Reporting: Payload created with data from #{ScoutApm.Payload.total_call_count(payload)} requests.")
-      ScoutApm.Logger.debug("Payload #{inspect payload}")
+      ScoutApm.Logger.log(:debug, "Reporting: Payload created with data from #{ScoutApm.Payload.total_call_count(payload)} requests.")
+      ScoutApm.Logger.log(:debug, "Payload #{inspect payload}")
 
       encoded = ScoutApm.Payload.encode(payload)
 
-      ScoutApm.Logger.debug("Encoded Payload: #{inspect encoded}")
+      ScoutApm.Logger.log(:debug, "Encoded Payload: #{inspect encoded}")
 
       ScoutApm.Reporter.report(encoded)
     rescue
-      e in RuntimeError -> ScoutApm.Logger.info("Reporting runtime error: #{inspect e}")
-      e -> ScoutApm.Logger.info("Reporting other error: #{inspect e}")
+      e in RuntimeError -> ScoutApm.Logger.log(:info, "Reporting runtime error: #{inspect e}")
+      e -> ScoutApm.Logger.log(:info, "Reporting other error: #{inspect e}")
     end
   end
 

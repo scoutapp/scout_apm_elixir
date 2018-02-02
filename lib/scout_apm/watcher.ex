@@ -19,7 +19,7 @@ defmodule ScoutApm.Watcher do
 
   def init(mod) do
     Process.monitor(mod)
-    ScoutApm.Logger.info("Setup ScoutApm.Watcher on #{inspect mod}")
+    ScoutApm.Logger.log(:info, "Setup ScoutApm.Watcher on #{inspect mod}")
     {:ok, :ok}
   end
 
@@ -28,7 +28,7 @@ defmodule ScoutApm.Watcher do
   # `Store` crashes, both the supervisor and this watcher get notified,
   # but the supervisor will shut down and restart this process as well.
   def handle_info({:DOWN, _, _, {what, _node}, reason}, state) do
-    ScoutApm.Logger.info("ScoutAPM Watcher: #{inspect what} Stopped: #{inspect reason}")
+    ScoutApm.Logger.log(:info, "ScoutAPM Watcher: #{inspect what} Stopped: #{inspect reason}")
     {:stop, :normal, state}
   end
 end

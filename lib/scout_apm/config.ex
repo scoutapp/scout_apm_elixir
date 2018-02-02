@@ -45,7 +45,7 @@ defmodule ScoutApm.Config do
           {:ok, c} ->
             {:halt, c}
           :error ->
-            ScoutApm.Logger.info("Coercion of configuration #{key} failed. Ignoring")
+            ScoutApm.Logger.log(:info, "Coercion of configuration #{key} failed. Ignoring")
             {:cont, nil}
         end
       else

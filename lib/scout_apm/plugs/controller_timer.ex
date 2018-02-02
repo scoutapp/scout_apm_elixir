@@ -56,7 +56,7 @@ defmodule ScoutApm.Plugs.ControllerTimer do
       ScoutApm.Context.add_user(:ip, remote_ip)
     rescue
       err ->
-        ScoutApm.Logger.debug("Failed adding IP context: #{inspect err}")
+        ScoutApm.Logger.log(:debug, "Failed adding IP context: #{inspect err}")
     end
   end
 end

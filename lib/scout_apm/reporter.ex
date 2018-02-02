@@ -8,23 +8,23 @@ defmodule ScoutApm.Reporter do
 
     case {monitor, key} do
       {nil, nil} ->
-        ScoutApm.Logger.debug("Skipping Reporting, both monitor and key settings are missing")
+        ScoutApm.Logger.log(:debug, "Skipping Reporting, both monitor and key settings are missing")
         :ok
 
       {true, nil} ->
-        ScoutApm.Logger.debug("Skipping Reporting, key is nil")
+        ScoutApm.Logger.log(:debug, "Skipping Reporting, key is nil")
         :ok
 
       {true, ""} ->
-        ScoutApm.Logger.debug("Skipping Reporting, key is empty")
+        ScoutApm.Logger.log(:debug, "Skipping Reporting, key is empty")
         :ok
 
       {nil, _} ->
-        ScoutApm.Logger.debug("Skipping Reporting, monitor is nil")
+        ScoutApm.Logger.log(:debug, "Skipping Reporting, monitor is nil")
         :ok
 
       {false, _} ->
-        ScoutApm.Logger.debug("Skipping Reporting, monitor is false")
+        ScoutApm.Logger.log(:debug, "Skipping Reporting, monitor is false")
         :ok
 
       _ ->
@@ -47,27 +47,27 @@ defmodule ScoutApm.Reporter do
 
     header_list = headers()
 
-    ScoutApm.Logger.debug("Reporting ScoutAPM Payload to #{url}")
-    ScoutApm.Logger.debug("Payload Size. JSON: #{inspect :erlang.iolist_size(encoded_payload)}, Gzipped: #{inspect :erlang.iolist_size(gzipped_payload)}")
-    # ScoutApm.Logger.debug("JSON Payload: #{inspect encoded_payload}")
-    # ScoutApm.Logger.debug("Headers: #{inspect header_list}")
+    ScoutApm.Logger.log(:debug, "Reporting ScoutAPM Payload to #{url}")
+    ScoutApm.Logger.log(:debug, "Payload Size. JSON: #{inspect :erlang.iolist_size(encoded_payload)}, Gzipped: #{inspect :erlang.iolist_size(gzipped_payload)}")
+    # ScoutApm.Logger.log(:debug, "JSON Payload: #{inspect encoded_payload}")
+    # ScoutApm.Logger.log(:debug, "Headers: #{inspect header_list}")
 
     case :hackney.request(method, url, header_list , gzipped_payload, options) do
 
       {:ok, status_code, resp_headers, _client_ref} when status_code in @error_http_codes ->
-        ScoutApm.Logger.info("Reporting ScoutAPM Payload Failed with #{status_code}. Response Headers: #{inspect resp_headers}")
+        ScoutApm.Logger.log(:info, "Reporting ScoutAPM Payload Failed with #{status_code}. Response Headers: #{inspect resp_headers}")
 
       {:ok, status_code, _resp_headers, _client_ref} when status_code in @success_http_codes ->
-        ScoutApm.Logger.debug("Reporting ScoutAPM Payload Succeeded. Status: #{inspect status_code}")
+        ScoutApm.Logger.log(:debug, "Reporting ScoutAPM Payload Succeeded. Status: #{inspect status_code}")
 
       {:ok, status_code, _resp_headers, _client_ref} ->
-        ScoutApm.Logger.info("Reporting ScoutAPM Payload Unexpected Status: #{inspect status_code}")
+        ScoutApm.Logger.log(:info, "Reporting ScoutAPM Payload Unexpected Status: #{inspect status_code}")
 
       {:error, ereason} ->
-        ScoutApm.Logger.info("Reporting ScoutAPM Payload Failed: Hackney Error: #{inspect ereason}")
+        ScoutApm.Logger.log(:info, "Reporting ScoutAPM Payload Failed: Hackney Error: #{inspect ereason}")
 
       r ->
-        ScoutApm.Logger.info("Reporting ScoutAPM Payload Failed: Unknown Hackney Error: #{inspect r}")
+        ScoutApm.Logger.log(:info, "Reporting ScoutAPM Payload Failed: Unknown Hackney Error: #{inspect r}")
     end
 
     :ok
