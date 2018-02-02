@@ -1,6 +1,5 @@
 defmodule ScoutApm.MetricSetTest do
   use ExUnit.Case, async: true
-  import ExUnit.CaptureLog
 
   alias ScoutApm.MetricSet
   alias ScoutApm.Internal.Metric
