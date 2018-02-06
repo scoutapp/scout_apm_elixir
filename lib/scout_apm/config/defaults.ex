@@ -4,7 +4,8 @@ defmodule ScoutApm.Config.Defaults do
       host: "https://checkin.scoutapp.com",
       direct_host: "https://apm.scoutapp.com",
       dev_trace: false,
-      monitor: true
+      monitor: true,
+      ignore: []
     }
   end
 
