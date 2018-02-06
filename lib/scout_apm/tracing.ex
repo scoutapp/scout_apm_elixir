@@ -133,7 +133,7 @@ defmodule ScoutApm.Tracing do
   # Deprecated!
   @spec instrument(String.t, String.t, any, function) :: any
   def instrument(type, name, opts \\ [], function) when is_function(function) do
-    ScoutApm.Logger.warn("#{__MODULE__}.instrument/4 is deprecated, use #{__MODULE__}.timing/4 instead")
+    ScoutApm.Logger.log(:warn, "#{__MODULE__}.instrument/4 is deprecated, use #{__MODULE__}.timing/4 instead")
     TrackedRequest.start_layer(type, name, opts)
     result = function.()
     TrackedRequest.stop_layer()

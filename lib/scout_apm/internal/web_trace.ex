@@ -152,7 +152,7 @@ defmodule ScoutApm.Internal.WebTrace do
     else
       # If we failed to lookup the percentile, just give back a 0 score.
       err ->
-        ScoutApm.Logger.debug("Failed to get percentile_score, error: #{err}")
+        ScoutApm.Logger.log(:debug, "Failed to get percentile_score, error: #{err}")
         0
     end
   end

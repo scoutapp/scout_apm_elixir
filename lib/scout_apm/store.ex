@@ -28,7 +28,7 @@ defmodule ScoutApm.Store do
 
   def record_web_metric(%Metric{} = metric) do
     case Process.whereis(__MODULE__) do
-      nil -> ScoutApm.Logger.info("Couldn't find ScoutAPM Store Process. :scout_apm application is likely not started.")
+      nil -> ScoutApm.Logger.log(:info, "Couldn't find ScoutAPM Store Process. :scout_apm application is likely not started.")
       pid ->
         GenServer.cast(pid, {:record_web_metric, metric})
     end
@@ -36,7 +36,7 @@ defmodule ScoutApm.Store do
 
   def record_web_trace(%WebTrace{} = trace) do
     case Process.whereis(__MODULE__) do
-      nil -> ScoutApm.Logger.info("Couldn't find ScoutAPM Store Process. :scout_apm application is likely not started.")
+      nil -> ScoutApm.Logger.log(:info, "Couldn't find ScoutAPM Store Process. :scout_apm application is likely not started.")
       pid ->
         GenServer.cast(pid, {:record_web_trace, trace})
     end
@@ -44,7 +44,7 @@ defmodule ScoutApm.Store do
 
   def record_job_record(%JobRecord{} = job_record) do
     case Process.whereis(__MODULE__) do
-      nil -> ScoutApm.Logger.info("Couldn't find ScoutAPM Store Process. :scout_apm application is likely not started.")
+      nil -> ScoutApm.Logger.log(:info, "Couldn't find ScoutAPM Store Process. :scout_apm application is likely not started.")
       pid ->
         GenServer.cast(pid, {:record_job_record, job_record})
     end
@@ -52,7 +52,7 @@ defmodule ScoutApm.Store do
 
   def record_job_trace(%JobTrace{} = job_trace) do
     case Process.whereis(__MODULE__) do
-      nil -> ScoutApm.Logger.info("Couldn't find ScoutAPM Store Process. :scout_apm application is likely not started.")
+      nil -> ScoutApm.Logger.log(:info, "Couldn't find ScoutAPM Store Process. :scout_apm application is likely not started.")
       pid ->
         GenServer.cast(pid, {:record_job_trace, job_trace})
     end
@@ -61,7 +61,7 @@ defmodule ScoutApm.Store do
 
   def record_per_minute_histogram(key, duration) do
     case Process.whereis(__MODULE__) do
-      nil -> ScoutApm.Logger.info("Couldn't find worker!?")
+      nil -> ScoutApm.Logger.log(:info, "Couldn't find worker!?")
       pid ->
         GenServer.cast(pid, {:record_per_minute_histogram, key, duration})
     end
@@ -142,7 +142,7 @@ defmodule ScoutApm.Store do
 
   # Runs samplers, which should run once per-minute just before reporting.
   defp capture_samplers(reporting_period) do
-    ScoutApm.Logger.debug("Capturing samplers")
+    ScoutApm.Logger.log(:debug, "Capturing samplers")
     Enum.each([ScoutApm.Instruments.Samplers.Memory], fn sampler ->
       sampler.metrics |> Enum.each(fn metric ->
         StoreReportingPeriod.record_sampler_metric(reporting_period, metric)

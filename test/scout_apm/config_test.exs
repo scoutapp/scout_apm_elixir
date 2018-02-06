@@ -1,5 +1,5 @@
 defmodule ScoutApm.ConfigTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   test "find/1 with plain value" do
     Mix.Config.persist(scout_apm: [key: "abc123"])
@@ -7,6 +7,7 @@ defmodule ScoutApm.ConfigTest do
     key = ScoutApm.Config.find(:key)
 
     assert key == "abc123"
+    Application.delete_env(:scout_apm, :key)
   end
 
   test "find/1 with application defined ENV variable" do
