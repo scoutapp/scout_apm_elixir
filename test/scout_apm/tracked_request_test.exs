@@ -79,12 +79,16 @@ defmodule ScoutApm.TrackedRequestTest do
   end
 
   test "Correctly discards and logs warning when layer is not stopped" do
+    Mix.Config.persist(scout_apm: [monitor: true, key: "abc123"])
     pid = self()
     assert capture_log(fn ->
-    TrackedRequest.new(fn r -> send(pid, {:complete, r}) end)
-    |> TrackedRequest.start_layer("foo", "bar", [])
-    |> TrackedRequest.stop_layer()
-    |> TrackedRequest.stop_layer()
+      TrackedRequest.new(fn r -> send(pid, {:complete, r}) end)
+      |> TrackedRequest.start_layer("foo", "bar", [])
+      |> TrackedRequest.stop_layer()
+      |> TrackedRequest.stop_layer()
     end) =~ "Scout Layer mismatch"
+
+    Application.delete_env(:scout_apm, :monitor)
+    Application.delete_env(:scout_apm, :key)
   end
 end
