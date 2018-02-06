@@ -8,37 +8,17 @@ defmodule ScoutApm.Config do
   an always-nil at the end of the chain.
   """
 
-  use GenServer
-
   alias ScoutApm.Config.Coercions
 
-  @name __MODULE__
-
-  ## Client API
-
-  def start_link do
-    GenServer.start_link(@name, :ok, [name: @name])
-  end
+  @config_modules [
+    {ScoutApm.Config.Env, ScoutApm.Config.Env.load()},
+    {ScoutApm.Config.Application, ScoutApm.Config.Application.load()},
+    {ScoutApm.Config.Defaults, ScoutApm.Config.Defaults.load()},
+    {ScoutApm.Config.Null, ScoutApm.Config.Null.load()},
+  ]
 
   def find(key) do
-    GenServer.call(@name, {:find, key})
-  end
-
-  ## Server Callbacks
-
-  def init(:ok) do
-    initial_state = [
-      {ScoutApm.Config.Env, ScoutApm.Config.Env.load()},
-      {ScoutApm.Config.Application, ScoutApm.Config.Application.load()},
-      {ScoutApm.Config.Defaults, ScoutApm.Config.Defaults.load()},
-      {ScoutApm.Config.Null, ScoutApm.Config.Null.load()},
-    ]
-
-    {:ok, initial_state}
-  end
-
-  def handle_call({:find, key}, _from, state) do
-    val = Enum.reduce_while(state, nil, fn {mod, data}, _acc ->
+    Enum.reduce_while(@config_modules, nil, fn {mod, data}, _acc ->
       if mod.contains?(data, key) do
         raw = mod.lookup(data, key)
         case coercion(key).(raw) do
@@ -48,20 +28,10 @@ defmodule ScoutApm.Config do
             ScoutApm.Logger.log(:info, "Coercion of configuration #{key} failed. Ignoring")
             {:cont, nil}
         end
-      else
-        {:cont, nil}
+    else
+      {:cont, nil}
       end
     end)
-
-    {:reply, val, state}
-  end
-
-  def handle_cast({}, state) do
-    {:noreply, state}
-  end
-
-  def handle_info(_msg, state) do
-    {:noreply, state}
   end
 
   defp coercion(:monitor), do: &Coercions.boolean/1
