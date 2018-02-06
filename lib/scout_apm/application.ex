@@ -8,13 +8,11 @@ defmodule ScoutApm.Application do
 
     children = [
       worker(ScoutApm.Store, []),
-      worker(ScoutApm.Config, []),
       worker(ScoutApm.PersistentHistogram, []),
 
       worker(ScoutApm.ApplicationLoadNotification, [], [restart: :temporary]),
 
       worker(ScoutApm.Watcher, [ScoutApm.Store], id: :store_watcher),
-      worker(ScoutApm.Watcher, [ScoutApm.Config], id: :config_watcher),
       worker(ScoutApm.Watcher, [ScoutApm.PersistentHistogram], id: :histogram_watcher),
     ]
 
