@@ -1,3 +1,15 @@
 language: elixir
-elixir: ['1.4.5', '1.5.2', '1.6.1']
-otp_release: ['19.0', '20.2']
+elixir:
+  - 1.4
+  - 1.5
+  - 1.6
+otp_release:
+  - 18.3
+  - 19.3
+  - 20.2
+matrix:
+  exclude:
+    - elixir: 1.6
+      otp_release: 18.3
+script:
+  - mix test
