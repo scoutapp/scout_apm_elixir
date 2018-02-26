@@ -83,8 +83,6 @@ defmodule ScoutApm.TrackedRequestTest do
     pid = self()
     assert capture_log(fn ->
       TrackedRequest.new(fn r -> send(pid, {:complete, r}) end)
-      |> TrackedRequest.start_layer("foo", "bar", [])
-      |> TrackedRequest.stop_layer()
       |> TrackedRequest.stop_layer()
     end) =~ "Scout Layer mismatch"
 
