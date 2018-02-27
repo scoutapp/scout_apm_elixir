@@ -158,4 +158,60 @@ defmodule ScoutApm.TracingTest do
       """)
     end
   end
+
+  describe "deftransaction" do
+    test "creates histograms with sensible default name" do
+      Code.eval_string(
+        """
+        defmodule TracingTestModule do
+        import ScoutApm.Tracing
+
+          deftransaction add_one(integer) when is_integer(integer) do
+            integer + 1
+          end
+
+          deftransaction add_one(number) when is_float(number) do
+            number + 1.0
+          end
+        end
+        """)
+
+      assert TracingTestModule.add_one(1) == 2
+      assert TracingTestModule.add_one(1.0) == 2.0
+      :timer.sleep(30)
+      %{reporting_periods: [pid]} = ScoutApm.Store.get()
+      Agent.get(pid, fn(%{histograms: histograms}) ->
+        assert Map.has_key?(histograms, "Job/TracingTestModule.add_one(integer) when is_integer(integer)")
+        assert Map.has_key?(histograms, "Job/TracingTestModule.add_one(number) when is_float(number)")
+      end)
+    end
+
+    test "creates histograms with overridden type and name" do
+      Code.eval_string(
+        """
+        defmodule TracingTestModule do
+        import ScoutApm.Tracing
+
+          @transaction_opts [name: "test1", type: "web"]
+          deftransaction add_one(integer) when is_integer(integer) do
+            integer + 1
+          end
+
+          @transaction_opts [name: "test2", type: "background"]
+          deftransaction add_one(number) when is_float(number) do
+            number + 1.0
+          end
+        end
+        """)
+
+      assert TracingTestModule.add_one(1) == 2
+      assert TracingTestModule.add_one(1.0) == 2.0
+      :timer.sleep(30)
+      %{reporting_periods: [pid]} = ScoutApm.Store.get()
+      Agent.get(pid, fn(%{histograms: histograms}) ->
+        assert Map.has_key?(histograms, "Controller/test1")
+        assert Map.has_key?(histograms, "Job/test2")
+      end)
+    end
+  end
 end

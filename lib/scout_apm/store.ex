@@ -67,6 +67,14 @@ defmodule ScoutApm.Store do
     end
   end
 
+  def get do
+    case Process.whereis(__MODULE__) do
+      nil -> ScoutApm.Logger.log(:info, "Couldn't find worker!?")
+      pid ->
+        GenServer.call(pid, :get)
+    end
+  end
+
   ## Server Callbacks
 
   def init(:ok) do
@@ -77,6 +85,10 @@ defmodule ScoutApm.Store do
     schedule_tick()
 
     {:ok, initial_state}
+  end
+
+  def handle_call(:get, _from, state) do
+    {:reply, state, state}
   end
 
   def handle_call({_}, _from, _state) do

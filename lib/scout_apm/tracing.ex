@@ -158,7 +158,8 @@ defmodule ScoutApm.Tracing do
   """
   defmacro transaction(type, name, opts \\ [], do: block) do
     quote do
-      TrackedRequest.start_layer(unquote(internal_layer_type(type)), unquote(name), unquote(opts))
+      # TrackedRequest.start_layer(unquote(internal_layer_type(type)), unquote(name), unquote(opts))
+      TrackedRequest.start_layer(internal_layer_type(unquote(type)), unquote(name), unquote(opts))
       try do
         (fn -> unquote(block) end).()
       rescue
@@ -174,20 +175,26 @@ defmodule ScoutApm.Tracing do
   defmacro deftransaction(head, body) do
     function_head = Macro.to_string(head)
     quote do
-      module = __ENV__.module
+      options = Module.delete_attribute(__MODULE__, :transaction_opts) || []
+      module = __MODULE__
                |> Atom.to_string()
                |> String.trim_leading("Elixir.")
-      Module.put_attribute(__ENV__.module, :name, "#{module}.#{unquote(function_head)}")
+      name = Keyword.get(options, :name, "#{module}.#{unquote(function_head)}")
+      type = Keyword.get(options, :type, "background")
+      Module.put_attribute(__MODULE__, :scout_name, name)
+      Module.put_attribute(__MODULE__, :scout_type, type)
 
       def unquote(head) do
-        transaction(:background, @name, []) do
+        transaction(@scout_type, @scout_name, []) do
           unquote(body[:do])
         end
       end
 
-      Module.delete_attribute(__ENV__.module, :name)
+      Module.delete_attribute(__MODULE__, :scout_name)
+      Module.delete_attribute(__MODULE__, :scout_type)
     end
   end
+
 
   @doc """
   Times the execution of the given `block` of code, labeling it with `category` and `name` within Scout.
