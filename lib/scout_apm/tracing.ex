@@ -158,8 +158,7 @@ defmodule ScoutApm.Tracing do
   """
   defmacro transaction(type, name, opts \\ [], do: block) do
     quote do
-      # TrackedRequest.start_layer(unquote(internal_layer_type(type)), unquote(name), unquote(opts))
-      TrackedRequest.start_layer(internal_layer_type(unquote(type)), unquote(name), unquote(opts))
+      TrackedRequest.start_layer(ScoutApm.Tracing.internal_layer_type(unquote(type)), unquote(name), unquote(opts))
       try do
         (fn -> unquote(block) end).()
       rescue
@@ -227,10 +226,10 @@ defmodule ScoutApm.Tracing do
   end
 
   # Converts the public-facing type ("web" or "background") to their internal layer representation.
-  defp internal_layer_type(type) when is_atom(type) do
+  def internal_layer_type(type) when is_atom(type) do
     Atom.to_string(type) |> internal_layer_type
   end
-  defp internal_layer_type(type) when is_binary(type) do
+  def internal_layer_type(type) when is_binary(type) do
     downcased = String.downcase(type) # some coercion to handle capitalization
     case downcased do
       "web" ->
