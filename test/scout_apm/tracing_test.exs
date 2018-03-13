@@ -163,7 +163,7 @@ defmodule ScoutApm.TracingTest do
     test "creates histograms with sensible default name" do
       Code.eval_string(
         """
-        defmodule TracingTestModule do
+        defmodule TracingAnnotationTestModule do
         import ScoutApm.Tracing
 
           deftransaction add_one(integer) when is_integer(integer) do
@@ -176,20 +176,20 @@ defmodule ScoutApm.TracingTest do
         end
         """)
 
-      assert TracingTestModule.add_one(1) == 2
-      assert TracingTestModule.add_one(1.0) == 2.0
-      :timer.sleep(30)
+      assert TracingAnnotationTestModule.add_one(1) == 2
+      assert TracingAnnotationTestModule.add_one(1.0) == 2.0
+      :timer.sleep(10)
       %{reporting_periods: [pid]} = ScoutApm.Store.get()
       Agent.get(pid, fn(%{histograms: histograms}) ->
-        assert Map.has_key?(histograms, "Job/TracingTestModule.add_one(integer) when is_integer(integer)")
-        assert Map.has_key?(histograms, "Job/TracingTestModule.add_one(number) when is_float(number)")
+        assert Map.has_key?(histograms, "Job/TracingAnnotationTestModule.add_one(integer) when is_integer(integer)")
+        assert Map.has_key?(histograms, "Job/TracingAnnotationTestModule.add_one(number) when is_float(number)")
       end)
     end
 
     test "creates histograms with overridden type and name" do
       Code.eval_string(
         """
-        defmodule TracingTestModule do
+        defmodule TracingAnnotationTestModule do
         import ScoutApm.Tracing
 
           @transaction_opts [name: "test1", type: "web"]
@@ -204,9 +204,9 @@ defmodule ScoutApm.TracingTest do
         end
         """)
 
-      assert TracingTestModule.add_one(1) == 2
-      assert TracingTestModule.add_one(1.0) == 2.0
-      :timer.sleep(30)
+      assert TracingAnnotationTestModule.add_one(1) == 2
+      assert TracingAnnotationTestModule.add_one(1.0) == 2.0
+      :timer.sleep(10)
       %{reporting_periods: [pid]} = ScoutApm.Store.get()
       Agent.get(pid, fn(%{histograms: histograms}) ->
         assert Map.has_key?(histograms, "Controller/test1")
