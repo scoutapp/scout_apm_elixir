@@ -69,7 +69,7 @@ defmodule ScoutApm.DevTrace.Plug do
   end
 
   defp payload do
-    ScoutApm.DevTrace.Store.payload() |> ScoutApm.DevTrace.Store.encode()
+    ScoutApm.DirectAnalysisStore.payload() |> ScoutApm.DirectAnalysisStore.encode()
   end
 
   defp async_request?(conn) do
