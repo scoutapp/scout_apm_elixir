@@ -1,11 +1,11 @@
-defmodule ScoutApm.DevTrace.Store do
+defmodule ScoutApm.DirectAnalysisStore do
   alias ScoutApm.Internal.WebTrace
   alias ScoutApm.Payload.SlowTransaction
 
   @trace_key :tracked_request
 
   def record(tracked_request) do
-    if ScoutApm.DevTrace.enabled?, do: Process.put(@trace_key, tracked_request)
+    Process.put(@trace_key, tracked_request)
   end
 
   def get_tracked_request do
