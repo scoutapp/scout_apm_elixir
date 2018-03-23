@@ -1,3 +1,7 @@
+# master
+* Enhancements
+  * Rename DevTrace.Store to DirectAnalysisStore and always enable (#51)
+
 # 0.4.0
 * Enhancements
   * Silence logging when Scout is not configured (#46)
