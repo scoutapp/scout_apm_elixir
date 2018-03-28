@@ -184,7 +184,7 @@ defmodule ScoutApm.Tracing do
       Module.put_attribute(__MODULE__, :scout_type, type)
 
       def unquote(head) do
-        transaction(@scout_type, @scout_name, []) do
+        transaction(@scout_type, @scout_name) do
           unquote(body[:do])
         end
       end
@@ -222,6 +222,29 @@ defmodule ScoutApm.Tracing do
       after # ensure we record the metric if the timed block throws an error
         TrackedRequest.stop_layer()
       end
+    end
+  end
+
+  defmacro deftiming(head, body) do
+    function_head = Macro.to_string(head)
+    quote do
+      options = Module.delete_attribute(__MODULE__, :timing_opts) || []
+      module = __MODULE__
+               |> Atom.to_string()
+               |> String.trim_leading("Elixir.")
+      name = Keyword.get(options, :name, "#{module}.#{unquote(function_head)}")
+      category = Keyword.get(options, :category, "Custom")
+      Module.put_attribute(__MODULE__, :scout_name, name)
+      Module.put_attribute(__MODULE__, :scout_category, category)
+
+      def unquote(head) do
+        timing(@scout_category, @scout_name) do
+          unquote(body[:do])
+        end
+      end
+
+      Module.delete_attribute(__MODULE__, :scout_name)
+      Module.delete_attribute(__MODULE__, :scout_type)
     end
   end
 
