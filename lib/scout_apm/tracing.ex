@@ -118,6 +118,12 @@ defmodule ScoutApm.Tracing do
 
   defmacro __using__(_) do
     quote do
+      warning =
+        "use ScoutApm.Tracing, @timing, and @transaction are deprecated." <>
+        "Instead, users should import ScoutApm.Tracing " <>
+        "and define functions with deftransaction and deftiming"
+        IO.warn(warning)
+
       # This handles module attributes that add instrumentation.
       # See `ScoutApm.Tracing.Annotations`.
       Module.register_attribute(__MODULE__, :scout_transactions, accumulate: true)
