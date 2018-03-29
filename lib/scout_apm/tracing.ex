@@ -14,8 +14,12 @@ defmodule ScoutApm.Tracing do
 
   There are 2 ways to define transactions:
 
-  1. `@transaction` module attributes
+  1. `deftransaction` macro
   2. Wrapping blocks of code with the `transaction/4` macro.
+
+  Deprecated:
+
+  * `@transaction` module attributes
 
   ### Transaction types
 
@@ -27,9 +31,25 @@ defmodule ScoutApm.Tracing do
   If you are instrumenting a stand-alone Elixir app, treat all transactions as `web`. Data from these transactions
   appear in the App overview charts.
 
+  ### deftransaction Macro Example
+
+  Replace your function `def` with `deftransaction` to instrument it.
+  You can override the name and type by setting the `@transaction_opts` attribute right before the function.
+
+      defmodule CampWaitlist.Web.HtmlChannel do
+        use Phoenix.Channel
+        import ScoutApm.Tracing
+
+        # Will appear under "Web" in the UI, named "CampWaitlist.Web.HtmlChannel.join".
+        @transaction_opts [type: "web"]
+        deftransaction join("topic:html", _message, socket) do
+          {:ok, socket}
+        end
+
   ### Module Attribute Example
 
-  The `@transaction` module attribute works well for treating GenServer calls as distinct transactions. An example instrumenting a Phoenix channel:
+  This is deprecated due to a number of gotchas around the macro that implements this.
+  The `deftransaction` macro more reliably sets up the instrumentation.
 
       defmodule CampWaitlist.Web.HtmlChannel do
         use Phoenix.Channel
@@ -65,10 +85,37 @@ defmodule ScoutApm.Tracing do
 
   There are 2 ways to time the execution of code:
 
-  1. `@timing` module attributes
+  1. `deftiming` macro
   2. Wrapping blocks of code with the `timing/4` macro.
 
+  Deprecated:
+
+  * `@timing` module attributes
+
+  ### deftiming Macro Example
+
+      defmodule Searcher do
+        import ScoutApm.Tracing
+
+        # Time associated with this function will appear under "Hound" in timeseries charts.
+        # The function will appear as `Hound/open_search` in transaction traces.
+        @timing_opts [category: "Hound"]
+        deftiming open_search(url) do
+          navigate_to(url)
+        end
+
+        # Time associated with this function will appear under "Hound" in timeseries charts.
+        # The function will appear as `Hound/search` in transaction traces.
+        @timing_opts [name: "search", category: "Hound"]
+        deftiming open_search(url) do
+          navigate_to(url)
+        end
+
+
   ### Module Attribute Example
+
+  This is deprecated due to a number of gotchas around the macro that implements this.
+  The `deftracing` macro more reliably sets up the instrumentation.
 
       defmodule Searcher do
         use ScoutApm.Tracing
@@ -95,6 +142,11 @@ defmodule ScoutApm.Tracing do
 
   ## use vs. import
 
+  To utilize the `deftransaction` and `deftiming` macros, import this module:
+
+      defmodule YourModule
+        import ScoutApm.Tracing
+
   To utilize the module attributes (`@transaction` and `@timing`), inject this module via the `use` macro:
 
       defmodule YourModule
@@ -104,7 +156,7 @@ defmodule ScoutApm.Tracing do
 
       ScoutApm.Tracing.timing("HTTP", "GitHub", do: ...)
 
-  To drop the full domain name, you'll need to use the `import` macro. The following is valid:
+  To drop the full module name, you'll need to use the `import` macro. The following is valid:
 
       defmodule YourModule
         use ScoutApm.Tracing
