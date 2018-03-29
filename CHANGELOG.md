@@ -1,5 +1,9 @@
 # master
+
+# 0.4.1
+
 * Enhancements
+  * Added `deftiming` and `deftransaction` macros to ScoutApm.Tracing (#52)
   * Rename DevTrace.Store to DirectAnalysisStore and always enable (#51)
 
 # 0.4.0
