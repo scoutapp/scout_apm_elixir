@@ -74,7 +74,7 @@ defmodule ScoutApm.TrackedRequest do
     if Enum.count(layers(tr2)) == 0 do
       request = tr2 |> with_root_layer(updated_layer)
       request.collector_fn.(request)
-      request
+      nil
     else
       tr2
     end
@@ -142,6 +142,11 @@ defmodule ScoutApm.TrackedRequest do
 
   defp lookup() do
     Process.get(:scout_apm_request) || new()
+  end
+
+  defp save(nil) do
+    Process.delete(:scout_apm_request)
+    nil
   end
 
   defp save(%__MODULE__{} = tr) do

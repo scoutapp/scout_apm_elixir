@@ -118,6 +118,12 @@ defmodule ScoutApm.Tracing do
 
   defmacro __using__(_) do
     quote do
+      warning =
+        "use ScoutApm.Tracing, @timing, and @transaction are deprecated." <>
+        "Instead, users should import ScoutApm.Tracing " <>
+        "and define functions with deftransaction and deftiming"
+        IO.warn(warning)
+
       # This handles module attributes that add instrumentation.
       # See `ScoutApm.Tracing.Annotations`.
       Module.register_attribute(__MODULE__, :scout_transactions, accumulate: true)
@@ -158,7 +164,7 @@ defmodule ScoutApm.Tracing do
   """
   defmacro transaction(type, name, opts \\ [], do: block) do
     quote do
-      TrackedRequest.start_layer(unquote(internal_layer_type(type)), unquote(name), unquote(opts))
+      TrackedRequest.start_layer(ScoutApm.Tracing.internal_layer_type(unquote(type)), unquote(name), unquote(opts))
       try do
         (fn -> unquote(block) end).()
       rescue
@@ -170,6 +176,30 @@ defmodule ScoutApm.Tracing do
       end
     end
   end
+
+  defmacro deftransaction(head, body) do
+    function_head = Macro.to_string(head)
+    quote do
+      options = Module.delete_attribute(__MODULE__, :transaction_opts) || []
+      module = __MODULE__
+               |> Atom.to_string()
+               |> String.trim_leading("Elixir.")
+      name = Keyword.get(options, :name, "#{module}.#{unquote(function_head)}")
+      type = Keyword.get(options, :type, "background")
+      Module.put_attribute(__MODULE__, :scout_name, name)
+      Module.put_attribute(__MODULE__, :scout_type, type)
+
+      def unquote(head) do
+        transaction(@scout_type, @scout_name) do
+          unquote(body[:do])
+        end
+      end
+
+      Module.delete_attribute(__MODULE__, :scout_name)
+      Module.delete_attribute(__MODULE__, :scout_type)
+    end
+  end
+
 
   @doc """
   Times the execution of the given `block` of code, labeling it with `category` and `name` within Scout.
@@ -201,11 +231,34 @@ defmodule ScoutApm.Tracing do
     end
   end
 
+  defmacro deftiming(head, body) do
+    function_head = Macro.to_string(head)
+    quote do
+      options = Module.delete_attribute(__MODULE__, :timing_opts) || []
+      module = __MODULE__
+               |> Atom.to_string()
+               |> String.trim_leading("Elixir.")
+      name = Keyword.get(options, :name, "#{module}.#{unquote(function_head)}")
+      category = Keyword.get(options, :category, "Custom")
+      Module.put_attribute(__MODULE__, :scout_name, name)
+      Module.put_attribute(__MODULE__, :scout_category, category)
+
+      def unquote(head) do
+        timing(@scout_category, @scout_name) do
+          unquote(body[:do])
+        end
+      end
+
+      Module.delete_attribute(__MODULE__, :scout_name)
+      Module.delete_attribute(__MODULE__, :scout_type)
+    end
+  end
+
   # Converts the public-facing type ("web" or "background") to their internal layer representation.
-  defp internal_layer_type(type) when is_atom(type) do
+  def internal_layer_type(type) when is_atom(type) do
     Atom.to_string(type) |> internal_layer_type
   end
-  defp internal_layer_type(type) when is_binary(type) do
+  def internal_layer_type(type) when is_binary(type) do
     downcased = String.downcase(type) # some coercion to handle capitalization
     case downcased do
       "web" ->
