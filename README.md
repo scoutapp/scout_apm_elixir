@@ -1,6 +1,6 @@
 # Scout Elixir Performance Monitoring Agent
 
-Scout monitors the performance of Elixir applications in production and provides an in-browser profiler during development. Metrics are
+`scout_apm` monitors the performance of Elixir applications in production and provides an in-browser profiler during development. Metrics are
 reported to [Scout](https://scoutapp.com), a hosted application monitoring service.
 
 ![screenshot](https://s3-us-west-1.amazonaws.com/scout-blog/elixir_screenshot.png)
