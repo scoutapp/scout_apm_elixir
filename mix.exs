@@ -50,6 +50,7 @@ defmodule ScoutApm.Mixfile do
 
       # TODO: Should this be in the dev-only dependencies? It is needed for dialyzer to complete correctly.
       {:phoenix, "~> 1.0", only: [:dev, :test]},
+      {:phoenix_slime, "~> 0.9.0", only: [:dev, :test]},
     ]
   end
 
