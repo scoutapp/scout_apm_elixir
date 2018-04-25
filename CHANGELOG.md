@@ -1,5 +1,10 @@
 # master
 
+# 0.4.2
+
+* Enhancements
+  * Added ability to instrument Slime templates (#54)
+
 # 0.4.1
 
 * Enhancements
