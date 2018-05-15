@@ -52,23 +52,15 @@ defmodule ScoutApm.Plugs.ControllerTimer do
   end
 
   defp add_ip_context(conn) do
-    try do
-      remote_ips = Plug.Conn.get_req_header(conn, "x-forwarded-for")
-      forwarded_ip = List.first(remote_ips)
-
-      remote_ip =
-        if forwarded_ip do
-          forwarded_ip
-        else
-          conn.remote_ip
-          |> Tuple.to_list
-          |> Enum.join(".")
-        end
-
-      ScoutApm.Context.add_user(:ip, remote_ip)
-    rescue
-      err ->
-        ScoutApm.Logger.log(:debug, "Failed adding IP context: #{inspect err}")
+    remote_ip = case Plug.Conn.get_req_header(conn, "x-forwarded-for") do
+      [forwarded_ip | _] ->
+        forwarded_ip
+      _ ->
+        conn.remote_ip
+        |> Tuple.to_list
+        |> Enum.join(".")
     end
+
+    ScoutApm.Context.add_user(:ip, remote_ip)
   end
 end
