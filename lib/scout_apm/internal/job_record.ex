@@ -101,6 +101,10 @@ defmodule ScoutApm.Internal.JobRecord do
     }
   end
 
+  def increment_errors(record) do
+    %{record | errors: record.errors + 1}
+  end
+
   defp merge_histos(h1, h2) do
     h1
     |> ApproximateHistogram.to_list

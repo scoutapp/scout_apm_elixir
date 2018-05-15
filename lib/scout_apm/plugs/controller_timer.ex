@@ -19,9 +19,11 @@ defmodule ScoutApm.Plugs.ControllerTimer do
     uri = "#{conn.request_path}"
 
     add_ip_context(conn)
+    maybe_mark_error(conn)
 
     ScoutApm.TrackedRequest.stop_layer(
       fn layer ->
+
         layer
         |> Layer.update_name(full_name)
         |> Layer.update_uri(uri)
@@ -38,6 +40,13 @@ defmodule ScoutApm.Plugs.ControllerTimer do
       String.starts_with?(uri, prefix)
     end)
   end
+
+  def maybe_mark_error(conn = %{status: 500}) do
+    ScoutApm.TrackedRequest.mark_error()
+    conn
+  end
+
+  def maybe_mark_error(conn), do: conn
 
   # Takes a connection, extracts the phoenix controller & action, then manipulates & cleans it up.
   # Returns a string like "PageController#index"

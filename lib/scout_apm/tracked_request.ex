@@ -21,7 +21,7 @@ defmodule ScoutApm.TrackedRequest do
 
   alias ScoutApm.Internal.Layer
 
-  defstruct [:root_layer, :layers, :children, :contexts, :collector_fn]
+  defstruct [:root_layer, :layers, :children, :contexts, :collector_fn, :error]
 
   ###############
   #  Interface  #
@@ -126,6 +126,16 @@ defmodule ScoutApm.TrackedRequest do
       contexts: [],
       collector_fn: build_collector_fn(custom_collector),
     })
+  end
+
+  def mark_error() do
+    with_saved_tracked_request(fn(request) ->
+      mark_error(request)
+    end)
+  end
+
+  def mark_error(%__MODULE__{} = request) do
+    %{request | error: true}
   end
 
   defp build_collector_fn(f) when is_function(f), do: f
