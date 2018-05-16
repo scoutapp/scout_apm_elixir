@@ -1,5 +1,7 @@
 # master
 
+# 0.4.3
+
 * Enhancements
   * Track Error Rates (#56)
 * Bug Fixes
