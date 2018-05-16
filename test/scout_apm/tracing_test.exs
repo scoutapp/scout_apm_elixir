@@ -149,4 +149,26 @@ defmodule ScoutApm.TracingTest do
       end)
     end
   end
+
+  test "marks as error" do
+    Code.eval_string(
+      """
+      defmodule TracingAnnotationTestModule do
+        import ScoutApm.Tracing
+
+        deftransaction add_two(number) do
+          ScoutApm.TrackedRequest.mark_error()
+          number + 2
+        end
+      end
+      """)
+      assert TracingAnnotationTestModule.add_two(2) == 4
+      assert TracingAnnotationTestModule.add_two(2) == 4
+      assert TracingAnnotationTestModule.add_two(2) == 4
+      :timer.sleep(70)
+      %{reporting_periods: [pid]} = ScoutApm.Store.get()
+      Agent.get(pid, fn(%{jobs: jobs}) ->
+        assert %{count: 3, errors: 3} = Map.get(jobs, "default/TracingAnnotationTestModule.add_two(number)")
+      end)
+  end
 end

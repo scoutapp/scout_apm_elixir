@@ -44,7 +44,6 @@ defmodule ScoutApm.Mixfile do
       # Dev & Testing Deps
 
       {:ex_doc, ">= 0.0.0", only: [:dev]},
-      {:propcheck, "~> 0.0", only: [:dev, :test]},
       {:credo, "~> 0.5", only: [:dev, :test]},
       {:dialyxir, "~> 0.5", only: [:dev], runtime: false},
 

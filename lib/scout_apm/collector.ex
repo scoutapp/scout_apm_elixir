@@ -9,7 +9,7 @@ defmodule ScoutApm.Collector do
   alias ScoutApm.Internal.JobTrace
   alias ScoutApm.Internal.Layer
   alias ScoutApm.Internal.JobRecord
-  alias ScoutApm.ScopeStack
+  alias ScoutApm.{ScopeStack, TrackedRequest}
 
   def record_async(tracked_request) do
     Task.start(fn -> record(tracked_request) end)
@@ -22,12 +22,13 @@ defmodule ScoutApm.Collector do
 
     case categorize(tracked_request) do
       :web ->
+        maybe_store_web_error_metric(tracked_request)
         store_web_metrics(tracked_request.root_layer, ScopeStack.layer_to_scope(tracked_request.root_layer))
         store_web_trace(tracked_request)
         :ok
 
       :job ->
-        store_job_metrics(tracked_request.root_layer, ScopeStack.layer_to_scope(tracked_request.root_layer))
+        store_job_metrics(tracked_request, ScopeStack.layer_to_scope(tracked_request.root_layer))
         store_job_trace(tracked_request)
         :ok
 
@@ -70,9 +71,16 @@ defmodule ScoutApm.Collector do
   end
 
   # Create a JobRecord, and store that?
-  def store_job_metrics(layer, scope) do
-    JobRecord.from_layer(layer, scope)
-    |> ScoutApm.Store.record_job_record()
+  def store_job_metrics(tracked_request, scope) do
+    record = JobRecord.from_layer(tracked_request.root_layer, scope)
+
+    record = if(tracked_request.error) do
+      JobRecord.increment_errors(record)
+    else
+      record
+    end
+
+    ScoutApm.Store.record_job_record(record)
   end
 
   ###################
@@ -102,4 +110,18 @@ defmodule ScoutApm.Collector do
       _ -> :unknown
     end
   end
+
+  defp maybe_store_web_error_metric(%TrackedRequest{error: true, root_layer: %Layer{}} = request) do
+    root_layer = request.root_layer
+    name = "#{root_layer.type}/#{root_layer.name}"
+    time = Duration.new(1, :microseconds)
+    metric = %Metric{type: "Errors", name: name, call_count: 1, total_time: time,
+      exclusive_time: time, min_time: time, max_time: time}
+
+    ScoutApm.Store.record_web_metric(metric)
+
+    request
+  end
+
+  defp maybe_store_web_error_metric(request), do: request
 end

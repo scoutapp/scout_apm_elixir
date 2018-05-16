@@ -1,5 +1,10 @@
 # master
 
+* Enhancements
+  * Track Error Rates (#56)
+* Bug Fixes
+  * Fix compile warning if project is not using PhoenixSlime (#56)
+
 # 0.4.2
 
 * Enhancements
