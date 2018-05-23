@@ -3,7 +3,7 @@ defmodule ScoutApm.Mixfile do
 
   def project do
     [app: :scout_apm,
-     version: "0.4.3",
+     version: "0.4.4",
      elixir: "~> 1.4",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,

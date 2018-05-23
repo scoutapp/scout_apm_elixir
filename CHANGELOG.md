@@ -1,5 +1,10 @@
 # master
 
+# 0.4.4
+
+* Bug Fixes
+  * Do not raise when Ecto.LogEntry has nil query\_time (#58)
+
 # 0.4.3
 
 * Enhancements
