@@ -23,12 +23,17 @@ defmodule ScoutApm.Instruments.EctoLogger do
   end
 
   defp record(entry) do
-    ScoutApm.TrackedRequest.track_layer(
-      "Ecto",
-      query_name(entry),
-      query_time(entry),
-      desc: entry.query
-    )
+    case query_time(entry) do
+      {:ok, duration} ->
+        ScoutApm.TrackedRequest.track_layer(
+        "Ecto",
+        query_name(entry),
+        duration,
+        desc: entry.query
+      )
+      {:error, _} ->
+        nil
+    end
   end
 
   def query_name(entry) do
@@ -80,9 +85,12 @@ defmodule ScoutApm.Instruments.EctoLogger do
     end
   end
 
-  def query_time(entry) do
-    raw_time = entry.query_time
-    microtime = System.convert_time_unit(raw_time, :native, :microseconds)
-    ScoutApm.Internal.Duration.new(microtime, :microseconds)
+  def query_time(%{query_time: query_time}) when is_integer(query_time) do
+    microtime = System.convert_time_unit(query_time, :native, :microseconds)
+    {:ok, ScoutApm.Internal.Duration.new(microtime, :microseconds)}
+  end
+
+  def query_time(_) do
+    {:error, :non_integer_query_time}
   end
 end
