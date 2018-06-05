@@ -45,7 +45,7 @@ defmodule ScoutApm.Payload.SlowTransaction do
       allocations: 0,
       seconds_since_startup: 0,
 
-      hostname: "slow_transaction_hostname",
+      hostname: ScoutApm.Utils.hostname(),
       git_sha: "",
       truncated_metrics: %{},
     }
