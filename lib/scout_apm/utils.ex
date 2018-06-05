@@ -9,9 +9,4 @@ defmodule ScoutApm.Utils do
   def agent_version do
     Application.spec(:scout_apm, :vsn) |> to_string
   end
-
-  def hostname do
-    {:ok, name} = :inet.gethostname()
-    to_string(name)
-  end
 end

@@ -119,7 +119,7 @@ defmodule ScoutApm.ApplicationLoadNotification do
 
   defp headers do
     [
-      {"Agent-Hostname", ScoutApm.Utils.hostname()},
+      {"Agent-Hostname", ScoutApm.Cache.hostname()},
       {"Agent-Version", ScoutApm.Utils.agent_version()},
 
       # This is not technically correct, it should be application/json

@@ -75,7 +75,7 @@ defmodule ScoutApm.Reporter do
 
   def headers do
     [
-      {"Agent-Hostname", ScoutApm.Utils.hostname()},
+      {"Agent-Hostname", ScoutApm.Cache.hostname()},
       {"Agent-Version", ScoutApm.Utils.agent_version()},
       {"Content-Type", "application/json"},
       {"Content-Encoding", "gzip"},

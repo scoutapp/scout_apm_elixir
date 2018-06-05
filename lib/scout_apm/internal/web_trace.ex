@@ -64,7 +64,7 @@ defmodule ScoutApm.Internal.WebTrace do
     contexts = tracked_request.contexts
 
     time = DateTime.utc_now() |> DateTime.to_iso8601()
-    hostname = ScoutApm.Utils.hostname()
+    hostname = ScoutApm.Cache.hostname()
 
     # Metrics scoped & stuff. Distinguished by type, name, scope, desc
     metric_set = create_trace_metrics(

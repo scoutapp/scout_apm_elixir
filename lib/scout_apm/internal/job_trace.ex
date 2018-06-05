@@ -66,7 +66,7 @@ defmodule ScoutApm.Internal.JobTrace do
     job_name = root_layer.name
     queue_name = "default"
     time = DateTime.utc_now() |> DateTime.to_iso8601()
-    hostname = ScoutApm.Utils.hostname()
+    hostname = ScoutApm.Cache.hostname()
     contexts = tracked_request.contexts
     metric_set = create_trace_metrics(
       root_layer,
