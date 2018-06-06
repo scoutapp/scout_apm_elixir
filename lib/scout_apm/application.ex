@@ -21,6 +21,8 @@ defmodule ScoutApm.Application do
     opts = [strategy: :one_for_all, name: ScoutApm.Supervisor]
     {:ok, pid} = Supervisor.start_link(children, opts)
 
+    ScoutApm.Cache.setup()
+
     ScoutApm.Watcher.start_link(ScoutApm.Supervisor)
 
     ScoutApm.Logger.log(:info, "ScoutAPM Started")
