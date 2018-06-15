@@ -159,6 +159,11 @@ defmodule ScoutApm.TrackedRequest do
     nil
   end
 
+  defp save(:error) do
+    Process.delete(:scout_apm_request)
+    nil
+  end
+
   defp save(%__MODULE__{} = tr) do
     Process.put(:scout_apm_request, tr)
     tr
