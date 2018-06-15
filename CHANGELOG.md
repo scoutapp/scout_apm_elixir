@@ -1,5 +1,11 @@
 # master
 
+# 0.4.5
+
+* Bug Fixes
+  * Set hostname on slow transactions (#61)
+  * Avoid raising on layer mismatch (#63)
+
 # 0.4.4
 
 * Bug Fixes
