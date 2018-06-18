@@ -1,5 +1,10 @@
 # master
 
+# 0.4.6
+
+* Bug Fixes
+  * Fix cache start order (#64)
+
 # 0.4.5
 
 * Bug Fixes
