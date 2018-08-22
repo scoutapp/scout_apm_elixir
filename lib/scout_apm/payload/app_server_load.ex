@@ -14,11 +14,11 @@ defmodule ScoutApm.Payload.AppServerLoad do
       libraries:            libraries(),
       application_name:     ScoutApm.Config.find(:name),
       hostname:             ScoutApm.Cache.hostname(),
+      git_sha:              ScoutApm.Cache.git_sha(),
       # framework:          ScoutApm::Environment.instance.framework_integration.human_name,
       # framework_version:  ScoutApm::Environment.instance.framework_integration.version,
       # environment:        ScoutApm::Environment.instance.framework_integration.env,
       # paas:               ScoutApm::Environment.instance.platform_integration.name,
-      # git_sha:            ScoutApm::Environment.instance.git_revision.sha
     }
   end
 
