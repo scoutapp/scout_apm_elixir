@@ -1,5 +1,11 @@
 # master
 
+# 0.4.7
+
+* Enhancements
+  * Add Deploy Tracking
+  * Attach Git SHA to Traces
+
 # 0.4.6
 
 * Bug Fixes
