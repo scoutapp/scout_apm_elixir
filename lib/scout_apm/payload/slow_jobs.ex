@@ -16,6 +16,7 @@ defmodule ScoutApm.Payload.SlowJobs do
       exclusive_time: Duration.as(job_trace.exclusive_time, :seconds),
 
       hostname: job_trace.hostname,
+      git_sha: job_trace.git_sha,
       metrics: ScoutApm.Payload.NewMetrics.new(job_trace.metrics),
       context: ScoutApm.Payload.Context.new(job_trace.contexts),
 
@@ -26,7 +27,6 @@ defmodule ScoutApm.Payload.SlowJobs do
       #
       # allocation_metrics: MetricsToJsonSerializer.new(job.allocation_metrics).as_json, # New style of metrics
       # truncated_metrics: job.truncated_metrics,
-      # git_sha: job.git_sha,
       # allocations: job.allocations,
       # mem_delta: job.mem_delta,
       # seconds_since_startup: job.seconds_since_startup,

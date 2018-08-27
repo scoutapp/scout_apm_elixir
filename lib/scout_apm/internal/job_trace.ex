@@ -22,6 +22,7 @@ defmodule ScoutApm.Internal.JobTrace do
     :metrics,
 
     :hostname,
+    :git_sha,
     :score,
   ]
 
@@ -38,11 +39,12 @@ defmodule ScoutApm.Internal.JobTrace do
     exclusive_time: Duration.t,
     metrics: MetricSet.t,
     hostname: String.t,
+    git_sha: String.t,
     score: number(),
   }
 
-  @spec new(String.t, String.t, any, list(Context.t), Duration.t, Duration.t, MetricSet.t, String.t) :: t
-  def new(queue_name, job_name, time, contexts, total_time, exclusive_time, metrics, hostname) do
+  @spec new(String.t, String.t, any, list(Context.t), Duration.t, Duration.t, MetricSet.t, String.t, String.t | nil) :: t
+  def new(queue_name, job_name, time, contexts, total_time, exclusive_time, metrics, hostname, git_sha) do
     %__MODULE__{
       queue_name: queue_name,
       job_name: job_name,
@@ -52,6 +54,7 @@ defmodule ScoutApm.Internal.JobTrace do
       exclusive_time: exclusive_time,
       metrics: metrics,
       hostname: hostname,
+      git_sha: git_sha,
 
       # TODO: Update the trace w/ the score?
       score: 0
@@ -67,6 +70,7 @@ defmodule ScoutApm.Internal.JobTrace do
     queue_name = "default"
     time = DateTime.utc_now() |> DateTime.to_iso8601()
     hostname = ScoutApm.Cache.hostname()
+    git_sha = ScoutApm.Cache.git_sha()
     contexts = tracked_request.contexts
     metric_set = create_trace_metrics(
       root_layer,
@@ -81,7 +85,8 @@ defmodule ScoutApm.Internal.JobTrace do
       duration,
       duration, # exclusive time isn't used?
       metric_set,
-      hostname
+      hostname,
+      git_sha
     )
   end
 

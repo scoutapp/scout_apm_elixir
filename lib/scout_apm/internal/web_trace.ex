@@ -17,7 +17,8 @@ defmodule ScoutApm.Internal.WebTrace do
     :metrics,
     :uri,
     :time,
-    :hostname, # hack - we need to reset these server side.
+    :hostname,
+    :git_sha,
     :contexts,
 
     # TODO: Does anybody ever set this Score field?
@@ -32,12 +33,13 @@ defmodule ScoutApm.Internal.WebTrace do
     uri: nil | String.t,
     time: any,
     hostname: String.t,
+    git_sha: String.t,
     contexts: Context.t,
     score: number(),
   }
 
-  # @spec new(String.t, String.t, Duration.t, list(Metric.t), String.t, Context.t, any, String.t) :: t
-  def new(type, name, duration, metrics, uri, contexts, time, hostname) do
+  # @spec new(String.t, String.t, Duration.t, list(Metric.t), String.t, Context.t, any, String.t, String.t | nil) :: t
+  def new(type, name, duration, metrics, uri, contexts, time, hostname, git_sha) do
     %__MODULE__{
       type: type,
       name: name,
@@ -46,6 +48,7 @@ defmodule ScoutApm.Internal.WebTrace do
       uri: uri,
       time: time,
       hostname: hostname,
+      git_sha: git_sha,
       contexts: contexts,
 
       # TODO: Store the trace's own score
@@ -65,6 +68,7 @@ defmodule ScoutApm.Internal.WebTrace do
 
     time = DateTime.utc_now() |> DateTime.to_iso8601()
     hostname = ScoutApm.Cache.hostname()
+    git_sha = ScoutApm.Cache.git_sha()
 
     # Metrics scoped & stuff. Distinguished by type, name, scope, desc
     metric_set = create_trace_metrics(
@@ -72,7 +76,7 @@ defmodule ScoutApm.Internal.WebTrace do
       ScopeStack.new(),
       MetricSet.new(%{compare_desc: true, collapse_all: true}))
 
-    new(root_layer.type, root_layer.name, duration, MetricSet.to_list(metric_set), uri, contexts, time, hostname)
+    new(root_layer.type, root_layer.name, duration, MetricSet.to_list(metric_set), uri, contexts, time, hostname, git_sha)
   end
 
   # Each layer creates two Trace metrics:
