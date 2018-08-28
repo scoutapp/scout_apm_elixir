@@ -15,8 +15,12 @@ defmodule ScoutApm.TrackedRequestTest do
 
   test "starting a layer, then stopping calls the track function" do
     pid = self()
+    TrackedRequest.new(fn r ->
+      ScoutApm.Command.Batch.from_tracked_request(r)
+      |> ScoutApm.Command.message()
 
-    TrackedRequest.new(fn r -> send(pid, {:complete, r}) end)
+      send(pid, {:complete, r})
+    end)
     |> TrackedRequest.start_layer("foo", "bar", [])
     |> TrackedRequest.stop_layer()
 
