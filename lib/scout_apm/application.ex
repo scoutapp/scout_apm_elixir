@@ -7,13 +7,10 @@ defmodule ScoutApm.Application do
     import Supervisor.Spec, warn: false
 
     children = [
-      worker(ScoutApm.Store, []),
       worker(ScoutApm.PersistentHistogram, []),
 
-      worker(ScoutApm.ApplicationLoadNotification, [], [restart: :temporary]),
-
-      worker(ScoutApm.Watcher, [ScoutApm.Store], id: :store_watcher),
       worker(ScoutApm.Watcher, [ScoutApm.PersistentHistogram], id: :histogram_watcher),
+      worker(ScoutApm.Core.AgentManager, [])
     ]
 
     ScoutApm.Cache.setup()
