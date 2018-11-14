@@ -39,7 +39,7 @@ defmodule ScoutApm.Mixfile do
       {:hackney, "~> 1.0"},
 
       {:approximate_histogram, "~>0.1.1"},
-      {:telemetry, "~> 0.2.0"},
+      {:telemetry, "~> 0.2.0", optional: true},
 
       #########################
       # Dev & Testing Deps
