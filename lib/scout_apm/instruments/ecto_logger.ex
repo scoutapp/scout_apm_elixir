@@ -22,7 +22,7 @@ defmodule ScoutApm.Instruments.EctoLogger do
     entry
   end
 
-  defp record(entry) do
+  def record(entry) do
     case query_time(entry) do
       {:ok, duration} ->
         ScoutApm.TrackedRequest.track_layer(
