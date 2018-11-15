@@ -1,5 +1,10 @@
 # master
 
+# 0.4.8
+
+* Enhancements
+  * Ecto 3 support
+
 # 0.4.7
 
 * Enhancements
