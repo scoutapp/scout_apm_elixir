@@ -50,7 +50,7 @@ defmodule ScoutApm.Plugs.ControllerTimer do
 
   # Takes a connection, extracts the phoenix controller & action, then manipulates & cleans it up.
   # Returns a string like "PageController#index"
-  defp action_name(conn) do
+  def action_name(conn) do
     controller_name = conn.private[:phoenix_controller]
     action_name = conn.private[:phoenix_action]
 
