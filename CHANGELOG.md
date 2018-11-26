@@ -1,5 +1,10 @@
 # master
 
+# 0.4.9
+
+* Enhancements
+  * Make `action_name` function public for use in instrumenting chunked HTTP responses (#70)
+
 # 0.4.8
 
 * Enhancements
