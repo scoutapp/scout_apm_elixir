@@ -11,7 +11,7 @@ defmodule ScoutApm.Payload.Metadata do
 
   def new(timestamp) do
     %__MODULE__{
-      app_root: System.cwd(),
+      app_root: File.cwd(),
       unique_id: ScoutApm.Utils.random_string(20),
       payload_version: 1,
       agent_version: ScoutApm.Utils.agent_version(),
