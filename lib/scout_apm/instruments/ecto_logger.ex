@@ -86,7 +86,7 @@ defmodule ScoutApm.Instruments.EctoLogger do
   end
 
   def query_time(%{query_time: query_time}) when is_integer(query_time) do
-    microtime = System.convert_time_unit(query_time, :native, :microseconds)
+    microtime = System.convert_time_unit(query_time, :native, :microsecond)
     {:ok, ScoutApm.Internal.Duration.new(microtime, :microseconds)}
   end
 

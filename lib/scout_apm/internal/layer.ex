@@ -41,9 +41,9 @@ defmodule ScoutApm.Internal.Layer do
   #  Construction  #
   ##################
 
-  @spec new(map) :: __MODULE__.t
+  @spec new(map) :: __MODULE__.t()
   def new(%{type: type, opts: opts} = data) do
-    started_at = data[:started_at] || System.monotonic_time(:microseconds)
+    started_at = data[:started_at] || System.monotonic_time(:microsecond)
     name = data[:name]
     scopable = Keyword.get(opts, :scopable, true)
 
@@ -63,7 +63,8 @@ defmodule ScoutApm.Internal.Layer do
   def update_name(layer, nil), do: layer
   def update_name(layer, name), do: %{layer | name: name}
 
-  def update_stopped_at(layer), do: update_stopped_at(layer, System.monotonic_time(:microseconds))
+  def update_stopped_at(layer), do: update_stopped_at(layer, System.monotonic_time(:microsecond))
+
   def update_stopped_at(layer, stopped_at) do
     %{layer | stopped_at: stopped_at}
   end
