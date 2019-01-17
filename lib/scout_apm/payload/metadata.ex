@@ -10,8 +10,15 @@ defmodule ScoutApm.Payload.Metadata do
   ]
 
   def new(timestamp) do
+    app_root = case File.cwd do
+      {:ok, path} ->
+        path
+      {:error, _reason} ->
+        nil
+    end
+
     %__MODULE__{
-      app_root: File.cwd!(),
+      app_root: app_root,
       unique_id: ScoutApm.Utils.random_string(20),
       payload_version: 1,
       agent_version: ScoutApm.Utils.agent_version(),
