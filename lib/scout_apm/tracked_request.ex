@@ -18,6 +18,7 @@ defmodule ScoutApm.TrackedRequest do
     STOP View
   STOP Controller
   """
+  @collector_module Application.get_env(:scout_apm, :collector_module, ScoutApm.Core.AgentManager)
 
   alias ScoutApm.Internal.Layer
 
@@ -215,7 +216,7 @@ defmodule ScoutApm.TrackedRequest do
   defp build_collector_fn(_), do: fn request ->
     batch = ScoutApm.Command.Batch.from_tracked_request(request)
             |> ScoutApm.Command.message()
-    GenServer.cast(ScoutApm.Core.AgentManager, {:send, batch})
+    @collector_module.send(batch)
   end
 
   def change_collector_fn(f), do: lookup() |> change_collector_fn(f) |> save()
