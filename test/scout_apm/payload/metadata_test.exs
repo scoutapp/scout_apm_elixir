@@ -9,7 +9,7 @@ defmodule ScoutApm.Payload.MetadataTest do
       {:ok, timestamp} = NaiveDateTime.new(2018, 1, 1, 1, 5, 3)
 
       assert %ScoutApm.Payload.Metadata{
-               agent_version: "0.4.9",
+               agent_version: "0.4.10",
                app_root: ^app_root,
                payload_version: 1,
                agent_time: "2018-01-01T01:05:03Z",
