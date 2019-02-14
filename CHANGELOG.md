@@ -1,5 +1,9 @@
 # master
 
+# 0.4.10
+
+* Fix deprecation warnings from newer Elixir versions
+
 # 0.4.9
 
 * Enhancements
