@@ -94,7 +94,7 @@ defmodule ScoutApm.StoreReportingPeriod do
     t = Agent.get(pid, fn state -> state.time end)
     now = NaiveDateTime.utc_now()
 
-    diff = NaiveDateTime.diff(now, t, :seconds)
+    diff = NaiveDateTime.diff(now, t, :second)
 
     if diff > @reporting_age do
       :ready
