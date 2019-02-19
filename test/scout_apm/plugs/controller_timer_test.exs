@@ -1,15 +1,21 @@
 defmodule ScoutApm.Plugs.ControllerTimerTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case
   use Plug.Test
+
+  setup do
+    ScoutApm.TestCollector.clear_messages()
+    :ok
+  end
 
   test "creates web trace" do
     conn(:get, "/")
     |> ScoutApm.TestPlugApp.call([])
 
-    :timer.sleep(50)
-    %{reporting_periods: [pid]} = ScoutApm.Store.get()
-    Agent.get(pid, fn(%{web_traces: %{data: data}}) ->
-      assert Map.has_key?(data, "Controller/PageController#index")
+    [%{BatchCommand: %{commands: commands}}] = ScoutApm.TestCollector.messages()
+
+    assert Enum.any?(commands, fn(command) ->
+      map = Map.get(command, :StartSpan)
+      map && Map.get(map, :operation) == "Controller/PageController#index"
     end)
   end
 
@@ -17,10 +23,15 @@ defmodule ScoutApm.Plugs.ControllerTimerTest do
     conn(:get, "/500")
     |> ScoutApm.TestPlugApp.call([])
 
-    :timer.sleep(50)
-    %{reporting_periods: [pid]} = ScoutApm.Store.get()
-    Agent.get(pid, fn(%{web_metric_set: %{data: data}}) ->
-      assert Map.has_key?(data, "Errors/Controller/PageController#500/scope//")
+    [%{BatchCommand: %{commands: commands}}] = ScoutApm.TestCollector.messages()
+
+    assert Enum.any?(commands, fn(command) ->
+      map = Map.get(command, :StartSpan)
+      map && Map.get(map, :operation) ==  "Controller/PageController#500"
+    end)
+    assert Enum.any?(commands, fn(command) ->
+      map = Map.get(command, :TagSpan)
+      map && Map.get(map, :tag) == "error" && Map.get(map, :value) == "true"
     end)
   end
 
@@ -28,12 +39,15 @@ defmodule ScoutApm.Plugs.ControllerTimerTest do
     conn(:get, "/")
     |> ScoutApm.TestPlugApp.call([])
 
-    :timer.sleep(50)
-    %{reporting_periods: [pid]} = ScoutApm.Store.get()
-    Agent.get(pid, fn(state) ->
-      %{web_traces: %{data: %{"Controller/PageController#index" => {_, %{contexts: [context]}}}}} = state
-      %{key: :ip, type: :user, value: value} = context
-      assert is_binary(value)
+    [%{BatchCommand: %{commands: commands}}] = ScoutApm.TestCollector.messages()
+
+    assert Enum.any?(commands, fn(command) ->
+      map = Map.get(command, :StartSpan)
+      map && Map.get(map, :operation) ==  "Controller/PageController#index"
+    end)
+    assert Enum.any?(commands, fn(command) ->
+      map = Map.get(command, :TagRequest)
+      map && Map.get(map, :tag) == :ip && is_binary(Map.get(map, :value))
     end)
   end
 
@@ -41,11 +55,15 @@ defmodule ScoutApm.Plugs.ControllerTimerTest do
     conn(:get, "/x-forwarded-for")
     |> ScoutApm.TestPlugApp.call([])
 
-    :timer.sleep(100)
-    %{reporting_periods: [pid]} = ScoutApm.Store.get()
-    Agent.get(pid, fn(state) ->
-      %{web_traces: %{data: %{"Controller/PageController#x-forwarded-for" => {_, %{contexts: [context]}}}}} = state
-      assert context == %ScoutApm.Internal.Context{key: :ip, type: :user, value: "1.2.3.4"}
+    [%{BatchCommand: %{commands: commands}}] = ScoutApm.TestCollector.messages()
+
+    assert Enum.any?(commands, fn(command) ->
+      map = Map.get(command, :StartSpan)
+      map && Map.get(map, :operation) ==  "Controller/PageController#x-forwarded-for"
+    end)
+    assert Enum.any?(commands, fn(command) ->
+      map = Map.get(command, :TagRequest)
+      map && Map.get(map, :tag) == :ip && Map.get(map, :value) == "1.2.3.4"
     end)
   end
 
