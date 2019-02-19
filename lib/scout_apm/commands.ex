@@ -224,6 +224,17 @@ defmodule ScoutApm.Command.Batch do
 
     spans = build_layer_spans([request.root_layer], request_id, nil, [])
 
+    spans = if request.error == true do
+      spans ++ [%Command.TagSpan{
+        timestamp: request.root_layer.started_at,
+        request_id: request_id,
+        tag: "error",
+        value: "true",
+      }]
+    else
+      spans
+    end
+
     commands = commands ++ spans
 
     finish_request = %Command.FinishRequest{
