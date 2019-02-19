@@ -1,11 +1,13 @@
 defmodule ScoutApm.Core.AgentManager do
   use GenServer
+  @behaviour ScoutApm.Collector
 
   def start_link() do
     options = []
     GenServer.start_link(__MODULE__, options, name: __MODULE__)
   end
 
+  @impl GenServer
   def init(_) do
     start_setup()
     register()
@@ -69,6 +71,7 @@ defmodule ScoutApm.Core.AgentManager do
     end
   end
 
+  @impl ScoutApm.Collector
   def send(message) when is_map(message) do
     GenServer.cast(__MODULE__, {:send, message})
   end
@@ -88,12 +91,14 @@ defmodule ScoutApm.Core.AgentManager do
     send(message)
   end
 
+  @impl GenServer
   def handle_cast(:setup, state) do
     tcp_socket = setup()
 
     {:noreply, %{state | socket: tcp_socket}}
   end
 
+  @impl GenServer
   def handle_cast({:send, _message}, %{socket: nil} = state) do
     ScoutApm.Logger.log(
       :warn,
@@ -103,6 +108,7 @@ defmodule ScoutApm.Core.AgentManager do
     {:noreply, state}
   end
 
+  @impl GenServer
   def handle_cast({:send, message}, %{socket: socket} = state) when is_map(message) do
     state = with {:ok, encoded} <- Poison.encode(message),
          message_length <- byte_size(encoded),
@@ -137,6 +143,7 @@ defmodule ScoutApm.Core.AgentManager do
     {:noreply, state}
   end
 
+  @impl GenServer
   def handle_info(_m, state) do
     {:noreply, state}
   end

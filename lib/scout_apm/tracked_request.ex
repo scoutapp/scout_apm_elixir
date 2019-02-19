@@ -18,7 +18,7 @@ defmodule ScoutApm.TrackedRequest do
     STOP View
   STOP Controller
   """
-  @collector_module Application.get_env(:scout_apm, :collector_module, ScoutApm.Core.AgentManager)
+  @collector_module ScoutApm.Config.find(:collector_module)
 
   alias ScoutApm.Internal.Layer
 
