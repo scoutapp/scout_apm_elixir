@@ -2,16 +2,16 @@ defmodule ScoutApm.Mixfile do
   use Mix.Project
 
   def project do
-    [
-      app: :scout_apm,
+    [app: :scout_apm,
       version: "0.4.15",
-      elixir: "~> 1.4",
-      build_embedded: Mix.env() == :prod,
-      start_permanent: Mix.env() == :prod,
-      deps: deps(),
-      description: description(),
-      package: package()
-    ]
+     elixir: "~> 1.4",
+     build_embedded: Mix.env == :prod,
+     start_permanent: Mix.env == :prod,
+     elixirc_paths: elixirc_paths(Mix.env()),
+     deps: deps(),
+     description: description(),
+     package: package(),
+   ]
   end
 
   def application do
@@ -73,4 +73,7 @@ defmodule ScoutApm.Mixfile do
       }
     ]
   end
+
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
 end

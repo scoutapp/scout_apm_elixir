@@ -6,11 +6,12 @@ defmodule ScoutApm.Application do
   def start(_type, _args) do
     import Supervisor.Spec, warn: false
 
+    collector_module = ScoutApm.Config.find(:collector_module)
     children = [
       worker(ScoutApm.PersistentHistogram, []),
 
       worker(ScoutApm.Watcher, [ScoutApm.PersistentHistogram], id: :histogram_watcher),
-      worker(ScoutApm.Core.AgentManager, [])
+      worker(collector_module, [])
     ]
 
     ScoutApm.Cache.setup()
