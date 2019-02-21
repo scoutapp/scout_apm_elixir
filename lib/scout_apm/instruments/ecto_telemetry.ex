@@ -14,11 +14,10 @@ if Code.ensure_loaded?(Telemetry) do
         |> Enum.map(&(&1 |> Macro.underscore() |> String.to_atom()))
         |> Kernel.++([:query])
 
-      Telemetry.attach(
+      :telemetry.attach(
         "scout-ecto-query-handler",
         query_event,
-        ScoutApm.Instruments.EctoTelemetry,
-        :handle_event,
+        &ScoutApm.Instruments.EctoTelemetry.handle_event/4,
         nil
       )
     end
