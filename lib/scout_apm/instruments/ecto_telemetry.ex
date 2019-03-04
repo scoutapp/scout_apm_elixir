@@ -10,20 +10,19 @@ if Code.ensure_loaded?(Telemetry) do
     def attach(repo_module) do
       query_event =
         repo_module
-        |> Module.split()
-        |> Enum.map(&(&1 |> Macro.underscore() |> String.to_atom()))
-        |> Kernel.++([:query])
+        |> Macro.underscore()
+        |> String.to_atom()
 
       Telemetry.attach(
         "scout-ecto-query-handler",
-        query_event,
+        [query_event, :query],
         ScoutApm.Instruments.EctoTelemetry,
         :handle_event,
         nil
       )
     end
 
-    def handle_event([_app, _repo, :query], _value, metadata, _config) do
+    def handle_event([_query_event, :query], _value, metadata, _config) do
       ScoutApm.Instruments.EctoLogger.record(metadata)
     end
   end
