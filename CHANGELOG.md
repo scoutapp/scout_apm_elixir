@@ -1,5 +1,9 @@
 # master
 
+# 0.4.11
+
+* Fix Ecto Telemetry when Repo module is deeply nested.
+
 # 0.4.10
 
 * Fix deprecation warnings from newer Elixir versions
