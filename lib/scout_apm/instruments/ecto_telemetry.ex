@@ -22,8 +22,10 @@ if Code.ensure_loaded?(Telemetry) do
       )
     end
 
-    def handle_event([_app, _repo, :query], _value, metadata, _config) do
-      ScoutApm.Instruments.EctoLogger.record(metadata)
+    def handle_event(query_event, _value, metadata, _config) when is_list(query_event) do
+      if :query == List.last(query_event) do
+        ScoutApm.Instruments.EctoLogger.record(metadata)
+      end
     end
   end
 end
