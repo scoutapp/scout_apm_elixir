@@ -10,6 +10,8 @@ defmodule ScoutApm.Plugs.ControllerTimer do
       conn
       |> Plug.Conn.register_before_send(&before_send/1)
     else
+      ScoutApm.TrackedRequest.ignore()
+
       conn
     end
   end

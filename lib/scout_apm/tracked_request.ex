@@ -21,11 +21,15 @@ defmodule ScoutApm.TrackedRequest do
 
   alias ScoutApm.Internal.Layer
 
-  defstruct [:root_layer, :layers, :children, :contexts, :collector_fn, :error]
+  defstruct [:root_layer, :layers, :children, :contexts, :collector_fn, :error, :ignored, :ignoring_depth]
 
   ###############
   #  Interface  #
   ###############
+
+  def start_layer(%__MODULE__{ignored: true} = tr, _type, _name, _opts) do
+    %{tr | ignoring_depth: tr.ignoring_depth + 1}
+  end
 
   def start_layer(%__MODULE__{} = tr, type, name, opts) do
     layer = Layer.new(%{type: type, name: name, opts: opts || []})
@@ -42,6 +46,15 @@ defmodule ScoutApm.TrackedRequest do
 
   def stop_layer(callback) when is_function(callback) do
     with_saved_tracked_request(fn tr -> stop_layer(tr, callback) end)
+  end
+
+  def stop_layer(%__MODULE__{ignored: true} = tr) do
+    if tr.ignoring_depth == 1 do
+      # clear tracked request when last layer is stopped
+      nil
+    else
+      %{tr | ignoring_depth: tr.ignoring_depth - 1}
+    end
   end
 
   def stop_layer(%__MODULE__{} = tr) do
@@ -90,8 +103,20 @@ defmodule ScoutApm.TrackedRequest do
 
     record_child_of_current_layer(tr, layer)
   end
+
   def track_layer(type, name, duration, fields, callback \\ (fn x -> x end)) do
     with_saved_tracked_request(fn tr -> track_layer(tr, type, name, duration, fields, callback) end)
+  end
+
+  def ignore() do
+    with_saved_tracked_request(fn tr ->
+      %{tr |
+        ignored: true,
+        ignoring_depth: Enum.count(tr.layers),
+        layers: [],
+        root_layer: nil,
+      }
+    end)
   end
 
   def record_context(%__MODULE__{} = tr, %ScoutApm.Internal.Context{} = context),
@@ -122,6 +147,7 @@ defmodule ScoutApm.TrackedRequest do
     save(%__MODULE__{
       root_layer: nil,
       layers: [],
+      ignored: false,
       children: [],
       contexts: [],
       collector_fn: build_collector_fn(custom_collector),

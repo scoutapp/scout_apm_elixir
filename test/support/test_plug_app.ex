@@ -7,6 +7,11 @@ defmodule ScoutApm.TestPlugApp do
   plug :dispatch
 
   get "/" do
+    conn = fetch_query_params(conn)
+    if Map.get(conn.query_params, "ignore") == "true" do
+      ScoutApm.TrackedRequest.ignore()
+    end
+
     put_private(conn, :phoenix_action, :index)
     |> send_resp(200, "")
   end

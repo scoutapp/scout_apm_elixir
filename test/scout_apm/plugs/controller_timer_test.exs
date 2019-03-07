@@ -48,4 +48,35 @@ defmodule ScoutApm.Plugs.ControllerTimerTest do
       assert context == %ScoutApm.Internal.Context{key: :ip, type: :user, value: "1.2.3.4"}
     end)
   end
+
+  test "does not create web trace when calling ScoutApm.TrackedRequest.ignore/0" do
+    %{reporting_periods: periods} = ScoutApm.Store.get()
+    data = case periods do
+      [] ->
+        %{}
+      [pid] ->
+        Agent.get(pid, fn(%{web_traces: %{data: data}}) ->
+          data
+        end)
+    end
+
+    conn(:get, "/?ignore=true")
+    |> ScoutApm.TestPlugApp.call([])
+
+    Application.delete_env(:scout_apm, :ignore_controller_transaction_function)
+
+    :timer.sleep(100)
+
+    %{reporting_periods: periods} = ScoutApm.Store.get()
+    new_data = case periods do
+      [] ->
+        %{}
+      [pid] ->
+        Agent.get(pid, fn(%{web_traces: %{data: data}}) ->
+          data
+        end)
+    end
+
+    assert data == new_data
+  end
 end
