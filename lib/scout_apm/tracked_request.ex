@@ -108,6 +108,35 @@ defmodule ScoutApm.TrackedRequest do
     with_saved_tracked_request(fn tr -> track_layer(tr, type, name, duration, fields, callback) end)
   end
 
+  @doc """
+  Marks the current tracked request as ignored, preventing it from being sent or included
+  in any metrics. It can be used in both web requests and jobs.
+
+  If you'd like to sample only 75% of your application's web requests, a Plug is a good
+  way to do that:
+
+      defmodule MyApp.ScoutSamplingPlug do
+        @behaviour Plug
+        def init(_), do: []
+
+        def call(conn, _opts) do
+          # capture 75% of requests
+          if :rand.uniform() > 0.75 do
+            ScoutApm.TrackedRequest.ignore()
+          end
+        end
+      end
+
+  Instrumented jobs can also be ignored by conditionally calling this function:
+
+      deftransaction multiplication_job(num1, num2) do
+        if num1 < 0 do
+          ScoutApm.TrackedRequest.ignore()
+        end
+
+        num1 * num2
+      end
+  """
   def ignore() do
     with_saved_tracked_request(fn tr ->
       %{tr |
