@@ -171,4 +171,27 @@ defmodule ScoutApm.TracingTest do
         assert %{count: 3, errors: 3} = Map.get(jobs, "default/TracingAnnotationTestModule.add_two(number)")
       end)
   end
+
+  test "marks as ignored" do
+    Code.eval_string(
+      """
+      defmodule TracingAnnotationTestModule do
+        import ScoutApm.Tracing
+
+        deftransaction add_three(number) do
+          if number > 2 do
+            ScoutApm.TrackedRequest.ignore()
+          end
+          number + 3
+        end
+      end
+      """)
+      assert TracingAnnotationTestModule.add_three(2) == 5
+      assert TracingAnnotationTestModule.add_three(3) == 6
+      :timer.sleep(70)
+      %{reporting_periods: [pid]} = ScoutApm.Store.get()
+      Agent.get(pid, fn(%{jobs: jobs}) ->
+        assert %{count: 1, errors: 0} = Map.get(jobs, "default/TracingAnnotationTestModule.add_three(number)")
+      end)
+  end
 end
