@@ -1,5 +1,10 @@
 # master
 
+# 0.4.12
+
+* Add ScoutApm.TrackedRequest.ignore() to immediately ignore and stop any
+  additional data collection for the current Transaction.
+
 # 0.4.11
 
 * Fix Ecto Telemetry when Repo module is deeply nested.
