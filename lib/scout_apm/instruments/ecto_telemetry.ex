@@ -15,7 +15,7 @@ if Code.ensure_loaded?(Telemetry) do
         |> Kernel.++([:query])
 
       :telemetry.attach(
-        "scout-ecto-query-handler",
+        "ScoutApm Ecto Instrument Hook for " <> Macro.underscore(repo_module),
         query_event,
         &ScoutApm.Instruments.EctoTelemetry.handle_event/4,
         nil
