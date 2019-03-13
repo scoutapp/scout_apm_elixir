@@ -1,5 +1,9 @@
 # master
 
+# 0.4.13
+
+* Support Instrumenting multiple Ecto repos (#81)
+
 # 0.4.12
 
 * Add ScoutApm.TrackedRequest.ignore() to immediately ignore and stop any
