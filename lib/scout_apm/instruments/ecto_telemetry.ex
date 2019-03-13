@@ -1,4 +1,4 @@
-if Code.ensure_loaded?(Telemetry) do
+if Code.ensure_loaded?(Telemetry) || Code.ensure_loaded?(:telemetry) do
   defmodule ScoutApm.Instruments.EctoTelemetry do
     @doc """
     Attaches an event handler for Ecto queries.
