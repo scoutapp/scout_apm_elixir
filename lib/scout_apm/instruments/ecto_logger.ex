@@ -1,96 +1,51 @@
 defmodule ScoutApm.Instruments.EctoLogger do
-  # [info] Entry:
-  # %Ecto.LogEntry{
-    # ansi_color: nil,
-    # connection_pid: nil,
-    # decode_time: 16000,
-    # params: [],
-    # query: "SELECT u0.\"id\", u0.\"name\", u0.\"age\" FROM \"users\" AS u0",
-    # query_time: 1192999,
-    # queue_time: 36000,
-    # result: {:ok,
-    #    %Postgrex.Result{
-    #      columns: ["id", "name", "age"],
-    #      command: :select,
-    #      connection_id: 70629,
-    #      num_rows: 1,
-    #      rows: [[%TestappPhoenix.User{__meta__: #Ecto.Schema.Metadata<:loaded, "users">, age: 32, id: 1, name: "chris"}]]}
-   #      },
-    # source: "users"}
-  def log(entry) do
-    record(entry)
-    entry
-  end
+  # value = %{
+  # decode_time: 5386000,
+  # query_time: 9435000,
+  # queue_time: 4549000,
+  # total_time: 19370000
+  # }
+  # metadata = %{
+  # params: [1],
+  # query: "SELECT p0.\"id\", p0.\"body\", p0.\"title\", p0.\"inserted_at\", p0.\"updated_at\" FROM \"posts\" AS p0 WHERE (p0.\"id\" = $1)",
+  # repo: MyApp.Repo,
+  # result: :ok,
+  # source: "posts",
+  # type: :ecto_sql_query
+  # }
 
-  def record(entry) do
-    case query_time(entry) do
+  def record(value, metadata) do
+    case query_time(value, metadata) do
       {:ok, duration} ->
         ScoutApm.TrackedRequest.track_layer(
         "Ecto",
-        query_name(entry),
+        query_name(value, metadata),
         duration,
-        desc: entry.query
+        desc: Map.get(metadata, :query)
       )
       {:error, _} ->
         nil
     end
   end
 
-  def query_name(entry) do
-    try do
-      case entry.result do
-        nil -> "SQL"
-
-        {:ok, %{__struct__: Postgrex.Result} = result} ->
-          query_name_postgrex(entry, result)
-
-        {:ok, %{__struct__: Mariaex.Result} = result} ->
-          query_name_mariaex(entry, result)
-
-        _ ->
-          "SQL"
-      end
-    rescue
-      _ -> "SQL"
+  def query_name(_value, metadata) do
+    case Map.get(metadata, :source) do
+      nil -> "SQL"
+      table_name -> "SQL##{table_name}"
     end
   end
 
-  def query_name_postgrex(entry, result) do
-    command =
-      case Map.fetch(result, :command) do
-        {:ok, val} -> val
-        :error -> "SQL"
-      end
-
-    table = entry.source
-
-    case table do
-      nil -> "#{command}"
-      _ -> "#{command}##{table}"
-    end
-  end
-
-  def query_name_mariaex(entry, result) do
-    command =
-      case Map.fetch(result, :command) do
-        {:ok, val} -> val
-        :error -> "SQL"
-      end
-
-    table = entry.source
-
-    case table do
-      nil -> "#{command}"
-      _ -> "#{command}##{table}"
-    end
-  end
-
-  def query_time(%{query_time: query_time}) when is_integer(query_time) do
+  def query_time(%{query_time: query_time}, _telemetry_metadata) when is_integer(query_time) do
     microtime = System.convert_time_unit(query_time, :native, :microsecond)
     {:ok, ScoutApm.Internal.Duration.new(microtime, :microseconds)}
   end
 
-  def query_time(_) do
+  def query_time(_telemetry_value, %{query_time: query_time}) when is_integer(query_time) do
+    microtime = System.convert_time_unit(query_time, :native, :microsecond)
+    {:ok, ScoutApm.Internal.Duration.new(microtime, :microseconds)}
+  end
+
+  def query_time(_telemetry_value, _telemetry_metadata) do
     {:error, :non_integer_query_time}
   end
 end
