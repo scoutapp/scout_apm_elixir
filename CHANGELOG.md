@@ -1,5 +1,9 @@
 # master
 
+# 0.4.14
+
+* Support Telemetry 0.3.0/0.4.0 and Ecto 3.0/3.1 (#84)
+
 # 0.4.13
 
 * Support Instrumenting multiple Ecto repos (#81)
