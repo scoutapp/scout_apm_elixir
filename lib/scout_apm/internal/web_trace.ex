@@ -22,21 +22,21 @@ defmodule ScoutApm.Internal.WebTrace do
     :contexts,
 
     # TODO: Does anybody ever set this Score field?
-    :score,
+    :score
   ]
 
   @type t :: %__MODULE__{
-    type: String.t,
-    name: String.t,
-    total_call_time: Duration.t,
-    metrics: list(Metric.t),
-    uri: nil | String.t,
-    time: any,
-    hostname: String.t,
-    git_sha: String.t,
-    contexts: Context.t,
-    score: number(),
-  }
+          type: String.t(),
+          name: String.t(),
+          total_call_time: Duration.t(),
+          metrics: list(Metric.t()),
+          uri: nil | String.t(),
+          time: any,
+          hostname: String.t(),
+          git_sha: String.t(),
+          contexts: Context.t(),
+          score: number()
+        }
 
   # @spec new(String.t, String.t, Duration.t, list(Metric.t), String.t, Context.t, any, String.t, String.t | nil) :: t
   def new(type, name, duration, metrics, uri, contexts, time, hostname, git_sha) do
@@ -52,7 +52,7 @@ defmodule ScoutApm.Internal.WebTrace do
       contexts: contexts,
 
       # TODO: Store the trace's own score
-      score: 0,
+      score: 0
     }
   end
 
@@ -71,12 +71,24 @@ defmodule ScoutApm.Internal.WebTrace do
     git_sha = ScoutApm.Cache.git_sha()
 
     # Metrics scoped & stuff. Distinguished by type, name, scope, desc
-    metric_set = create_trace_metrics(
-      root_layer,
-      ScopeStack.new(),
-      MetricSet.new(%{compare_desc: true, collapse_all: true}))
+    metric_set =
+      create_trace_metrics(
+        root_layer,
+        ScopeStack.new(),
+        MetricSet.new(%{compare_desc: true, collapse_all: true})
+      )
 
-    new(root_layer.type, root_layer.name, duration, MetricSet.to_list(metric_set), uri, contexts, time, hostname, git_sha)
+    new(
+      root_layer.type,
+      root_layer.name,
+      duration,
+      MetricSet.to_list(metric_set),
+      uri,
+      contexts,
+      time,
+      hostname,
+      git_sha
+    )
   end
 
   # Each layer creates two Trace metrics:
@@ -100,7 +112,9 @@ defmodule ScoutApm.Internal.WebTrace do
     new_scope_stack = ScopeStack.push_scope(scope_stack, layer)
 
     # Absorb each child recursively
-    Enum.reduce(layer.children, metric_set, fn child, set -> create_trace_metrics(child, new_scope_stack, set) end)
+    Enum.reduce(layer.children, metric_set, fn child, set ->
+      create_trace_metrics(child, new_scope_stack, set)
+    end)
     # Then absorb this layer's 2 metrics
     |> MetricSet.absorb(detail_metric)
     |> MetricSet.absorb(summary_metric)
@@ -130,11 +144,13 @@ defmodule ScoutApm.Internal.WebTrace do
   end
 
   defp percentile_score(%__MODULE__{} = trace) do
-    with {:ok, percentile} <- ScoutApm.PersistentHistogram.percentile_for_value(
-                                key(trace),
-                                Duration.as(trace.total_call_time, :seconds))
-      do
-        raw = cond do
+    with {:ok, percentile} <-
+           ScoutApm.PersistentHistogram.percentile_for_value(
+             key(trace),
+             Duration.as(trace.total_call_time, :seconds)
+           ) do
+      raw =
+        cond do
           # Don't put much emphasis on capturing low percentiles.
           percentile < 40 ->
             0.4
@@ -152,7 +168,7 @@ defmodule ScoutApm.Internal.WebTrace do
             1.8
         end
 
-        raw * @point_multiplier_percentile
+      raw * @point_multiplier_percentile
     else
       # If we failed to lookup the percentile, just give back a 0 score.
       err ->

@@ -7,7 +7,7 @@ defmodule ScoutApm.ApplicationLoadNotification do
   @wait_between_retries 10_000
 
   def start_link() do
-    GenServer.start_link(__MODULE__, :ok, [name: @name])
+    GenServer.start_link(__MODULE__, :ok, name: @name)
   end
 
   ################
@@ -15,12 +15,12 @@ defmodule ScoutApm.ApplicationLoadNotification do
   ################
   def init(:ok) do
     initial_state = %{}
-    run([retries: 3])
+    run(retries: 3)
 
     {:ok, initial_state}
   end
 
-  def run([retries: retries]) do
+  def run(retries: retries) do
     GenServer.cast(@name, {:run, [retries: retries]})
   end
 
@@ -31,19 +31,20 @@ defmodule ScoutApm.ApplicationLoadNotification do
   def handle_cast({:run, [retries: retries]}, state) do
     payload =
       ScoutApm.Payload.AppServerLoad.new()
-      |> Poison.encode!
+      |> Poison.encode!()
 
     # post/1 logs errors and successes, so only log if we stop retrying
     case report(payload) do
       :ok ->
         {:stop, :normal, state}
+
       :error ->
         if retries < 1 do
           ScoutApm.Logger.log(:info, "Failed to send AppServerLoad, aborting.")
           {:stop, :normal, state}
         else
           :timer.sleep(@wait_between_retries)
-          run([retries: retries - 1])
+          run(retries: retries - 1)
           {:noreply, state}
         end
     end
@@ -59,7 +60,11 @@ defmodule ScoutApm.ApplicationLoadNotification do
 
     case {monitor, key} do
       {nil, nil} ->
-        ScoutApm.Logger.log(:debug, "Skipping AppServerLoad, both monitor and key settings are missing")
+        ScoutApm.Logger.log(
+          :debug,
+          "Skipping AppServerLoad, both monitor and key settings are missing"
+        )
+
         :ok
 
       {true, nil} ->
@@ -94,25 +99,47 @@ defmodule ScoutApm.ApplicationLoadNotification do
     options = []
     header_list = headers()
 
-    case :hackney.request(method, url, header_list , encoded_payload, options) do
+    case :hackney.request(method, url, header_list, encoded_payload, options) do
       {:ok, status_code, _resp_headers, _client_ref} when status_code in @success_http_codes ->
-        ScoutApm.Logger.log(:info, "AppServerLoad Report Succeeded. Status: #{inspect status_code}")
+        ScoutApm.Logger.log(
+          :info,
+          "AppServerLoad Report Succeeded. Status: #{inspect(status_code)}"
+        )
+
         :ok
 
       {:ok, status_code, resp_headers, _client_ref} when status_code in @error_http_codes ->
-        ScoutApm.Logger.log(:info, "AppServerLoad Report Failed with #{status_code}. Response Headers: #{inspect resp_headers}")
+        ScoutApm.Logger.log(
+          :info,
+          "AppServerLoad Report Failed with #{status_code}. Response Headers: #{
+            inspect(resp_headers)
+          }"
+        )
+
         :error
 
       {:ok, status_code, _resp_headers, _client_ref} ->
-        ScoutApm.Logger.log(:info, "AppServerLoad Report Unexpected Status: #{inspect status_code}")
+        ScoutApm.Logger.log(
+          :info,
+          "AppServerLoad Report Unexpected Status: #{inspect(status_code)}"
+        )
+
         :error
 
       {:error, ereason} ->
-        ScoutApm.Logger.log(:info, "AppServerLoad Report Failed: Hackney Error: #{inspect ereason}")
+        ScoutApm.Logger.log(
+          :info,
+          "AppServerLoad Report Failed: Hackney Error: #{inspect(ereason)}"
+        )
+
         :error
 
       r ->
-        ScoutApm.Logger.log(:info, "AppServerLoad Report Failed: Unknown Hackney Error: #{inspect r}")
+        ScoutApm.Logger.log(
+          :info,
+          "AppServerLoad Report Failed: Unknown Hackney Error: #{inspect(r)}"
+        )
+
         :error
     end
   end
@@ -125,7 +152,7 @@ defmodule ScoutApm.ApplicationLoadNotification do
       # This is not technically correct, it should be application/json
       # or a custom content-type, but due to how ingest works, this is the
       # correct thing for now.
-      {"Content-Type", "application/octet-stream"},
+      {"Content-Type", "application/octet-stream"}
     ]
   end
 end

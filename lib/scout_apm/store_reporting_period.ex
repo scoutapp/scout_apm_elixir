@@ -18,15 +18,19 @@ defmodule ScoutApm.StoreReportingPeriod do
         job_traces: ScoredItemSet.new(),
 
         # a map of key => ApproximateHistogram
-        histograms: %{},
+        histograms: %{}
       }
     end)
   end
 
   def record_web_trace(pid, trace) do
-    Agent.update(pid,
+    Agent.update(
+      pid,
       fn state ->
-        %{state | web_traces: ScoredItemSet.absorb(state.web_traces, WebTrace.as_scored_item(trace))}
+        %{
+          state
+          | web_traces: ScoredItemSet.absorb(state.web_traces, WebTrace.as_scored_item(trace))
+        }
       end
     )
   end
@@ -36,7 +40,8 @@ defmodule ScoutApm.StoreReportingPeriod do
   def record_sampler_metric(pid, metric), do: record_web_metric(pid, metric)
 
   def record_web_metric(pid, metric) do
-    Agent.update(pid,
+    Agent.update(
+      pid,
       fn state ->
         %{state | web_metric_set: MetricSet.absorb(state.web_metric_set, metric)}
       end
@@ -44,36 +49,49 @@ defmodule ScoutApm.StoreReportingPeriod do
   end
 
   def record_job_record(pid, job_record) do
-    Agent.update(pid,
+    Agent.update(
+      pid,
       fn state ->
-        %{state |
-            jobs: Map.update(
-              state.jobs,
-              JobRecord.key(job_record),
-              job_record,
-              fn existing -> JobRecord.merge(job_record, existing) end
-            )
-         }
+        %{
+          state
+          | jobs:
+              Map.update(
+                state.jobs,
+                JobRecord.key(job_record),
+                job_record,
+                fn existing -> JobRecord.merge(job_record, existing) end
+              )
+        }
       end
     )
   end
 
   def record_job_trace(pid, trace) do
-    Agent.update(pid,
+    Agent.update(
+      pid,
       fn state ->
-        %{state | job_traces: ScoredItemSet.absorb(state.job_traces, JobTrace.as_scored_item(trace))}
+        %{
+          state
+          | job_traces: ScoredItemSet.absorb(state.job_traces, JobTrace.as_scored_item(trace))
+        }
       end
     )
   end
 
-  def record_timing(pid, key, %Duration{} = timing), do: record_timing(pid, key, Duration.as(timing, :seconds))
+  def record_timing(pid, key, %Duration{} = timing),
+    do: record_timing(pid, key, Duration.as(timing, :seconds))
+
   def record_timing(pid, key, timing) do
-    Agent.update(pid,
+    Agent.update(
+      pid,
       fn state ->
-        %{state | histograms:
-          Map.update(state.histograms, key, ApproximateHistogram.new(), fn histo ->
-            ApproximateHistogram.add(histo, timing)
-          end)}
+        %{
+          state
+          | histograms:
+              Map.update(state.histograms, key, ApproximateHistogram.new(), fn histo ->
+                ApproximateHistogram.add(histo, timing)
+              end)
+        }
       end
     )
   end
@@ -111,29 +129,31 @@ defmodule ScoutApm.StoreReportingPeriod do
       state = Agent.get(pid, fn state -> state end)
       Agent.stop(pid)
 
-      payload = ScoutApm.Payload.new(
-        state.time,
+      payload =
+        ScoutApm.Payload.new(
+          state.time,
+          state.web_metric_set,
+          ScoredItemSet.to_list(state.web_traces, :without_scores),
+          state.histograms,
+          Map.values(state.jobs),
+          ScoredItemSet.to_list(state.job_traces, :without_scores)
+        )
 
-        state.web_metric_set,
-        ScoredItemSet.to_list(state.web_traces, :without_scores),
-
-        state.histograms,
-
-        Map.values(state.jobs),
-        ScoredItemSet.to_list(state.job_traces, :without_scores)
+      ScoutApm.Logger.log(
+        :debug,
+        "Reporting: Payload created with data from #{ScoutApm.Payload.total_call_count(payload)} requests."
       )
 
-      ScoutApm.Logger.log(:debug, "Reporting: Payload created with data from #{ScoutApm.Payload.total_call_count(payload)} requests.")
-      ScoutApm.Logger.log(:debug, "Payload #{inspect payload}")
+      ScoutApm.Logger.log(:debug, "Payload #{inspect(payload)}")
 
       encoded = ScoutApm.Payload.encode(payload)
 
-      ScoutApm.Logger.log(:debug, "Encoded Payload: #{inspect encoded}")
+      ScoutApm.Logger.log(:debug, "Encoded Payload: #{inspect(encoded)}")
 
       ScoutApm.Reporter.report(encoded)
     rescue
-      e in RuntimeError -> ScoutApm.Logger.log(:info, "Reporting runtime error: #{inspect e}")
-      e -> ScoutApm.Logger.log(:info, "Reporting other error: #{inspect e}")
+      e in RuntimeError -> ScoutApm.Logger.log(:info, "Reporting runtime error: #{inspect(e)}")
+      e -> ScoutApm.Logger.log(:info, "Reporting other error: #{inspect(e)}")
     end
   end
 

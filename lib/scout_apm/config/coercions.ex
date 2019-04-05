@@ -11,26 +11,30 @@ defmodule ScoutApm.Config.Coercions do
   @truthy ["true", "t", "1"]
   @falsey ["false", "f", "0"]
   def boolean(b) when is_boolean(b), do: {:ok, b}
-  def boolean(s) when s in @truthy,  do: {:ok, true}
-  def boolean(s) when s in @falsey,  do: {:ok, false}
+  def boolean(s) when s in @truthy, do: {:ok, true}
+  def boolean(s) when s in @falsey, do: {:ok, false}
+
   def boolean(s) when is_binary(s) do
     downcased = String.downcase(s)
+
     if downcased != s do
       boolean(downcased)
     else
       :error
     end
   end
-  def boolean(_), do: :error
 
+  def boolean(_), do: :error
 
   def json(json) when is_list(json), do: {:ok, json}
   def json(json) when is_map(json), do: {:ok, json}
+
   def json(json) when is_binary(json) do
     case Poison.decode(json) do
       {:ok, json} -> {:ok, json}
       {:error, _} -> :error
     end
   end
+
   def json(_), do: :error
 end

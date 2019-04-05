@@ -7,7 +7,8 @@ defmodule ScoutApm.PersistentHistogram do
 
   # This is synchronous.
   def record_timing(key, timing) do
-    Agent.update(@name,
+    Agent.update(
+      @name,
       fn state ->
         Map.update(
           state,
@@ -25,10 +26,10 @@ defmodule ScoutApm.PersistentHistogram do
 
   # Returns {:ok, percentile} or :error
   def percentile(key, timing) do
-    Agent.get(@name,
+    Agent.get(
+      @name,
       fn state ->
         case Map.fetch(state, key) do
-
           {:ok, histo} ->
             p = ApproximateHistogram.percentile(histo, timing)
             {:ok, p}
@@ -42,7 +43,8 @@ defmodule ScoutApm.PersistentHistogram do
 
   # Returns {:ok, percentile} or :error
   def percentile_for_value(key, value) do
-    Agent.get(@name,
+    Agent.get(
+      @name,
       fn state ->
         case Map.fetch(state, key) do
           {:ok, histo} ->

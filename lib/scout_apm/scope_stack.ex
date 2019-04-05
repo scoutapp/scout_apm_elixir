@@ -19,6 +19,7 @@ defmodule ScoutApm.ScopeStack do
 
   def push_scope(stack, %Layer{scopable: false}), do: stack
   def push_scope(stack, %Layer{} = layer), do: push_scope(stack, layer_to_scope(layer))
+
   def push_scope(stack, %{} = scope) do
     if Enum.count(stack) >= @max_depth do
       stack

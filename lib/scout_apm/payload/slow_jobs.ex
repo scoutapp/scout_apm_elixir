@@ -1,5 +1,4 @@
 defmodule ScoutApm.Payload.SlowJobs do
-
   alias ScoutApm.Internal.Duration
 
   def new(job_traces) do
@@ -11,16 +10,13 @@ defmodule ScoutApm.Payload.SlowJobs do
       queue: job_trace.queue_name,
       name: job_trace.job_name,
       time: job_trace.time,
-
       total_time: Duration.as(job_trace.total_time, :seconds),
       exclusive_time: Duration.as(job_trace.exclusive_time, :seconds),
-
       hostname: job_trace.hostname,
       git_sha: job_trace.git_sha,
       metrics: ScoutApm.Payload.NewMetrics.new(job_trace.metrics),
       context: ScoutApm.Payload.Context.new(job_trace.contexts),
-
-      score: job_trace.score,
+      score: job_trace.score
 
       # Unimplemented parts of this payload. Kept here to remind us of
       # the symmetry w/ the ruby agent

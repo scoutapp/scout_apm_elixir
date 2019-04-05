@@ -3,7 +3,6 @@ defmodule ScoutApm.Internal.JobRecordTest do
 
   describe "new/0" do
     test "creating" do
-
     end
   end
 end

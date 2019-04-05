@@ -4,7 +4,7 @@ defmodule ScoutApm.Payload.Jobs do
 
   alias ScoutApm.Internal.JobRecord
 
-  @spec new(list(JobRecord.t)) :: list(map)
+  @spec new(list(JobRecord.t())) :: list(map)
   def new(jobs) do
     jobs
     |> Enum.map(&make_job/1)
@@ -16,11 +16,9 @@ defmodule ScoutApm.Payload.Jobs do
       name: job.name,
       count: job.count,
       errors: job.errors,
-
       total_time: job.total_time |> ApproximateHistogram.to_list() |> to_jsonable_histo,
       exclusive_time: job.exclusive_time |> ApproximateHistogram.to_list() |> to_jsonable_histo,
-
-      metrics: ScoutApm.Payload.NewMetrics.new(job.metrics),
+      metrics: ScoutApm.Payload.NewMetrics.new(job.metrics)
     }
   end
 

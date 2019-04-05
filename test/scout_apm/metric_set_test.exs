@@ -8,11 +8,12 @@ defmodule ScoutApm.MetricSetTest do
     test "creates a MetricSet with default options" do
       set = MetricSet.new()
       assert ScoutApm.MetricSet == set.__struct__
+
       assert %{
-        collapse_all: false,
-        compare_desc: false,
-        max_types: 100,
-      } == set.options
+               collapse_all: false,
+               compare_desc: false,
+               max_types: 100
+             } == set.options
     end
 
     test "accepts overriding options" do
@@ -27,7 +28,7 @@ defmodule ScoutApm.MetricSetTest do
   describe "absorb" do
     test "adds to metrics" do
       set =
-        MetricSet.new
+        MetricSet.new()
         |> MetricSet.absorb(make_metric("Ecto", "select"))
 
       assert 1 == Enum.count(MetricSet.to_list(set))
@@ -35,7 +36,7 @@ defmodule ScoutApm.MetricSetTest do
 
     test "merges if the metric already exists" do
       set =
-        MetricSet.new
+        MetricSet.new()
         |> MetricSet.absorb(make_metric("Ecto", "select"))
         |> MetricSet.absorb(make_metric("Ecto", "select"))
         |> MetricSet.absorb(make_metric("Ecto", "select"))
@@ -49,8 +50,10 @@ defmodule ScoutApm.MetricSetTest do
         |> MetricSet.absorb(make_metric("A", "select"))
         |> MetricSet.absorb(make_metric("B", "select"))
         |> MetricSet.absorb(make_metric("C", "select"))
-        |> MetricSet.absorb(make_metric("D", "select")) # skipped
-        |> MetricSet.absorb(make_metric("E", "select")) # skipped
+        # skipped
+        |> MetricSet.absorb(make_metric("D", "select"))
+        # skipped
+        |> MetricSet.absorb(make_metric("E", "select"))
 
       assert 3 == Enum.count(MetricSet.to_list(set))
     end
@@ -59,12 +62,12 @@ defmodule ScoutApm.MetricSetTest do
   describe "absorb_all" do
     test "adds to metrics" do
       set =
-        MetricSet.new
+        MetricSet.new()
         |> MetricSet.absorb_all([
-             make_metric("Ecto", "select"),
-             make_metric("Controller", "foo/bar"),
-             make_metric("EEx", "pages/index.html"),
-           ])
+          make_metric("Ecto", "select"),
+          make_metric("Controller", "foo/bar"),
+          make_metric("EEx", "pages/index.html")
+        ])
 
       assert 3 == Enum.count(MetricSet.to_list(set))
     end
@@ -72,17 +75,21 @@ defmodule ScoutApm.MetricSetTest do
 
   describe "merge" do
     test "merges the two sets of metrics" do
-      set1 = MetricSet.new |> MetricSet.absorb_all([
-        make_metric("Ecto", "select"),
-        make_metric("Controller", "foo/bar"),
-        make_metric("EEx", "pages/index.html"),
-      ])
+      set1 =
+        MetricSet.new()
+        |> MetricSet.absorb_all([
+          make_metric("Ecto", "select"),
+          make_metric("Controller", "foo/bar"),
+          make_metric("EEx", "pages/index.html")
+        ])
 
-      set2 = MetricSet.new |> MetricSet.absorb_all([
-        make_metric("Ecto", "select"),
-        make_metric("Ecto", "delete"),
-        make_metric("EEx", "pages/layout.html"),
-      ])
+      set2 =
+        MetricSet.new()
+        |> MetricSet.absorb_all([
+          make_metric("Ecto", "select"),
+          make_metric("Ecto", "delete"),
+          make_metric("EEx", "pages/layout.html")
+        ])
 
       merged = MetricSet.merge(set1, set2)
 

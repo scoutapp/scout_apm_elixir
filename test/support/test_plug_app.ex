@@ -1,13 +1,14 @@
 defmodule ScoutApm.TestPlugApp do
   use Plug.Router
 
-  plug :match
-  plug :add_private_phoenix_controller
-  plug ScoutApm.Plugs.ControllerTimer
-  plug :dispatch
+  plug(:match)
+  plug(:add_private_phoenix_controller)
+  plug(ScoutApm.Plugs.ControllerTimer)
+  plug(:dispatch)
 
   get "/" do
     conn = fetch_query_params(conn)
+
     if Map.get(conn.query_params, "ignore") == "true" do
       ScoutApm.TrackedRequest.ignore()
     end

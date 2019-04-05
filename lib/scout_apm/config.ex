@@ -14,22 +14,24 @@ defmodule ScoutApm.Config do
     {ScoutApm.Config.Env, ScoutApm.Config.Env.load()},
     {ScoutApm.Config.Application, ScoutApm.Config.Application.load()},
     {ScoutApm.Config.Defaults, ScoutApm.Config.Defaults.load()},
-    {ScoutApm.Config.Null, ScoutApm.Config.Null.load()},
+    {ScoutApm.Config.Null, ScoutApm.Config.Null.load()}
   ]
 
   def find(key) do
     Enum.reduce_while(@config_modules, nil, fn {mod, data}, _acc ->
       if mod.contains?(data, key) do
         raw = mod.lookup(data, key)
+
         case coercion(key).(raw) do
           {:ok, c} ->
             {:halt, c}
+
           :error ->
             ScoutApm.Logger.log(:info, "Coercion of configuration #{key} failed. Ignoring")
             {:cont, nil}
         end
-    else
-      {:cont, nil}
+      else
+        {:cont, nil}
       end
     end)
   end

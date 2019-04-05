@@ -175,9 +175,10 @@ defmodule ScoutApm.Tracing do
     quote do
       warning =
         "use ScoutApm.Tracing, @timing, and @transaction are deprecated." <>
-        "Instead, users should import ScoutApm.Tracing " <>
-        "and define functions with deftransaction and deftiming"
-        IO.warn(warning)
+          "Instead, users should import ScoutApm.Tracing " <>
+          "and define functions with deftransaction and deftiming"
+
+      IO.warn(warning)
 
       # This handles module attributes that add instrumentation.
       # See `ScoutApm.Tracing.Annotations`.
@@ -192,9 +193,13 @@ defmodule ScoutApm.Tracing do
 
   @doc false
   # Deprecated!
-  @spec instrument(String.t, String.t, any, function) :: any
+  @spec instrument(String.t(), String.t(), any, function) :: any
   def instrument(type, name, opts \\ [], function) when is_function(function) do
-    ScoutApm.Logger.log(:warn, "#{__MODULE__}.instrument/4 is deprecated, use #{__MODULE__}.timing/4 instead")
+    ScoutApm.Logger.log(
+      :warn,
+      "#{__MODULE__}.instrument/4 is deprecated, use #{__MODULE__}.timing/4 instead"
+    )
+
     TrackedRequest.start_layer(type, name, opts)
     result = function.()
     TrackedRequest.stop_layer()
@@ -219,14 +224,20 @@ defmodule ScoutApm.Tracing do
   """
   defmacro transaction(type, name, opts \\ [], do: block) do
     quote do
-      TrackedRequest.start_layer(ScoutApm.Tracing.internal_layer_type(unquote(type)), unquote(name), unquote(opts))
+      TrackedRequest.start_layer(
+        ScoutApm.Tracing.internal_layer_type(unquote(type)),
+        unquote(name),
+        unquote(opts)
+      )
+
+      # ensure we record the transaction if it throws an error
       try do
         (fn -> unquote(block) end).()
       rescue
         e in RuntimeError ->
           # TODO - Add real error tracking
           raise e
-      after # ensure we record the transaction if it throws an error
+      after
         TrackedRequest.stop_layer()
       end
     end
@@ -234,11 +245,15 @@ defmodule ScoutApm.Tracing do
 
   defmacro deftransaction(head, body) do
     function_head = Macro.to_string(head)
+
     quote do
       options = Module.delete_attribute(__MODULE__, :transaction_opts) || []
-      module = __MODULE__
-               |> Atom.to_string()
-               |> String.trim_leading("Elixir.")
+
+      module =
+        __MODULE__
+        |> Atom.to_string()
+        |> String.trim_leading("Elixir.")
+
       name = Keyword.get(options, :name, "#{module}.#{unquote(function_head)}")
       type = Keyword.get(options, :type, "background")
       Module.put_attribute(__MODULE__, :scout_name, name)
@@ -254,7 +269,6 @@ defmodule ScoutApm.Tracing do
       Module.delete_attribute(__MODULE__, :scout_type)
     end
   end
-
 
   @doc """
   Times the execution of the given `block` of code, labeling it with `category` and `name` within Scout.
@@ -278,9 +292,10 @@ defmodule ScoutApm.Tracing do
   defmacro timing(category, name, opts \\ [], do: block) do
     quote do
       TrackedRequest.start_layer(unquote(category), unquote(name), unquote(opts))
+      # ensure we record the metric if the timed block throws an error
       try do
         (fn -> unquote(block) end).()
-      after # ensure we record the metric if the timed block throws an error
+      after
         TrackedRequest.stop_layer()
       end
     end
@@ -288,11 +303,15 @@ defmodule ScoutApm.Tracing do
 
   defmacro deftiming(head, body) do
     function_head = Macro.to_string(head)
+
     quote do
       options = Module.delete_attribute(__MODULE__, :timing_opts) || []
-      module = __MODULE__
-               |> Atom.to_string()
-               |> String.trim_leading("Elixir.")
+
+      module =
+        __MODULE__
+        |> Atom.to_string()
+        |> String.trim_leading("Elixir.")
+
       name = Keyword.get(options, :name, "#{module}.#{unquote(function_head)}")
       category = Keyword.get(options, :category, "Custom")
       Module.put_attribute(__MODULE__, :scout_name, name)
@@ -313,11 +332,15 @@ defmodule ScoutApm.Tracing do
   def internal_layer_type(type) when is_atom(type) do
     Atom.to_string(type) |> internal_layer_type
   end
+
   def internal_layer_type(type) when is_binary(type) do
-    downcased = String.downcase(type) # some coercion to handle capitalization
+    # some coercion to handle capitalization
+    downcased = String.downcase(type)
+
     case downcased do
       "web" ->
         "Controller"
+
       "background" ->
         "Job"
     end
@@ -336,7 +359,7 @@ defmodule ScoutApm.Tracing do
         HTTPoison.get! "http://httparrot.herokuapp.com/get"
       end
   """
-  @spec update_desc(String.t) :: any
+  @spec update_desc(String.t()) :: any
   def update_desc(desc) do
     TrackedRequest.update_current_layer(fn layer ->
       Layer.update_desc(layer, desc)
@@ -366,7 +389,7 @@ defmodule ScoutApm.Tracing do
 
     This naturally occurs when taking the output of Ecto log entries.
   """
-  @spec track(String.t, String.t, number(), Duration.unit, keyword()) :: :ok | :error
+  @spec track(String.t(), String.t(), number(), Duration.unit(), keyword()) :: :ok | :error
   def track(category, name, value, units, opts \\ []) when is_number(value) do
     if value < 0 do
       :error
