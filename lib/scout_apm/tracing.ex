@@ -162,6 +162,9 @@ defmodule ScoutApm.Tracing do
         use ScoutApm.Tracing
         import ScoutApm.Tracing
 
+
+  If you are importing across multiple libraries, it is possible to run into naming collisions.  Elixir
+  has documentation around those issues [here](https://elixir-lang.org/getting-started/alias-require-and-import.html).
   """
 
   alias ScoutApm.Internal.Layer
