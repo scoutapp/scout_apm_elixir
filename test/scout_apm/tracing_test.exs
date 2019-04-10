@@ -115,12 +115,12 @@ defmodule ScoutApm.TracingTest do
         end
       end
       """)
-      assert TracingAnnotationTestModule.add_three(2) == 5
-      assert TracingAnnotationTestModule.add_three(3) == 6
-      :timer.sleep(70)
-      %{reporting_periods: [pid]} = ScoutApm.Store.get()
-      Agent.get(pid, fn(%{jobs: jobs}) ->
-        assert %{count: 1, errors: 0} = Map.get(jobs, "default/TracingAnnotationTestModule.add_three(number)")
-      end)
+    assert TracingAnnotationTestModule.add_three(2) == 5
+    assert TracingAnnotationTestModule.add_three(3) == 6
+    [%{BatchCommand: %{commands: commands}}] = ScoutApm.TestCollector.messages()
+    assert Enum.any?(commands, fn(command) ->
+      map = Map.get(command, :StartSpan)
+      map && Map.get(map, :operation) == "Job/TracingAnnotationTestModule.add_three(number)"
+    end)
   end
 end
