@@ -56,7 +56,7 @@ defmodule ScoutApm.Mixfile do
 
   defp description() do
     """
-    ScoutAPM agent for Phoenix & Elixir projects. For more information, visit https://apm.scoutapp.com/elixir.
+    ScoutAPM agent for Phoenix & Elixir projects. For more information, visit https://scoutapm.com/elixir.
     """
   end
 
@@ -67,6 +67,6 @@ defmodule ScoutApm.Mixfile do
      maintainers: ["Scout Team"],
      licenses: ["Scout Software Agent License"],
      links: %{"GitHub" => "https://github.com/scoutapp/scout_apm_elixir",
-              "Docs" => "http://help.apm.scoutapp.com/#elixir-agent"}]
+              "Docs" => "http://docs.scoutapm.com/#elixir-agent"}]
   end
 end
