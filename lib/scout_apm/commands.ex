@@ -277,7 +277,7 @@ defmodule ScoutApm.Command.Batch do
     }
 
     stop_timestamp = if layer.manual_duration do
-      NaiveDateTime.add(layer.started_at, layer.manual_duration.value, :microseconds)
+      NaiveDateTime.add(layer.started_at, layer.manual_duration.value, :microsecond)
     else
       layer.stopped_at
     end
