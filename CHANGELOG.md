@@ -1,5 +1,7 @@
 # master
 
+* Fix Ecto 2 support (#88)
+
 # 0.4.14
 
 * Support Telemetry 0.3.0/0.4.0 and Ecto 3.0/3.1 (#84)
