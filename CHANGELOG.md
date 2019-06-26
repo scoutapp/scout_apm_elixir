@@ -1,5 +1,7 @@
 # master
 
+# 0.4.15
+
 * Fix Ecto 2 support (#88)
 
 # 0.4.14
