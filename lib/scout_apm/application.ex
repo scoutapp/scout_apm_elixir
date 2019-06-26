@@ -9,11 +9,9 @@ defmodule ScoutApm.Application do
     children = [
       worker(ScoutApm.Store, []),
       worker(ScoutApm.PersistentHistogram, []),
-
-      worker(ScoutApm.ApplicationLoadNotification, [], [restart: :temporary]),
-
+      worker(ScoutApm.ApplicationLoadNotification, [], restart: :temporary),
       worker(ScoutApm.Watcher, [ScoutApm.Store], id: :store_watcher),
-      worker(ScoutApm.Watcher, [ScoutApm.PersistentHistogram], id: :histogram_watcher),
+      worker(ScoutApm.Watcher, [ScoutApm.PersistentHistogram], id: :histogram_watcher)
     ]
 
     ScoutApm.Cache.setup()

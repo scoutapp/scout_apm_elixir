@@ -18,7 +18,7 @@ defmodule ScoutApm.DirectAnalysisStore do
 
   def transaction do
     if get_tracked_request() do
-      get_tracked_request() |> WebTrace.from_tracked_request |> SlowTransaction.new
+      get_tracked_request() |> WebTrace.from_tracked_request() |> SlowTransaction.new()
     else
       %{}
     end
@@ -30,5 +30,4 @@ defmodule ScoutApm.DirectAnalysisStore do
 
   def encode(nil), do: Poison.encode!(%{})
   def encode(payload), do: Poison.encode!(payload)
-
 end

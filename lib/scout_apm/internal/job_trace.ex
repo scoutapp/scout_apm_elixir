@@ -15,36 +15,53 @@ defmodule ScoutApm.Internal.JobTrace do
 
     # What else interesting did we learn?
     :contexts,
-
     :total_time,
     :exclusive_time,
-
     :metrics,
-
     :hostname,
     :git_sha,
-    :score,
+    :score
   ]
 
   @type t :: %__MODULE__{
-    queue_name: String.t,
-    job_name: String.t,
+          queue_name: String.t(),
+          job_name: String.t(),
 
-    # When did this job occur
-    time: any,
+          # When did this job occur
+          time: any,
 
-    # What else interesting did we learn?
-    contexts: list(Context.t),
-    total_time: Duration.t,
-    exclusive_time: Duration.t,
-    metrics: MetricSet.t,
-    hostname: String.t,
-    git_sha: String.t,
-    score: number(),
-  }
+          # What else interesting did we learn?
+          contexts: list(Context.t()),
+          total_time: Duration.t(),
+          exclusive_time: Duration.t(),
+          metrics: MetricSet.t(),
+          hostname: String.t(),
+          git_sha: String.t(),
+          score: number()
+        }
 
-  @spec new(String.t, String.t, any, list(Context.t), Duration.t, Duration.t, MetricSet.t, String.t, String.t | nil) :: t
-  def new(queue_name, job_name, time, contexts, total_time, exclusive_time, metrics, hostname, git_sha) do
+  @spec new(
+          String.t(),
+          String.t(),
+          any,
+          list(Context.t()),
+          Duration.t(),
+          Duration.t(),
+          MetricSet.t(),
+          String.t(),
+          String.t() | nil
+        ) :: t
+  def new(
+        queue_name,
+        job_name,
+        time,
+        contexts,
+        total_time,
+        exclusive_time,
+        metrics,
+        hostname,
+        git_sha
+      ) do
     %__MODULE__{
       queue_name: queue_name,
       job_name: job_name,
@@ -72,10 +89,13 @@ defmodule ScoutApm.Internal.JobTrace do
     hostname = ScoutApm.Cache.hostname()
     git_sha = ScoutApm.Cache.git_sha()
     contexts = tracked_request.contexts
-    metric_set = create_trace_metrics(
-      root_layer,
-      ScopeStack.new(),
-      MetricSet.new(%{compare_desc: true, collapse_all: true}))
+
+    metric_set =
+      create_trace_metrics(
+        root_layer,
+        ScopeStack.new(),
+        MetricSet.new(%{compare_desc: true, collapse_all: true})
+      )
 
     new(
       queue_name,
@@ -83,7 +103,8 @@ defmodule ScoutApm.Internal.JobTrace do
       time,
       contexts,
       duration,
-      duration, # exclusive time isn't used?
+      # exclusive time isn't used?
+      duration,
       metric_set,
       hostname,
       git_sha
@@ -97,7 +118,9 @@ defmodule ScoutApm.Internal.JobTrace do
     new_scope_stack = ScopeStack.push_scope(scope_stack, layer)
 
     # Absorb each child recursively
-    Enum.reduce(layer.children, metric_set, fn child, set -> create_trace_metrics(child, new_scope_stack, set) end)
+    Enum.reduce(layer.children, metric_set, fn child, set ->
+      create_trace_metrics(child, new_scope_stack, set)
+    end)
     # Then absorb this layer's 2 metrics
     |> MetricSet.absorb(detail_metric)
     |> MetricSet.absorb(summary_metric)
@@ -128,11 +151,13 @@ defmodule ScoutApm.Internal.JobTrace do
   end
 
   defp percentile_score(%__MODULE__{} = trace) do
-    with {:ok, percentile} <- ScoutApm.PersistentHistogram.percentile_for_value(
-                                score_key(trace),
-                                Duration.as(trace.total_time, :seconds))
-      do
-        raw = cond do
+    with {:ok, percentile} <-
+           ScoutApm.PersistentHistogram.percentile_for_value(
+             score_key(trace),
+             Duration.as(trace.total_time, :seconds)
+           ) do
+      raw =
+        cond do
           # Don't put much emphasis on capturing low percentiles.
           percentile < 40 ->
             0.4
@@ -150,7 +175,7 @@ defmodule ScoutApm.Internal.JobTrace do
             1.8
         end
 
-        raw * @point_multiplier_percentile
+      raw * @point_multiplier_percentile
     else
       # If we failed to lookup the percentile, just give back a 0 score.
       err ->

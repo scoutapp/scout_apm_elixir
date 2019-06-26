@@ -18,18 +18,20 @@ defmodule ScoutApm.Payload.JobRecordTest do
         errors: 0,
         total_time: ApproximateHistogram.new() |> ApproximateHistogram.add(1),
         exclusive_time: ApproximateHistogram.new() |> ApproximateHistogram.add(1),
-        metrics: MetricSet.new(),
+        metrics: MetricSet.new()
       }
 
-      assert [%{
-                name: "name",
-                queue: "q",
-                count: 1,
-                errors: 0,
-                exclusive_time: [[1.0, 1]],
-                total_time: [[1.0, 1]],
-                metrics: [],
-              }] == Jobs.new([jr])
+      assert [
+               %{
+                 name: "name",
+                 queue: "q",
+                 count: 1,
+                 errors: 0,
+                 exclusive_time: [[1.0, 1]],
+                 total_time: [[1.0, 1]],
+                 metrics: []
+               }
+             ] == Jobs.new([jr])
     end
   end
 end

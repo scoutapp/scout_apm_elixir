@@ -16,21 +16,21 @@ defmodule ScoutApm.ScoredItemSet do
   """
 
   @type t :: %__MODULE__{
-    options: __MODULE__.options,
-    data: %{any() => scored_item}
-  }
+          options: __MODULE__.options(),
+          data: %{any() => scored_item}
+        }
 
   @type options :: %{
-    max_count: pos_integer()
-  }
+          max_count: pos_integer()
+        }
 
-  @type key :: String.t
+  @type key :: String.t()
   @type score :: {:score, number(), key}
   @type scored_item :: {score, any()}
 
   defstruct [
     :options,
-    :data,
+    :data
   ]
 
   @default_max_count 10
@@ -60,12 +60,14 @@ defmodule ScoutApm.ScoredItemSet do
     case Map.fetch(set.data, key) do
       # If the item exists, compare the new vs old scored_items and the winner
       # gets put into the data map. Size of the data map doesn't change.
-      {:ok, {{_,existing_score,_},_} = existing_scored_item} ->
-        winner = if existing_score < score do
-          scored_item
-        else
-          existing_scored_item
-        end
+      {:ok, {{_, existing_score, _}, _} = existing_scored_item} ->
+        winner =
+          if existing_score < score do
+            scored_item
+          else
+            existing_scored_item
+          end
+
         %{set | data: %{set.data | key => winner}}
 
       # If this key doesn't yet exist, then we simply add it if there's room
@@ -73,8 +75,12 @@ defmodule ScoutApm.ScoredItemSet do
       # another, and then do the eviction
       :error ->
         if size(set) < set.options.max_count do
-          %{set | data: set.data
-                          |> Map.put(key, scored_item)}
+          %{
+            set
+            | data:
+                set.data
+                |> Map.put(key, scored_item)
+          }
         else
           absorb_at_capacity(set, scored_item)
         end
@@ -93,8 +99,7 @@ defmodule ScoutApm.ScoredItemSet do
 
   @spec absorb_at_capacity(t, scored_item) :: t
   defp absorb_at_capacity(%__MODULE__{} = set, {{:score, score, key}, _} = scored_item) do
-    {_, {{_, low_score, low_key}, _}} =
-      Enum.min_by(set.data, fn {_key, {{_, s, _}, _}} -> s end)
+    {_, {{_, low_score, low_key}, _}} = Enum.min_by(set.data, fn {_key, {{_, s, _}, _}} -> s end)
 
     if score < low_score do
       # This score was too low to break into the set, so no update is needed.
@@ -102,9 +107,13 @@ defmodule ScoutApm.ScoredItemSet do
     else
       # This score is higher than the lowest in the set, so we'll evict the
       # lowest, and replace it with this one.
-      %{set | data: set.data
-        |> Map.delete(low_key)
-        |> Map.put(key, scored_item)}
+      %{
+        set
+        | data:
+            set.data
+            |> Map.delete(low_key)
+            |> Map.put(key, scored_item)
+      }
     end
   end
 end

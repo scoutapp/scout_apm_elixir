@@ -21,7 +21,16 @@ defmodule ScoutApm.TrackedRequest do
 
   alias ScoutApm.Internal.Layer
 
-  defstruct [:root_layer, :layers, :children, :contexts, :collector_fn, :error, :ignored, :ignoring_depth]
+  defstruct [
+    :root_layer,
+    :layers,
+    :children,
+    :contexts,
+    :collector_fn,
+    :error,
+    :ignored,
+    :ignoring_depth
+  ]
 
   ###############
   #  Interface  #
@@ -61,13 +70,23 @@ defmodule ScoutApm.TrackedRequest do
     stop_layer(tr, fn x -> x end)
   end
 
-  def stop_layer(%__MODULE__{layers: []} = tracked_request, callback) when is_function(callback) do
-    ScoutApm.Logger.log(:info, "Scout Layer mismatch when stopping layer in #{inspect(tracked_request)}")
+  def stop_layer(%__MODULE__{layers: []} = tracked_request, callback)
+      when is_function(callback) do
+    ScoutApm.Logger.log(
+      :info,
+      "Scout Layer mismatch when stopping layer in #{inspect(tracked_request)}"
+    )
+
     :error
   end
 
-  def stop_layer(%__MODULE__{children: []} = tracked_request, callback) when is_function(callback) do
-    ScoutApm.Logger.log(:info, "Scout Layer mismatch when stopping layer in #{inspect(tracked_request)}")
+  def stop_layer(%__MODULE__{children: []} = tracked_request, callback)
+      when is_function(callback) do
+    ScoutApm.Logger.log(
+      :info,
+      "Scout Layer mismatch when stopping layer in #{inspect(tracked_request)}"
+    )
+
     :error
   end
 
@@ -76,7 +95,7 @@ defmodule ScoutApm.TrackedRequest do
 
     updated_layer =
       popped_layer
-      |> Layer.update_stopped_at
+      |> Layer.update_stopped_at()
       |> callback.()
 
     tr2 =
@@ -96,7 +115,7 @@ defmodule ScoutApm.TrackedRequest do
   def track_layer(%__MODULE__{} = tr, type, name, duration, fields, callback) do
     layer =
       Layer.new(%{type: type, name: name, opts: []})
-      |> Layer.update_stopped_at
+      |> Layer.update_stopped_at()
       |> Layer.set_manual_duration(duration)
       |> Layer.update_fields(fields)
       |> callback.()
@@ -104,8 +123,10 @@ defmodule ScoutApm.TrackedRequest do
     record_child_of_current_layer(tr, layer)
   end
 
-  def track_layer(type, name, duration, fields, callback \\ (fn x -> x end)) do
-    with_saved_tracked_request(fn tr -> track_layer(tr, type, name, duration, fields, callback) end)
+  def track_layer(type, name, duration, fields, callback \\ fn x -> x end) do
+    with_saved_tracked_request(fn tr ->
+      track_layer(tr, type, name, duration, fields, callback)
+    end)
   end
 
   @doc """
@@ -139,17 +160,13 @@ defmodule ScoutApm.TrackedRequest do
   """
   def ignore() do
     with_saved_tracked_request(fn tr ->
-      %{tr |
-        ignored: true,
-        ignoring_depth: Enum.count(tr.layers),
-        layers: [],
-        root_layer: nil,
-      }
+      %{tr | ignored: true, ignoring_depth: Enum.count(tr.layers), layers: [], root_layer: nil}
     end)
   end
 
   def record_context(%__MODULE__{} = tr, %ScoutApm.Internal.Context{} = context),
     do: %{tr | contexts: [context | tr.contexts]}
+
   def record_context(%ScoutApm.Internal.Context{} = context),
     do: with_saved_tracked_request(fn tr -> record_context(tr, context) end)
 
@@ -179,12 +196,12 @@ defmodule ScoutApm.TrackedRequest do
       ignored: false,
       children: [],
       contexts: [],
-      collector_fn: build_collector_fn(custom_collector),
+      collector_fn: build_collector_fn(custom_collector)
     })
   end
 
   def mark_error() do
-    with_saved_tracked_request(fn(request) ->
+    with_saved_tracked_request(fn request ->
       mark_error(request)
     end)
   end
@@ -195,12 +212,15 @@ defmodule ScoutApm.TrackedRequest do
 
   defp build_collector_fn(f) when is_function(f), do: f
   defp build_collector_fn({module, fun}), do: fn request -> apply(module, fun, [request]) end
-  defp build_collector_fn(_), do: fn request ->
-    ScoutApm.Collector.record_async(request)
-    ScoutApm.DirectAnalysisStore.record(request)
-  end
+
+  defp build_collector_fn(_),
+    do: fn request ->
+      ScoutApm.Collector.record_async(request)
+      ScoutApm.DirectAnalysisStore.record(request)
+    end
 
   def change_collector_fn(f), do: lookup() |> change_collector_fn(f) |> save()
+
   def change_collector_fn(%__MODULE__{} = tr, f) do
     %{tr | collector_fn: build_collector_fn(f)}
   end
@@ -230,7 +250,6 @@ defmodule ScoutApm.TrackedRequest do
     |> save()
   end
 
-
   defp layers(%__MODULE__{} = tr) do
     tr
     |> Map.get(:layers)
@@ -238,10 +257,13 @@ defmodule ScoutApm.TrackedRequest do
 
   defp with_root_layer(%__MODULE__{} = tr, layer) do
     tr
-    |> Map.update!(:root_layer,
-                   fn nil -> layer
-                      rl -> rl
-                   end)
+    |> Map.update!(
+      :root_layer,
+      fn
+        nil -> layer
+        rl -> rl
+      end
+    )
   end
 
   defp push_layer(%__MODULE__{} = tr, l) do
@@ -261,13 +283,9 @@ defmodule ScoutApm.TrackedRequest do
   # Return the layer
   defp pop_layer(%__MODULE__{} = tr) do
     s0 = tr
-    {cur_layer, s1} =
-      Map.get_and_update(s0, :layers,
-                         fn [cur | rest] -> {cur, rest} end)
+    {cur_layer, s1} = Map.get_and_update(s0, :layers, fn [cur | rest] -> {cur, rest} end)
 
-    {children, new_tr} =
-      Map.get_and_update(s1, :children,
-                         fn [cur | rest] -> {cur, rest} end)
+    {children, new_tr} = Map.get_and_update(s1, :children, fn [cur | rest] -> {cur, rest} end)
 
     popped_layer =
       cur_layer
@@ -282,8 +300,8 @@ defmodule ScoutApm.TrackedRequest do
   defp record_child_of_current_layer(%__MODULE__{} = tr, child) do
     tr
     |> Map.update!(:children, fn
-        [layer_children | cs] -> [[child | layer_children] | cs]
-        [] -> []
-      end)
+      [layer_children | cs] -> [[child | layer_children] | cs]
+      [] -> []
+    end)
   end
 end

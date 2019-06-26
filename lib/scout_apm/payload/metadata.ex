@@ -10,12 +10,14 @@ defmodule ScoutApm.Payload.Metadata do
   ]
 
   def new(timestamp) do
-    app_root = case File.cwd do
-      {:ok, path} ->
-        path
-      {:error, _reason} ->
-        nil
-    end
+    app_root =
+      case File.cwd() do
+        {:ok, path} ->
+          path
+
+        {:error, _reason} ->
+          nil
+      end
 
     %__MODULE__{
       app_root: app_root,

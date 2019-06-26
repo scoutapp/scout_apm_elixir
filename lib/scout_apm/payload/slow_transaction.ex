@@ -20,34 +20,28 @@ defmodule ScoutApm.Payload.SlowTransaction do
     :seconds_since_startup,
     :hostname,
     :git_sha,
-    :truncated_metrics,
+    :truncated_metrics
   ]
 
   def new(%WebTrace{} = trace) do
     %__MODULE__{
       key: %{
         bucket: trace.type,
-        name: trace.name,
+        name: trace.name
       },
-
       context: ScoutApm.Payload.Context.new(trace.contexts),
-
       time: trace.time,
       total_call_time: Duration.as(trace.total_call_time, :seconds),
       uri: trace.uri,
-
       metrics: trace.metrics |> Enum.map(fn m -> ScoutApm.Payload.Metric.new(m) end),
-
       score: trace.score,
-
       mem_delta: 0,
       allocation_metrics: %{},
       allocations: 0,
       seconds_since_startup: 0,
-
       hostname: trace.hostname,
       git_sha: trace.git_sha,
-      truncated_metrics: %{},
+      truncated_metrics: %{}
     }
   end
 end

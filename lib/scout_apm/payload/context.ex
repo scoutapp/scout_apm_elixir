@@ -7,7 +7,8 @@ defmodule ScoutApm.Payload.Context do
   def new(contexts) do
     Map.merge(
       contexts_of_type(contexts, :extra),
-      %{user: contexts_of_type(contexts, :user)})
+      %{user: contexts_of_type(contexts, :user)}
+    )
   end
 
   defp contexts_of_type(contexts, type) do

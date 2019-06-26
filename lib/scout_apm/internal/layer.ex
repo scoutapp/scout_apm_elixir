@@ -6,34 +6,33 @@ defmodule ScoutApm.Internal.Layer do
   """
 
   @type t :: %__MODULE__{
-    type: String.t,
-    name: nil | String.t,
-    desc: nil | String.t,
-    backtrace: nil | list(any()),
-    uri: nil | String.t,
-    started_at: number(),
-    stopped_at: nil | Integer,
-    scopable: boolean,
-    manual_duration: nil | ScoutApm.Internal.Duration.t,
-    children: list(%__MODULE__{})
-  }
+          type: String.t(),
+          name: nil | String.t(),
+          desc: nil | String.t(),
+          backtrace: nil | list(any()),
+          uri: nil | String.t(),
+          started_at: number(),
+          stopped_at: nil | Integer,
+          scopable: boolean,
+          manual_duration: nil | ScoutApm.Internal.Duration.t(),
+          children: list(%__MODULE__{})
+        }
 
   defstruct [
-   :type,
-   :name,
-   :desc,
-   :backtrace,
-   :uri,
-   :started_at,
-   :stopped_at,
+    :type,
+    :name,
+    :desc,
+    :backtrace,
+    :uri,
+    :started_at,
+    :stopped_at,
 
-   # If this is set, ignore started_at -> stopped_at valuse when calculating
-   # how long this layer ran
-   :manual_duration,
-
-   scopable: true,
-   children: [],
-   ]
+    # If this is set, ignore started_at -> stopped_at valuse when calculating
+    # how long this layer ran
+    :manual_duration,
+    scopable: true,
+    children: []
+  ]
 
   alias ScoutApm.Internal.Duration
 
@@ -51,7 +50,7 @@ defmodule ScoutApm.Internal.Layer do
       type: type,
       name: name,
       started_at: started_at,
-      scopable: scopable,
+      scopable: scopable
     }
   end
 
@@ -94,8 +93,9 @@ defmodule ScoutApm.Internal.Layer do
   ##################
 
   # Updates Layer fields in bulk. See `update_field` functions for fields that permit updates.
-  def update_fields(layer,[]), do: layer
-  def update_fields(layer,fields) do
+  def update_fields(layer, []), do: layer
+
+  def update_fields(layer, fields) do
     Enum.reduce(fields, layer, fn {key, value}, layer ->
       update_field(layer, key, value)
     end)
@@ -112,16 +112,16 @@ defmodule ScoutApm.Internal.Layer do
     case layer.manual_duration do
       nil ->
         Duration.new(layer.stopped_at - layer.started_at, :microseconds)
+
       %Duration{} ->
         layer.manual_duration
     end
   end
 
   def total_child_time(layer) do
-    Enum.reduce(layer.children, Duration.zero(),
-      fn(child, acc) ->
-        Duration.add(acc, total_time(child))
-      end)
+    Enum.reduce(layer.children, Duration.zero(), fn child, acc ->
+      Duration.add(acc, total_time(child))
+    end)
   end
 
   def total_exclusive_time(layer) do
