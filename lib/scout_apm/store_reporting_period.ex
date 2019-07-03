@@ -1,16 +1,13 @@
 defmodule ScoutApm.StoreReportingPeriod do
-  alias ScoutApm.Internal.Duration
-  alias ScoutApm.Internal.WebTrace
-  alias ScoutApm.Internal.JobRecord
-  alias ScoutApm.Internal.JobTrace
-  alias ScoutApm.MetricSet
-  alias ScoutApm.ScoredItemSet
+  alias ScoutApm.Internal.{DbMetric, Duration, JobRecord, JobTrace, WebTrace}
+  alias ScoutApm.{MetricSet, ScoredItemSet}
 
   def start_link(timestamp) do
     Agent.start_link(fn ->
       %{
         time: beginning_of_minute(timestamp),
         web_metric_set: MetricSet.new(),
+        db_metric_set: %{},
         web_traces: ScoredItemSet.new(),
 
         # key is JobRecord.key(), value is a single Merged JobRecord
@@ -96,6 +93,21 @@ defmodule ScoutApm.StoreReportingPeriod do
     )
   end
 
+  def record_db_metric(pid, key, db_metric) do
+    Agent.update(
+      pid,
+      fn state ->
+        %{
+          state
+          | db_metric_set:
+              Map.update(state.db_metric_set, key, db_metric, fn existing_db_metric ->
+                DbMetric.combine(existing_db_metric, db_metric)
+              end)
+        }
+      end
+    )
+  end
+
   # Returns true if the timestamp is part of the minute of this StoreReportingPeriod
   def covers?(pid, timestamp) do
     t = Agent.get(pid, fn state -> state.time end)
@@ -136,7 +148,8 @@ defmodule ScoutApm.StoreReportingPeriod do
           ScoredItemSet.to_list(state.web_traces, :without_scores),
           state.histograms,
           Map.values(state.jobs),
-          ScoredItemSet.to_list(state.job_traces, :without_scores)
+          ScoredItemSet.to_list(state.job_traces, :without_scores),
+          state.db_metric_set
         )
 
       ScoutApm.Logger.log(

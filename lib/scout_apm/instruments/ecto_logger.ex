@@ -24,6 +24,24 @@ defmodule ScoutApm.Instruments.EctoLogger do
           desc: Map.get(entry, :query)
         )
 
+        # db_metric = %ScoutApm.Internal.DbMetric{
+        #   model_name: String.t(),
+        #   operation: String.t(),
+        #   scope: String.t(),
+        #   transaction_count: non_neg_integer(),
+        #   call_count: non_neg_integer(),
+        #   call_time: Duration.t(),
+        #   rows_returned: non_neg_integer(),
+        #   min_call_time: Duration.t(),
+        #   max_call_time: Duration.t(),
+        #   min_rows_returned: non_neg_integer(),
+        #   max_rows_returned: non_neg_integer(),
+        #   histogram: term()
+        # }
+        metric = build_db_metric(entry, duration)
+
+        ScoutApm.Store.record_db_metric(ScoutApm.Internal.DbMetric.key(metric), metric)
+
       {:error, _} ->
         nil
     end
@@ -65,6 +83,28 @@ defmodule ScoutApm.Instruments.EctoLogger do
     else
       _ ->
         "SQL"
+    end
+  end
+
+  defp build_db_metric(entry, call_time_duration) do
+    metric = %ScoutApm.Internal.DbMetric{
+      scope: "Ecto/Limited",
+      transaction_count: 0,
+      call_count: 1,
+      call_time: call_time_duration
+    }
+
+    metric = Map.put(metric, :model_name, Map.get(entry, :source, metric.model_name))
+
+    with {:ok, {:ok, result}} <- Map.fetch(entry, :result),
+         command <- Map.get(result, :command, metric.operation),
+         num_rows <- Map.get(result, :num_rows, 0) do
+      command =
+        List.wrap(command)
+        |> Enum.map(&to_string(&1))
+        |> Enum.join(",")
+
+      %{metric | operation: command, rows_returned: num_rows, call_time: call_time_duration}
     end
   end
 

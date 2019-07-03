@@ -10,10 +10,7 @@ defmodule ScoutApm.Store do
 
   use GenServer
 
-  alias ScoutApm.Internal.Metric
-  alias ScoutApm.Internal.WebTrace
-  alias ScoutApm.Internal.JobRecord
-  alias ScoutApm.Internal.JobTrace
+  alias ScoutApm.Internal.{DbMetric, Metric, JobRecord, JobTrace, WebTrace}
   alias ScoutApm.StoreReportingPeriod
 
   # 60 seconds
@@ -88,6 +85,16 @@ defmodule ScoutApm.Store do
     end
   end
 
+  def record_db_metric(key, %DbMetric{} = db_metric) do
+    case Process.whereis(__MODULE__) do
+      nil ->
+        ScoutApm.Logger.log(:info, "Couldn't find worker!?")
+
+      pid ->
+        GenServer.cast(pid, {:record_db_metric, key, db_metric})
+    end
+  end
+
   def get do
     case Process.whereis(__MODULE__) do
       nil ->
@@ -143,6 +150,12 @@ defmodule ScoutApm.Store do
   def handle_cast({:record_job_trace, %JobTrace{} = trace}, state) do
     {rp, new_state} = find_or_create_reporting_period(state)
     StoreReportingPeriod.record_job_trace(rp, trace)
+    {:noreply, new_state}
+  end
+
+  def handle_cast({:record_db_metric, key, %DbMetric{} = db_metric}, state) do
+    {rp, new_state} = find_or_create_reporting_period(state)
+    StoreReportingPeriod.record_db_metric(rp, key, db_metric)
     {:noreply, new_state}
   end
 
