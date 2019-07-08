@@ -1,6 +1,7 @@
 defmodule ScoutApm.Core do
   def socket_path do
     socket_path = ScoutApm.Config.find(:core_agent_socket_path)
+
     if is_nil(socket_path) do
       dir = ScoutApm.Config.find(:core_agent_dir)
 
@@ -32,12 +33,14 @@ defmodule ScoutApm.Core do
   end
 
   def platform do
-    case :os.type do
+    case :os.type() do
       {:unix, :darwin} ->
         "apple-darwin"
+
       {:unix, _} ->
         libc = libc()
         "unknown-linux-#{libc}"
+
       _ ->
         "unknown"
     end

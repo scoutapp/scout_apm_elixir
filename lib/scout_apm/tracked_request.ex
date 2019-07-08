@@ -213,11 +213,15 @@ defmodule ScoutApm.TrackedRequest do
 
   defp build_collector_fn(f) when is_function(f), do: f
   defp build_collector_fn({module, fun}), do: fn request -> apply(module, fun, [request]) end
-  defp build_collector_fn(_), do: fn request ->
-    batch = ScoutApm.Command.Batch.from_tracked_request(request)
-            |> ScoutApm.Command.message()
-    @collector_module.send(batch)
-  end
+
+  defp build_collector_fn(_),
+    do: fn request ->
+      batch =
+        ScoutApm.Command.Batch.from_tracked_request(request)
+        |> ScoutApm.Command.message()
+
+      @collector_module.send(batch)
+    end
 
   def change_collector_fn(f), do: lookup() |> change_collector_fn(f) |> save()
 

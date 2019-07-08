@@ -113,6 +113,7 @@ defmodule ScoutApm.Internal.Layer do
       nil ->
         NaiveDateTime.diff(layer.stopped_at, layer.started_at, :microsecond)
         |> Duration.new(:microseconds)
+
       %Duration{} ->
         layer.manual_duration
     end

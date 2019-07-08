@@ -21,6 +21,7 @@ defmodule ScoutApm.Core.AgentManager do
 
   def setup do
     dir = ScoutApm.Config.find(:core_agent_dir)
+
     if ScoutApm.Config.find(:core_agent_launch) do
       case ScoutApm.Core.verify(dir) do
         {:ok, manifest} ->
@@ -28,6 +29,7 @@ defmodule ScoutApm.Core.AgentManager do
 
           ScoutApm.Core.Manifest.bin_path(manifest)
           |> run()
+
         {:error, _reason} ->
           maybe_download()
       end
@@ -36,6 +38,7 @@ defmodule ScoutApm.Core.AgentManager do
 
   def maybe_download do
     dir = ScoutApm.Config.find(:core_agent_dir)
+
     if ScoutApm.Config.find(:core_agent_download) do
       ScoutApm.Logger.log(:info, "Failed to find valid ScoutApm Core Agent. Attempting download.")
 
@@ -51,7 +54,10 @@ defmodule ScoutApm.Core.AgentManager do
           ScoutApm.Logger.log(:warn, "Failed to start ScoutApm Core Agent")
       end
     else
-      ScoutApm.Logger.log(:warn, "Not attempting to download ScoutApm Core Agent due to :core_agent_download configuration")
+      ScoutApm.Logger.log(
+        :warn,
+        "Not attempting to download ScoutApm Core Agent due to :core_agent_download configuration"
+      )
     end
   end
 
@@ -59,7 +65,7 @@ defmodule ScoutApm.Core.AgentManager do
     destination = Path.join([directory, file_name])
 
     with :ok <- File.mkdir_p(directory),
-         {:ok, 200, _headers, client_ref} <- :hackney.get(url, [], "", [follow_redirect: true]),
+         {:ok, 200, _headers, client_ref} <- :hackney.get(url, [], "", follow_redirect: true),
          {:ok, body} <- :hackney.body(client_ref),
          :ok <- File.write(destination, body),
          :ok <- :erl_tar.extract(destination, [:compressed, {:cwd, directory}]) do
@@ -67,7 +73,10 @@ defmodule ScoutApm.Core.AgentManager do
       :ok
     else
       e ->
-        ScoutApm.Logger.log(:warn, "Failed to download and extract ScoutApm Core Agent: #{inspect e}")
+        ScoutApm.Logger.log(
+          :warn,
+          "Failed to download and extract ScoutApm Core Agent: #{inspect(e)}"
+        )
     end
   end
 
@@ -77,8 +86,9 @@ defmodule ScoutApm.Core.AgentManager do
   end
 
   def app_metadata do
-    message = ScoutApm.Command.ApplicationEvent.app_metadata
-              |> ScoutApm.Command.message()
+    message =
+      ScoutApm.Command.ApplicationEvent.app_metadata()
+      |> ScoutApm.Command.message()
 
     send(message)
   end
@@ -110,35 +120,52 @@ defmodule ScoutApm.Core.AgentManager do
 
   @impl GenServer
   def handle_cast({:send, message}, %{socket: socket} = state) when is_map(message) do
-    state = with {:ok, encoded} <- Poison.encode(message),
-         message_length <- byte_size(encoded),
-         binary_length <- pad_leading(:binary.encode_unsigned(message_length, :big), 4, 0),
-         :ok <- :gen_tcp.send(socket, binary_length),
-         :ok <- :gen_tcp.send(socket, encoded),
-         {:ok, <<message_length::big-unsigned-integer-size(32)>>} <- :gen_tcp.recv(socket, 4),
-         {:ok, msg} <- :gen_tcp.recv(socket, message_length),
-         {:ok, decoded_msg} <- Poison.decode(msg) do
-      ScoutApm.Logger.log(
-        :info,
-        "Received message of length #{message_length}: #{inspect(decoded_msg)}"
-      )
-      state
-    else
-      {:error, :closed} ->
-        Port.close(socket)
-        ScoutApm.Logger.log(:warn, "ScoutApm Core Agent TCP socket closed. Attempting to reconnect.")
-        %{state | socket: setup()}
+    state =
+      with {:ok, encoded} <- Poison.encode(message),
+           message_length <- byte_size(encoded),
+           binary_length <- pad_leading(:binary.encode_unsigned(message_length, :big), 4, 0),
+           :ok <- :gen_tcp.send(socket, binary_length),
+           :ok <- :gen_tcp.send(socket, encoded),
+           {:ok, <<message_length::big-unsigned-integer-size(32)>>} <- :gen_tcp.recv(socket, 4),
+           {:ok, msg} <- :gen_tcp.recv(socket, message_length),
+           {:ok, decoded_msg} <- Poison.decode(msg) do
+        ScoutApm.Logger.log(
+          :info,
+          "Received message of length #{message_length}: #{inspect(decoded_msg)}"
+        )
 
-      {:error, :enotconn} ->
-        Port.close(socket)
-        ScoutApm.Logger.log(:warn, "ScoutApm Core Agent TCP socket disconnected. Attempting to reconnect.")
-        %{state | socket: setup()}
+        state
+      else
+        {:error, :closed} ->
+          Port.close(socket)
 
-      e ->
-        Port.close(socket)
-        ScoutApm.Logger.log(:warn, "Error in ScoutApm Core Agent TCP socket: #{inspect(e)}. Attempting to reconnect.")
-        %{state | socket: setup()}
-    end
+          ScoutApm.Logger.log(
+            :warn,
+            "ScoutApm Core Agent TCP socket closed. Attempting to reconnect."
+          )
+
+          %{state | socket: setup()}
+
+        {:error, :enotconn} ->
+          Port.close(socket)
+
+          ScoutApm.Logger.log(
+            :warn,
+            "ScoutApm Core Agent TCP socket disconnected. Attempting to reconnect."
+          )
+
+          %{state | socket: setup()}
+
+        e ->
+          Port.close(socket)
+
+          ScoutApm.Logger.log(
+            :warn,
+            "Error in ScoutApm Core Agent TCP socket: #{inspect(e)}. Attempting to reconnect."
+          )
+
+          %{state | socket: setup()}
+      end
 
     {:noreply, state}
   end
@@ -161,8 +188,10 @@ defmodule ScoutApm.Core.AgentManager do
   end
 
   def run(bin_path) do
-    ip = ScoutApm.Config.find(:core_agent_tcp_ip)
-         |> :inet_parse.ntoa()
+    ip =
+      ScoutApm.Config.find(:core_agent_tcp_ip)
+      |> :inet_parse.ntoa()
+
     port = ScoutApm.Config.find(:core_agent_tcp_port)
     socket_path = ScoutApm.Core.socket_path()
 
@@ -173,7 +202,11 @@ defmodule ScoutApm.Core.AgentManager do
       socket
     else
       e ->
-        ScoutApm.Logger.log(:warn, "Unable to start and connect to ScoutApm Core Agent: #{inspect e}")
+        ScoutApm.Logger.log(
+          :warn,
+          "Unable to start and connect to ScoutApm Core Agent: #{inspect(e)}"
+        )
+
         nil
     end
   end
