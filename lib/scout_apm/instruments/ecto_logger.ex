@@ -13,6 +13,7 @@ defmodule ScoutApm.Instruments.EctoLogger do
   # source: "posts",
   # type: :ecto_sql_query
   # }
+  alias ScoutApm.Internal.DbMetric
 
   def log(entry) do
     case query_time_log_entry(entry) do
@@ -24,23 +25,8 @@ defmodule ScoutApm.Instruments.EctoLogger do
           desc: Map.get(entry, :query)
         )
 
-        # db_metric = %ScoutApm.Internal.DbMetric{
-        #   model_name: String.t(),
-        #   operation: String.t(),
-        #   scope: String.t(),
-        #   transaction_count: non_neg_integer(),
-        #   call_count: non_neg_integer(),
-        #   call_time: Duration.t(),
-        #   rows_returned: non_neg_integer(),
-        #   min_call_time: Duration.t(),
-        #   max_call_time: Duration.t(),
-        #   min_rows_returned: non_neg_integer(),
-        #   max_rows_returned: non_neg_integer(),
-        #   histogram: term()
-        # }
-        metric = build_db_metric(entry, duration)
-
-        ScoutApm.Store.record_db_metric(ScoutApm.Internal.DbMetric.key(metric), metric)
+        build_db_metric(entry, duration)
+        |> store_db_metric()
 
       {:error, _} ->
         nil
@@ -58,6 +44,9 @@ defmodule ScoutApm.Instruments.EctoLogger do
           duration,
           desc: Map.get(metadata, :query)
         )
+
+        build_db_metric(metadata, duration)
+        |> store_db_metric()
 
       {:error, _} ->
         nil
@@ -86,17 +75,17 @@ defmodule ScoutApm.Instruments.EctoLogger do
     end
   end
 
-  defp build_db_metric(entry, call_time_duration) do
-    metric = %ScoutApm.Internal.DbMetric{
+  defp build_db_metric(entry_or_metadata, call_time_duration) do
+    metric = %DbMetric{
       scope: "Ecto/Limited",
       transaction_count: 0,
       call_count: 1,
       call_time: call_time_duration
     }
 
-    metric = Map.put(metric, :model_name, Map.get(entry, :source, metric.model_name))
+    metric = Map.put(metric, :model_name, Map.get(entry_or_metadata, :source, metric.model_name))
 
-    with {:ok, {:ok, result}} <- Map.fetch(entry, :result),
+    with {:ok, {:ok, result}} <- Map.fetch(entry_or_metadata, :result),
          command <- Map.get(result, :command, metric.operation),
          num_rows <- Map.get(result, :num_rows, 0) do
       command =
@@ -105,7 +94,18 @@ defmodule ScoutApm.Instruments.EctoLogger do
         |> Enum.join(",")
 
       %{metric | operation: command, rows_returned: num_rows, call_time: call_time_duration}
+    else
+      _ ->
+        {:error, :invalid_db_metric_data}
     end
+  end
+
+  defp store_db_metric(%DbMetric{} = db_metric) do
+    ScoutApm.Store.record_db_metric(DbMetric.key(db_metric), db_metric)
+  end
+
+  defp store_db_metric({:error, _} = error) do
+    ScoutApm.Logger.log(:debug, "Failed to store DBMetric: #{inspect(error)}")
   end
 
   def query_time(%{query_time: query_time}, _telemetry_metadata) when is_integer(query_time) do
