@@ -14,6 +14,23 @@ defmodule ScoutApm.Instruments.EctoLogger do
   # type: :ecto_sql_query
   # }
 
+  def log(entry) do
+    case query_time_log_entry(entry) do
+      {:ok, duration} ->
+        ScoutApm.TrackedRequest.track_layer(
+          "Ecto",
+          query_name_log_entry(entry),
+          duration,
+          desc: Map.get(entry, :query)
+        )
+
+      {:error, _} ->
+        nil
+    end
+
+    entry
+  end
+
   def record(value, metadata) do
     case query_time(value, metadata) do
       {:ok, duration} ->
@@ -36,6 +53,21 @@ defmodule ScoutApm.Instruments.EctoLogger do
     end
   end
 
+  def query_name_log_entry(entry) do
+    with {:ok, {:ok, result}} <- Map.fetch(entry, :result),
+         command <- Map.get(result, :command, "SQL"),
+         table <- Map.get(entry, :source) do
+      if table do
+        "#{command}##{table}"
+      else
+        "#{command}"
+      end
+    else
+      _ ->
+        "SQL"
+    end
+  end
+
   def query_time(%{query_time: query_time}, _telemetry_metadata) when is_integer(query_time) do
     microtime = System.convert_time_unit(query_time, :native, :microsecond)
     {:ok, ScoutApm.Internal.Duration.new(microtime, :microseconds)}
@@ -47,6 +79,15 @@ defmodule ScoutApm.Instruments.EctoLogger do
   end
 
   def query_time(_telemetry_value, _telemetry_metadata) do
+    {:error, :non_integer_query_time}
+  end
+
+  def query_time_log_entry(%{query_time: query_time}) when is_integer(query_time) do
+    microtime = System.convert_time_unit(query_time, :native, :microsecond)
+    {:ok, ScoutApm.Internal.Duration.new(microtime, :microseconds)}
+  end
+
+  def query_time_log_entry(_entry) do
     {:error, :non_integer_query_time}
   end
 end
