@@ -10,10 +10,10 @@ defmodule ScoutApm.Internal.Context do
   @type context_types :: :user | :extra
 
   @type t :: %__MODULE__{
-    type: context_types,
-    key: String.t,
-    value: number | boolean | String.t,
-  }
+          type: context_types,
+          key: String.t(),
+          value: number | boolean | String.t()
+        }
 
   def new(type, key, value) do
     case {valid_type?(type), valid_key?(key), valid_value?(value)} do
@@ -35,7 +35,7 @@ defmodule ScoutApm.Internal.Context do
   defp valid_type?(_), do: false
 
   defp valid_key?(key) when is_binary(key), do: String.printable?(key)
-  defp valid_key?(key) when is_atom(key), do: key |> to_string |> String.printable?
+  defp valid_key?(key) when is_atom(key), do: key |> to_string |> String.printable?()
   defp valid_key?(_), do: false
 
   defp valid_value?(val) when is_binary(val), do: String.printable?(val)

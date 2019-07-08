@@ -26,8 +26,8 @@ defmodule ScoutApm.Logger do
   #  |              |
   #  v              v
   @debug_levels [:debug]
-  @info_levels  [:debug, :info]
-  @warn_levels  [:debug, :info, :warn]
+  @info_levels [:debug, :info]
+  @warn_levels [:debug, :info, :warn]
   @error_levels [:debug, :info, :warn, :error]
 
   @log_levels %{
@@ -41,8 +41,7 @@ defmodule ScoutApm.Logger do
     log_level = ScoutApm.Config.find(:log_level) || @default_level
 
     with {:ok, levels} <- logging_enabled() && Map.fetch(@log_levels, level),
-         true <- log_level in levels
-    do
+         true <- log_level in levels do
       Logger.log(level, chardata_or_fun, metadata)
     else
       _ -> :ok

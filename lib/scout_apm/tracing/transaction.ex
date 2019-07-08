@@ -3,7 +3,8 @@ defmodule ScoutApm.Tracing.Annotations.Transaction do
 
   defstruct function_name: nil,
             scout_name: nil,
-            type: :web, # can be :web or :background
+            # can be :web or :background
+            type: :web,
             args: nil,
             guards: nil,
             body: nil
@@ -11,7 +12,7 @@ defmodule ScoutApm.Tracing.Annotations.Transaction do
   def new(type, mod, fun, args, guards, body, opts \\ []) do
     %__MODULE__{
       type: type,
-      scout_name: opts[:name] || default_scout_name(mod,fun),
+      scout_name: opts[:name] || default_scout_name(mod, fun),
       function_name: fun,
       args: args,
       guards: guards,
@@ -20,6 +21,6 @@ defmodule ScoutApm.Tracing.Annotations.Transaction do
   end
 
   defp default_scout_name(mod, fun) do
-    "#{mod}.#{fun}" |> String.replace_prefix("Elixir.","")
+    "#{mod}.#{fun}" |> String.replace_prefix("Elixir.", "")
   end
 end

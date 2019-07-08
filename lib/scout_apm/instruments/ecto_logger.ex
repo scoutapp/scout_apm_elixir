@@ -18,11 +18,12 @@ defmodule ScoutApm.Instruments.EctoLogger do
     case query_time(value, metadata) do
       {:ok, duration} ->
         ScoutApm.TrackedRequest.track_layer(
-        "Ecto",
-        query_name(value, metadata),
-        duration,
-        desc: Map.get(metadata, :query)
-      )
+          "Ecto",
+          query_name(value, metadata),
+          duration,
+          desc: Map.get(metadata, :query)
+        )
+
       {:error, _} ->
         nil
     end

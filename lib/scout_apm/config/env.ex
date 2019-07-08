@@ -20,5 +20,7 @@ defmodule ScoutApm.Config.Env do
 
   @env_prefix "SCOUT_"
   defp env_name(key) when is_atom(key), do: key |> to_string |> env_name
-  defp env_name(key) when is_binary(key), do: key |> String.upcase |> (fn k -> @env_prefix <> k end).()
+
+  defp env_name(key) when is_binary(key),
+    do: key |> String.upcase() |> (fn k -> @env_prefix <> k end).()
 end

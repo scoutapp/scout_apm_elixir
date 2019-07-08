@@ -2,13 +2,15 @@ defmodule ScoutApm.DevTrace.Plug do
   import Plug.Conn
 
   # This monkey-patches XMLHttpRequest. It could possibly be part of the main scout_instant.js too. This is placed in the HTML HEAD so it loads as soon as possible.
-  xml_http_script_path  = Application.app_dir(:scout_apm, "priv/static/devtrace/xml_http_script.html")
+  xml_http_script_path =
+    Application.app_dir(:scout_apm, "priv/static/devtrace/xml_http_script.html")
+
   @xml_http_script File.read!(xml_http_script_path)
 
   def init(default), do: default
 
   def call(conn, _) do
-    if ScoutApm.DevTrace.enabled? do
+    if ScoutApm.DevTrace.enabled?() do
       before_send_inject_devtrace(conn)
     else
       conn
@@ -17,17 +19,20 @@ defmodule ScoutApm.DevTrace.Plug do
 
   # Phoenix.LiveReloader is used as a base for much of the injection logic.
   defp before_send_inject_devtrace(conn) do
-    register_before_send conn, fn conn ->
+    register_before_send(conn, fn conn ->
       resp_body = to_string(conn.resp_body)
+
       cond do
         async_request?(conn) ->
           add_async_header(conn)
+
         inject?(conn, resp_body) ->
-          inject_js(conn,resp_body)
+          inject_js(conn, resp_body)
+
         true ->
           conn
       end
-    end
+    end)
   end
 
   defp add_async_header(conn) do
@@ -35,7 +40,7 @@ defmodule ScoutApm.DevTrace.Plug do
     |> put_resp_header("X-scoutapminstant", payload())
   end
 
-  defp inject_js(conn,resp_body) do
+  defp inject_js(conn, resp_body) do
     # HTML HEAD
     [page | rest] = String.split(resp_body, "</head>")
     body = page <> head_tags() <> Enum.join(["</head>" | rest], "")
@@ -43,7 +48,7 @@ defmodule ScoutApm.DevTrace.Plug do
     [page | rest] = String.split(body, "</body>")
     body = page <> body_tags() <> Enum.join(["</body>" | rest], "")
 
-    put_in conn.resp_body, body
+    put_in(conn.resp_body, body)
   end
 
   defp apm_host do
@@ -64,7 +69,9 @@ defmodule ScoutApm.DevTrace.Plug do
   defp body_tags do
     """
     <script src="#{apm_host()}/instant/scout_instant.js?cachebust=#{cachebust_time()}"></script>
-    <script>var scoutInstantPageTrace=#{payload()};window.scoutInstant=window.scoutInstant('#{apm_host()}', scoutInstantPageTrace)</script>
+    <script>var scoutInstantPageTrace=#{payload()};window.scoutInstant=window.scoutInstant('#{
+      apm_host()
+    }', scoutInstantPageTrace)</script>
     """
   end
 

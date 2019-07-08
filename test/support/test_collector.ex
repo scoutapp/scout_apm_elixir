@@ -39,5 +39,3 @@ defmodule ScoutApm.TestCollector do
     {:reply, :ok, %{state | messages: []}}
   end
 end
-
-

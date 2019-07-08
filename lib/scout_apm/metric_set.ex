@@ -6,21 +6,21 @@ defmodule ScoutApm.MetricSet do
   """
 
   @type t :: %__MODULE__{
-    data: map,
-    options: options,
-    types: MapSet.t,
-  }
+          data: map,
+          options: options,
+          types: MapSet.t()
+        }
 
   @type options :: %{
-    collapse_all: boolean(),
-    compare_desc: boolean(),
-    max_types: non_neg_integer(),
-  }
+          collapse_all: boolean(),
+          compare_desc: boolean(),
+          max_types: non_neg_integer()
+        }
 
   defstruct [
     :options,
     :data,
-    :types,
+    :types
   ]
 
   # Maximum number of unique types. This is far larger than what you'd really
@@ -34,23 +34,24 @@ defmodule ScoutApm.MetricSet do
   @default_options %{
     collapse_all: false,
     compare_desc: false,
-    max_types: @max_types,
+    max_types: @max_types
   }
 
-  @spec new() :: ScoutApm.MetricSet.t
+  @spec new() :: ScoutApm.MetricSet.t()
   def new, do: new(@default_options)
 
   @spec new(map()) :: t
   def new(options) do
     resolved_options = Map.merge(@default_options, options)
+
     %__MODULE__{
       options: resolved_options,
       data: %{},
-      types: MapSet.new(),
+      types: MapSet.new()
     }
   end
 
-  @spec absorb(t, Metric.t) :: t
+  @spec absorb(t, Metric.t()) :: t
   @doc """
   Add this metric to this metric set.
 
@@ -73,12 +74,13 @@ defmodule ScoutApm.MetricSet do
     end
   end
 
-  @spec absorb_all(t, list(Metric.t)) :: t
+  @spec absorb_all(t, list(Metric.t())) :: t
   def absorb_all(%__MODULE__{} = metric_set, metrics) when is_list(metrics) do
     Enum.reduce(
       metrics,
       metric_set,
-      fn metric, set -> absorb(set, metric) end)
+      fn metric, set -> absorb(set, metric) end
+    )
   end
 
   @spec merge(t, t) :: t
@@ -87,11 +89,11 @@ defmodule ScoutApm.MetricSet do
   end
 
   # Ditches the key part, and just returns the aggregate metric
-  @spec to_list(t) :: list(Metric.t)
+  @spec to_list(t) :: list(Metric.t())
   def to_list(%__MODULE__{} = metric_set) do
     metric_set.data
-    |> Map.to_list
-    |> Enum.map(fn {_,x} -> x end)
+    |> Map.to_list()
+    |> Enum.map(fn {_, x} -> x end)
   end
 
   #####################
@@ -103,7 +105,10 @@ defmodule ScoutApm.MetricSet do
   defp scoped_key(metric, %{compare_desc: compare_desc}) do
     case compare_desc do
       true ->
-        "#{metric.type}/#{metric.name}/scope/#{metric.scope[:type]}/#{metric.scope[:name]}/desc/#{metric.desc}"
+        "#{metric.type}/#{metric.name}/scope/#{metric.scope[:type]}/#{metric.scope[:name]}/desc/#{
+          metric.desc
+        }"
+
       false ->
         "#{metric.type}/#{metric.name}/scope/#{metric.scope[:type]}/#{metric.scope[:name]}"
     end
@@ -123,9 +128,11 @@ defmodule ScoutApm.MetricSet do
 
   defp absorb_no_type_limit(%__MODULE__{} = metric_set, %Metric{} = metric) do
     scoped_key = scoped_key(metric, metric_set.options)
-    new_data = Map.update(
-      metric_set.data, scoped_key, metric,
-      fn m2 -> Metric.merge(stripped_metric(metric, metric_set.options), m2) end)
+
+    new_data =
+      Map.update(metric_set.data, scoped_key, metric, fn m2 ->
+        Metric.merge(stripped_metric(metric, metric_set.options), m2)
+      end)
 
     %{metric_set | data: new_data}
   end
@@ -133,6 +140,4 @@ defmodule ScoutApm.MetricSet do
   defp register_type(%__MODULE__{} = metric_set, type) do
     %{metric_set | types: MapSet.put(metric_set.types, type)}
   end
-
 end
-

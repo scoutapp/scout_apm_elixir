@@ -36,7 +36,7 @@ defmodule ScoutApm.Core.Manifest do
     with {:ok, content} <- File.read(bin_path),
          hash <- :crypto.hash(:sha256, content),
          encoded <- Base.encode16(hash, case: :lower) do
-           manifest.sha256 == encoded
+      manifest.sha256 == encoded
     else
       _ ->
         ScoutApm.Logger.log(:debug, "Core Agent verification failed due to SHA mismatch")

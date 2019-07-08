@@ -7,9 +7,9 @@ defmodule ScoutApm.Application do
     import Supervisor.Spec, warn: false
 
     collector_module = ScoutApm.Config.find(:collector_module)
+
     children = [
       worker(ScoutApm.PersistentHistogram, []),
-
       worker(ScoutApm.Watcher, [ScoutApm.PersistentHistogram], id: :histogram_watcher),
       worker(collector_module, [])
     ]
