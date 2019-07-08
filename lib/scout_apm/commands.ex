@@ -203,11 +203,9 @@ defmodule ScoutApm.Command.Batch do
   alias ScoutApm.Internal.Layer
 
   def from_tracked_request(request) do
-    request_id = ScoutApm.Utils.random_string(12)
-
     start_request = %Command.StartRequest{
       timestamp: request.root_layer.started_at,
-      request_id: request_id
+      request_id: request.id
     }
 
     commands = [start_request]
@@ -216,7 +214,7 @@ defmodule ScoutApm.Command.Batch do
       Enum.map(request.contexts, fn %{key: key, value: value} ->
         %Command.TagRequest{
           timestamp: start_request.timestamp,
-          request_id: start_request.request_id,
+          request_id: request.id,
           tag: key,
           value: value
         }
@@ -224,7 +222,7 @@ defmodule ScoutApm.Command.Batch do
 
     commands = commands ++ tag_requests
 
-    spans = build_layer_spans([request.root_layer], request_id, nil, [])
+    spans = build_layer_spans([request.root_layer], request.id, nil, [])
 
     spans =
       if request.error == true do
@@ -232,7 +230,7 @@ defmodule ScoutApm.Command.Batch do
           [
             %Command.TagSpan{
               timestamp: request.root_layer.started_at,
-              request_id: request_id,
+              request_id: request.id,
               tag: "error",
               value: "true"
             }
@@ -245,7 +243,7 @@ defmodule ScoutApm.Command.Batch do
 
     finish_request = %Command.FinishRequest{
       timestamp: request.root_layer.stopped_at,
-      request_id: request_id
+      request_id: request.id
     }
 
     commands = commands ++ [finish_request]

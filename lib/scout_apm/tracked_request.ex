@@ -23,6 +23,7 @@ defmodule ScoutApm.TrackedRequest do
   alias ScoutApm.Internal.Layer
 
   defstruct [
+    :id,
     :root_layer,
     :layers,
     :children,
@@ -192,6 +193,7 @@ defmodule ScoutApm.TrackedRequest do
 
   def new(custom_collector \\ nil) do
     save(%__MODULE__{
+      id: ScoutApm.Utils.random_string(12),
       root_layer: nil,
       layers: [],
       ignored: false,
