@@ -100,9 +100,14 @@ defmodule ScoutApm.StoreReportingPeriod do
         %{
           state
           | db_metric_set:
-              Map.update(state.db_metric_set, key, db_metric, fn existing_db_metric ->
-                DbMetric.combine(existing_db_metric, db_metric)
-              end)
+              Map.update(
+                state.db_metric_set,
+                key,
+                DbMetric.new(db_metric.call_time),
+                fn existing_db_metric ->
+                  DbMetric.combine(existing_db_metric, db_metric)
+                end
+              )
         }
       end
     )

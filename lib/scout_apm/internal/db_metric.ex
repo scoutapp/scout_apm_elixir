@@ -29,26 +29,24 @@ defmodule ScoutApm.Internal.DbMetric do
 
   defstruct [
     :scope,
-    :transaction_count,
     :call_time,
     :min_call_time,
     :max_call_time,
     :min_rows_returned,
     :max_rows_returned,
-    :histogram,
+    transaction_count: 0,
     call_count: 0,
     rows_returned: 0,
+    histogram: ApproximateHistogram.new(),
     model_name: @default_model,
     operation: @default_operation
   ]
 
-  def new do
+  def new(call_time = %Duration{}) do
     %__MODULE__{
-      call_count: 0,
-      rows_returned: 0,
-      model_name: @default_model,
-      operation: @default_operation,
-      histogram: ApproximateHistogram.new()
+      call_time: call_time,
+      min_call_time: call_time,
+      max_call_time: call_time
     }
   end
 
