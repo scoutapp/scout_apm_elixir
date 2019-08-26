@@ -57,6 +57,11 @@ defmodule ScoutApm.Instruments.EctoLogger do
     with {:ok, {:ok, result}} <- Map.fetch(entry, :result),
          command <- Map.get(result, :command, "SQL"),
          table <- Map.get(entry, :source) do
+      command =
+        List.wrap(command)
+        |> Enum.map(&to_string(&1))
+        |> Enum.join(",")
+
       if table do
         "#{command}##{table}"
       else
