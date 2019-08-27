@@ -28,6 +28,6 @@ defmodule ScoutApm.DirectAnalysisStore do
     ScoutApm.Payload.Metadata.new(NaiveDateTime.utc_now())
   end
 
-  def encode(nil), do: Poison.encode!(%{})
-  def encode(payload), do: Poison.encode!(payload)
+  def encode(nil), do: Jason.encode!(%{})
+  def encode(payload), do: Jason.encode!(payload)
 end

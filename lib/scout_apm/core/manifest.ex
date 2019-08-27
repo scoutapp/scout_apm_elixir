@@ -6,7 +6,7 @@ defmodule ScoutApm.Core.Manifest do
     manifest_path = Path.join([directory, file])
 
     with {:ok, binary} <- File.read(manifest_path),
-         {:ok, json} <- Poison.decode(binary),
+         {:ok, json} <- Jason.decode(binary),
          {:ok, version} <- Map.fetch(json, "version"),
          {:ok, bin_version} <- Map.fetch(json, "core_agent_version"),
          {:ok, bin_name} <- Map.fetch(json, "core_agent_binary"),
