@@ -9,7 +9,7 @@ defmodule ScoutApm.Config.Defaults do
       core_agent_dir: "/tmp/scout_apm_core",
       core_agent_download: true,
       core_agent_launch: true,
-      core_agent_version: "v1.1.8",
+      core_agent_version: "v1.1.11",
       core_agent_tcp_ip: {127, 0, 0, 1},
       core_agent_tcp_port: 9000,
       collector_module: ScoutApm.Core.AgentManager,
