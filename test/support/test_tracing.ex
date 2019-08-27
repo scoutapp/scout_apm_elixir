@@ -1,12 +1,6 @@
 defmodule ScoutApm.TestTracing do
   import ScoutApm.Tracing
 
-  def transaction_block(_) do
-    transaction(:web, "TracingMacro") do
-      1
-    end
-  end
-
   deftransaction add_one(integer) when is_integer(integer) do
     integer + 1
   end

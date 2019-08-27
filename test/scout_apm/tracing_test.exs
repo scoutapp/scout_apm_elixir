@@ -6,12 +6,6 @@ defmodule ScoutApm.TracingTest do
     :ok
   end
 
-  describe "transaction block" do
-    test "usage with import" do
-      ScoutApm.TestTracing.transaction_block(1)
-    end
-  end
-
   describe "deftransaction" do
     test "creates histograms with sensible defaults" do
       assert ScoutApm.TestTracing.add_one(1) == 2

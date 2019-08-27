@@ -6,20 +6,8 @@ defmodule ScoutApm.Tracing do
   Scout's instrumentation is divided into 2 areas:
 
   1. __Transactions__: these wrap around a flow of work, like a web request or a GenServer call. The UI groups data under
-  transactions. Use `@transaction` module attributes and the `transaction/4` macro.
-  2. __Timing__: these measure individual pieces of work, like an HTTP request to an outside service or an Ecto query. Use
-  `@timing` module attributes and the `timing/4` macro.
-
-  ## Recording transactions
-
-  There are 2 ways to define transactions:
-
-  1. `deftransaction` macro
-  2. Wrapping blocks of code with the `transaction/4` macro.
-
-  Deprecated:
-
-  * `@transaction` module attributes
+  transactions.
+  2. __Timing__: these measure individual pieces of work, like an HTTP request to an outside service or an Ecto query.
 
   ### Transaction types
 
@@ -46,51 +34,7 @@ defmodule ScoutApm.Tracing do
           {:ok, socket}
         end
 
-  ### Module Attribute Example
-
-  This is deprecated due to a number of gotchas around the macro that implements this.
-  The `deftransaction` macro more reliably sets up the instrumentation.
-
-      defmodule CampWaitlist.Web.HtmlChannel do
-        use Phoenix.Channel
-        use ScoutApm.Tracing
-
-        # Will appear under "Web" in the UI, named "CampWaitlist.Web.HtmlChannel.join".
-        @transaction(type: "web")
-        def join("topic:html", _message, socket) do
-          {:ok, socket}
-        end
-
-  We treat this as a `web` transaction as it impacts the user experience.
-
-  An example treating a GenServer function as a background job:
-
-      defmodule CampWaitlist.AvailChecker do
-        use GenServer
-        use ScoutApm.Tracing
-
-        # Will appear under "Background Jobs" in the UI, named "CampWaitlist.AvailChecker.handle_call".
-        @transaction(type: "background")
-        def handle_call({:check, campground}, _from, state) do
-          # Do work...
-        end
-
-        # Will appear under "Background Jobs" in the UI, named "AvailChecker.status".
-        @transaction(type: "background", name: "AvailChecker.status")
-        def handle_call({:status, campground}, _from, state) do
-          # Do work...
-        end
-
   ## Timing Code
-
-  There are 2 ways to time the execution of code:
-
-  1. `deftiming` macro
-  2. Wrapping blocks of code with the `timing/4` macro.
-
-  Deprecated:
-
-  * `@timing` module attributes
 
   ### deftiming Macro Example
 
@@ -108,29 +52,6 @@ defmodule ScoutApm.Tracing do
         # The function will appear as `Hound/search` in transaction traces.
         @timing_opts [name: "search", category: "Hound"]
         deftiming open_search(url) do
-          navigate_to(url)
-        end
-
-
-  ### Module Attribute Example
-
-  This is deprecated due to a number of gotchas around the macro that implements this.
-  The `deftracing` macro more reliably sets up the instrumentation.
-
-      defmodule Searcher do
-        use ScoutApm.Tracing
-
-        # Time associated with this function will appear under "Hound" in timeseries charts.
-        # The function will appear as `Hound/open_search` in transaction traces.
-        @timing(category: "Hound")
-        def open_search(url) do
-          navigate_to(url)
-        end
-
-        # Time associated with this function will appear under "Hound" in timeseries charts.
-        # The function will appear as `Hound/search` in transaction traces.
-        @timing(category: "Hound", name: "search")
-        def open_search(url) do
           navigate_to(url)
         end
 
@@ -171,78 +92,20 @@ defmodule ScoutApm.Tracing do
   alias ScoutApm.Internal.Duration
   alias ScoutApm.TrackedRequest
 
-  defmacro __using__(_) do
-    quote do
-      warning =
-        "use ScoutApm.Tracing, @timing, and @transaction are deprecated." <>
-          "Instead, users should import ScoutApm.Tracing " <>
-          "and define functions with deftransaction and deftiming"
-
-      IO.warn(warning)
-
-      # This handles module attributes that add instrumentation.
-      # See `ScoutApm.Tracing.Annotations`.
-      Module.register_attribute(__MODULE__, :scout_transactions, accumulate: true)
-      Module.register_attribute(__MODULE__, :scout_timings, accumulate: true)
-      Module.register_attribute(__MODULE__, :scout_instrumented, accumulate: false, persist: true)
-
-      @on_definition {ScoutApm.Tracing.Annotations, :on_definition}
-      @before_compile {ScoutApm.Tracing.Annotations, :before_compile}
-    end
-  end
-
-  @doc false
-  # Deprecated!
-  @spec instrument(String.t(), String.t(), any, function) :: any
-  def instrument(type, name, opts \\ [], function) when is_function(function) do
-    ScoutApm.Logger.log(
-      :warn,
-      "#{__MODULE__}.instrument/4 is deprecated, use #{__MODULE__}.timing/4 instead"
-    )
-
-    TrackedRequest.start_layer(type, name, opts)
-    result = function.()
-    TrackedRequest.stop_layer()
-    result
-  end
-
   @doc """
-  Creates a transaction of `type` (either `web` or `background`) with the given `name` that should be displayed
-  in the UI for the provided code `block`.
+  Creates a transaction defaulting to type `background` with the default name being the fully qualified module, function and arity.
+
+  You can override the name and type by setting the `@transaction_opts` attribute right before the function.
 
   ## Example Usage
 
       import ScoutApm.Tracking
 
-      def do_async_work do
-        Task.start(fn ->
-          transaction(:background, "do_work") do
-            # Do work...
-          end
-        end)
+      # @transaction_opts [type: "web", name: "name_override"]
+      deftransaction do_async_work() do
+        # Do work...
       end
   """
-  defmacro transaction(type, name, opts \\ [], do: block) do
-    quote do
-      TrackedRequest.start_layer(
-        ScoutApm.Tracing.internal_layer_type(unquote(type)),
-        unquote(name),
-        unquote(opts)
-      )
-
-      # ensure we record the transaction if it throws an error
-      try do
-        (fn -> unquote(block) end).()
-      rescue
-        e in RuntimeError ->
-          # TODO - Add real error tracking
-          raise e
-      after
-        TrackedRequest.stop_layer()
-      end
-    end
-  end
-
   defmacro deftransaction(head, body) do
     function_head = Macro.to_string(head)
 
@@ -260,8 +123,20 @@ defmodule ScoutApm.Tracing do
       Module.put_attribute(__MODULE__, :scout_type, type)
 
       def unquote(head) do
-        transaction(@scout_type, @scout_name) do
+        TrackedRequest.start_layer(
+          ScoutApm.Tracing.internal_layer_type(@scout_type),
+          @scout_name
+        )
+
+        # ensure we record the transaction if it throws an error
+        try do
           unquote(body[:do])
+        rescue
+          e in RuntimeError ->
+            # TODO - Add real error tracking
+            raise e
+        after
+          TrackedRequest.stop_layer()
         end
       end
 
@@ -271,9 +146,11 @@ defmodule ScoutApm.Tracing do
   end
 
   @doc """
-  Times the execution of the given `block` of code, labeling it with `category` and `name` within Scout.
+  Times the execution of the given function, labeling it with a `category` and `name` within Scout. The default category is "Custom", and the default name is the fully qualified module, function and arity.
 
-  Within a trace in the Scout UI, the `block` will appear as `category/name` ie `Images/format_avatar` in traces and
+  You can override the category and name by setting the `@timing_opts` attribute right before the function.
+
+  Within a trace in the Scout UI, the block will appear as `category/name` ie `Images/format_avatar` in traces and
   will be displayed in timeseries charts under the associated `category`.
 
   ## Example Usage
@@ -282,25 +159,16 @@ defmodule ScoutApm.Tracing do
         use PhoenixApp.Web, :controller
         import ScoutApm.Tracing
 
-        def index(conn, _params) do
-          timing("Timer", "sleep") do
-            :timer.sleep(3000)
-          end
+        # @timing_opts [category: "Images", name: "format_images"]
+        deftiming format_avatars(params) do
+          # Formatting avatars
+        end
+
+        def index(conn, params) do
+          format_avatars(params)
           render conn, "index.html"
         end
   """
-  defmacro timing(category, name, opts \\ [], do: block) do
-    quote do
-      TrackedRequest.start_layer(unquote(category), unquote(name), unquote(opts))
-      # ensure we record the metric if the timed block throws an error
-      try do
-        (fn -> unquote(block) end).()
-      after
-        TrackedRequest.stop_layer()
-      end
-    end
-  end
-
   defmacro deftiming(head, body) do
     function_head = Macro.to_string(head)
 
@@ -318,8 +186,12 @@ defmodule ScoutApm.Tracing do
       Module.put_attribute(__MODULE__, :scout_category, category)
 
       def unquote(head) do
-        timing(@scout_category, @scout_name) do
+        TrackedRequest.start_layer(@scout_category, @scout_name)
+        # ensure we record the metric if the timed block throws an error
+        try do
           unquote(body[:do])
+        after
+          TrackedRequest.stop_layer()
         end
       end
 
