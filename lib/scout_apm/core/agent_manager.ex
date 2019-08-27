@@ -198,7 +198,7 @@ defmodule ScoutApm.Core.AgentManager do
     args = ["start", "--socket", socket_path, "--daemonize", "true", "--tcp", "#{ip}:#{port}"]
 
     with {_, 0} <- System.cmd(bin_path, args),
-         {:ok, socket} <- :gen_tcp.connect(ip, port, [{:active, false}, :binary]) do
+         {:ok, socket} <- try_connect_twice(ip, port) do
       socket
     else
       e ->
@@ -208,6 +208,17 @@ defmodule ScoutApm.Core.AgentManager do
         )
 
         nil
+    end
+  end
+
+  defp try_connect_twice(ip, port) do
+    case :gen_tcp.connect(ip, port, [{:active, false}, :binary]) do
+      {:ok, socket} ->
+        {:ok, socket}
+
+      _ ->
+        :timer.sleep(500)
+        :gen_tcp.connect(ip, port, [{:active, false}, :binary])
     end
   end
 end
