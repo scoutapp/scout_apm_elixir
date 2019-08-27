@@ -6,7 +6,8 @@ defmodule ScoutApm.Payload.Metadata do
     :agent_version,
     :agent_time,
     :agent_pid,
-    :platform
+    :platform,
+    :platform_version
   ]
 
   def new(timestamp) do
@@ -26,7 +27,8 @@ defmodule ScoutApm.Payload.Metadata do
       agent_version: ScoutApm.Utils.agent_version(),
       agent_time: timestamp |> DateTime.from_naive!("Etc/UTC") |> DateTime.to_iso8601(),
       agent_pid: System.get_pid() |> String.to_integer(),
-      platform: "elixir"
+      platform: "elixir",
+      platform_version: System.version()
     }
   end
 end
