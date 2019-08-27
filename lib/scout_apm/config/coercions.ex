@@ -30,7 +30,7 @@ defmodule ScoutApm.Config.Coercions do
   def json(json) when is_map(json), do: {:ok, json}
 
   def json(json) when is_binary(json) do
-    case Poison.decode(json) do
+    case Jason.decode(json) do
       {:ok, json} -> {:ok, json}
       {:error, _} -> :error
     end
