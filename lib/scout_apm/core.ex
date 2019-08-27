@@ -5,7 +5,7 @@ defmodule ScoutApm.Core do
     if is_nil(socket_path) do
       dir = ScoutApm.Config.find(:core_agent_dir)
 
-      Path.join([dir, "core-agent.sock"])
+      Path.join([dir, "scout-agent.sock"])
     else
       socket_path
     end
