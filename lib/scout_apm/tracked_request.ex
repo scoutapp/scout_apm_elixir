@@ -57,17 +57,17 @@ defmodule ScoutApm.TrackedRequest do
     with_saved_tracked_request(fn tr -> stop_layer(tr, callback) end)
   end
 
-  def stop_layer(%__MODULE__{ignored: true} = tr) do
+  def stop_layer(%__MODULE__{} = tr) do
+    stop_layer(tr, fn x -> x end)
+  end
+
+  def stop_layer(%__MODULE__{ignored: true} = tr, _callback) do
     if tr.ignoring_depth == 1 do
       # clear tracked request when last layer is stopped
       nil
     else
       %{tr | ignoring_depth: tr.ignoring_depth - 1}
     end
-  end
-
-  def stop_layer(%__MODULE__{} = tr) do
-    stop_layer(tr, fn x -> x end)
   end
 
   def stop_layer(%__MODULE__{layers: []} = tracked_request, callback)
