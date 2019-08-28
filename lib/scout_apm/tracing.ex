@@ -92,6 +92,28 @@ defmodule ScoutApm.Tracing do
   alias ScoutApm.Internal.Duration
   alias ScoutApm.TrackedRequest
 
+  @doc false
+  defmacro transaction(type, name, opts \\ [], do: block) do
+    quote do
+      TrackedRequest.start_layer(
+        ScoutApm.Tracing.internal_layer_type(unquote(type)),
+        unquote(name),
+        unquote(opts)
+      )
+
+      # ensure we record the transaction if it throws an error
+      try do
+        (fn -> unquote(block) end).()
+      rescue
+        e in RuntimeError ->
+          # TODO - Add real error tracking
+          raise e
+      after
+        TrackedRequest.stop_layer()
+      end
+    end
+  end
+
   @doc """
   Creates a transaction defaulting to type `background` with the default name being the fully qualified module, function and arity.
 
@@ -123,25 +145,26 @@ defmodule ScoutApm.Tracing do
       Module.put_attribute(__MODULE__, :scout_type, type)
 
       def unquote(head) do
-        TrackedRequest.start_layer(
-          ScoutApm.Tracing.internal_layer_type(@scout_type),
-          @scout_name
-        )
-
-        # ensure we record the transaction if it throws an error
-        try do
+        transaction(@scout_type, @scout_name) do
           unquote(body[:do])
-        rescue
-          e in RuntimeError ->
-            # TODO - Add real error tracking
-            raise e
-        after
-          TrackedRequest.stop_layer()
         end
       end
 
       Module.delete_attribute(__MODULE__, :scout_name)
       Module.delete_attribute(__MODULE__, :scout_type)
+    end
+  end
+
+  @doc false
+  defmacro timing(category, name, opts \\ [], do: block) do
+    quote do
+      TrackedRequest.start_layer(unquote(category), unquote(name), unquote(opts))
+      # ensure we record the metric if the timed block throws an error
+      try do
+        (fn -> unquote(block) end).()
+      after
+        TrackedRequest.stop_layer()
+      end
     end
   end
 
@@ -186,12 +209,8 @@ defmodule ScoutApm.Tracing do
       Module.put_attribute(__MODULE__, :scout_category, category)
 
       def unquote(head) do
-        TrackedRequest.start_layer(@scout_category, @scout_name)
-        # ensure we record the metric if the timed block throws an error
-        try do
+        timing(@scout_category, @scout_name) do
           unquote(body[:do])
-        after
-          TrackedRequest.stop_layer()
         end
       end
 
