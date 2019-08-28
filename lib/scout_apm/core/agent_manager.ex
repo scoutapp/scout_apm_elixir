@@ -130,7 +130,7 @@ defmodule ScoutApm.Core.AgentManager do
            {:ok, msg} <- :gen_tcp.recv(socket, message_length),
            {:ok, decoded_msg} <- Poison.decode(msg) do
         ScoutApm.Logger.log(
-          :info,
+          :debug,
           "Received message of length #{message_length}: #{inspect(decoded_msg)}"
         )
 
