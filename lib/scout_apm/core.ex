@@ -21,7 +21,13 @@ defmodule ScoutApm.Core do
 
     if is_nil(full_name) do
       version = ScoutApm.Config.find(:core_agent_version)
-      platform_triple = platform_triple()
+
+      platform_triple =
+        case ScoutApm.Config.find(:core_agent_triple) do
+          triple when is_binary(triple) -> triple
+          nil -> platform_triple()
+        end
+
       "scout_apm_core-#{version}-#{platform_triple}"
     else
       full_name
