@@ -12,7 +12,7 @@ defmodule ScoutApm.Core.AgentManager do
     start_setup()
     register()
     app_metadata()
-    {:ok, %{socket: nil, manifest: nil}}
+    {:ok, %{socket: nil}}
   end
 
   def start_setup do
@@ -21,8 +21,10 @@ defmodule ScoutApm.Core.AgentManager do
 
   def setup do
     dir = ScoutApm.Config.find(:core_agent_dir)
+    enabled = ScoutApm.Config.find(:monitor)
+    core_agent_launch = ScoutApm.Config.find(:core_agent_launch)
 
-    if ScoutApm.Config.find(:core_agent_launch) do
+    if enabled && core_agent_launch do
       case ScoutApm.Core.verify(dir) do
         {:ok, manifest} ->
           ScoutApm.Logger.log(:info, "Found valid Scout Core Agent")
@@ -119,55 +121,25 @@ defmodule ScoutApm.Core.AgentManager do
   end
 
   @impl GenServer
-  def handle_cast({:send, message}, %{socket: socket} = state) when is_map(message) do
-    state =
-      with {:ok, encoded} <- Poison.encode(message),
-           message_length <- byte_size(encoded),
-           binary_length <- pad_leading(:binary.encode_unsigned(message_length, :big), 4, 0),
-           :ok <- :gen_tcp.send(socket, binary_length),
-           :ok <- :gen_tcp.send(socket, encoded),
-           {:ok, <<message_length::big-unsigned-integer-size(32)>>} <- :gen_tcp.recv(socket, 4),
-           {:ok, msg} <- :gen_tcp.recv(socket, message_length),
-           {:ok, decoded_msg} <- Poison.decode(msg) do
-        ScoutApm.Logger.log(
-          :debug,
-          "Received message of length #{message_length}: #{inspect(decoded_msg)}"
-        )
-
-        state
-      else
-        {:error, :closed} ->
-          Port.close(socket)
-
-          ScoutApm.Logger.log(
-            :warn,
-            "ScoutApm Core Agent TCP socket closed. Attempting to reconnect."
-          )
-
-          %{state | socket: setup()}
-
-        {:error, :enotconn} ->
-          Port.close(socket)
-
-          ScoutApm.Logger.log(
-            :warn,
-            "ScoutApm Core Agent TCP socket disconnected. Attempting to reconnect."
-          )
-
-          %{state | socket: setup()}
-
-        e ->
-          Port.close(socket)
-
-          ScoutApm.Logger.log(
-            :warn,
-            "Error in ScoutApm Core Agent TCP socket: #{inspect(e)}. Attempting to reconnect."
-          )
-
-          %{state | socket: setup()}
-      end
-
+  def handle_cast({:send, message}, state) when is_map(message) do
+    state = send_message(message, state)
     {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_call({:send, _message}, _from, %{socket: nil} = state) do
+    ScoutApm.Logger.log(
+      :warn,
+      "ScoutApm Core Agent is not connected. Skipping sending event."
+    )
+
+    {:reply, state, state}
+  end
+
+  @impl GenServer
+  def handle_call({:send, message}, _from, state) when is_map(message) do
+    state = send_message(message, state)
+    {:reply, state, state}
   end
 
   @impl GenServer
@@ -208,6 +180,54 @@ defmodule ScoutApm.Core.AgentManager do
         )
 
         nil
+    end
+  end
+
+  defp send_message(message, %{socket: socket} = state) do
+    with {:ok, encoded} <- Poison.encode(message),
+         message_length <- byte_size(encoded),
+         binary_length <- pad_leading(:binary.encode_unsigned(message_length, :big), 4, 0),
+         :ok <- :gen_tcp.send(socket, binary_length),
+         :ok <- :gen_tcp.send(socket, encoded),
+         {:ok, <<message_length::big-unsigned-integer-size(32)>>} <- :gen_tcp.recv(socket, 4),
+         {:ok, msg} <- :gen_tcp.recv(socket, message_length),
+         {:ok, decoded_msg} <- Poison.decode(msg) do
+      ScoutApm.Logger.log(
+        :debug,
+        "Received message of length #{message_length}: #{inspect(decoded_msg)}"
+      )
+
+      state
+    else
+      {:error, :closed} ->
+        Port.close(socket)
+
+        ScoutApm.Logger.log(
+          :warn,
+          "ScoutApm Core Agent TCP socket closed. Attempting to reconnect."
+        )
+
+        %{state | socket: setup()}
+
+      {:error, :enotconn} ->
+        Port.close(socket)
+
+        ScoutApm.Logger.log(
+          :warn,
+          "ScoutApm Core Agent TCP socket disconnected. Attempting to reconnect."
+        )
+
+        %{state | socket: setup()}
+
+      e ->
+        Port.close(socket)
+
+        ScoutApm.Logger.log(
+          :warn,
+          "Error in ScoutApm Core Agent TCP socket: #{inspect(e)}. Attempting to reconnect."
+        )
+
+        %{state | socket: setup()}
     end
   end
 
