@@ -3,6 +3,11 @@ defmodule ScoutApm.TrackedRequestTest do
   import ExUnit.CaptureLog
   alias ScoutApm.TrackedRequest
 
+  setup do
+    ScoutApm.TestCollector.clear_messages()
+    :ok
+  end
+
   describe "new/0" do
     test "creates a TrackedRequest" do
       assert ScoutApm.TrackedRequest == TrackedRequest.new().__struct__
@@ -103,5 +108,22 @@ defmodule ScoutApm.TrackedRequestTest do
 
     Application.delete_env(:scout_apm, :monitor)
     Application.delete_env(:scout_apm, :key)
+  end
+
+  test "rename creates a TagRequest" do
+    TrackedRequest.start_layer("foo", "bar", [])
+    TrackedRequest.start_layer("nested", "x", [])
+    TrackedRequest.stop_layer()
+    TrackedRequest.rename("testing-rename")
+    TrackedRequest.stop_layer()
+
+    [%{BatchCommand: %{commands: commands}}] = ScoutApm.TestCollector.messages()
+
+    assert Enum.any?(commands, fn command ->
+             map = Map.get(command, :TagRequest)
+
+             map && Map.get(map, :tag) == "transaction.name" &&
+               Map.get(map, :value) == "testing-rename"
+           end)
   end
 end
