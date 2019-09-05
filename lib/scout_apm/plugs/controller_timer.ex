@@ -1,16 +1,23 @@
 defmodule ScoutApm.Plugs.ControllerTimer do
   alias ScoutApm.Internal.Layer
+  alias ScoutApm.{Context, TrackedRequest}
+  @queue_headers ~w(x-queue-start x-request-start)
 
   def init(default), do: default
 
   def call(conn, _default) do
     if !ignore_uri?(conn.request_path) do
-      ScoutApm.TrackedRequest.start_layer("Controller", action_name(conn))
+      queue_time = get_queue_time_diff_nanoseconds(conn)
+      TrackedRequest.start_layer("Controller", action_name(conn))
+
+      if queue_time do
+        Context.add("scout.queue_time_ns", queue_time)
+      end
 
       conn
       |> Plug.Conn.register_before_send(&before_send/1)
     else
-      ScoutApm.TrackedRequest.ignore()
+      TrackedRequest.ignore()
 
       conn
     end
@@ -23,7 +30,7 @@ defmodule ScoutApm.Plugs.ControllerTimer do
     add_ip_context(conn)
     maybe_mark_error(conn)
 
-    ScoutApm.TrackedRequest.stop_layer(fn layer ->
+    TrackedRequest.stop_layer(fn layer ->
       layer
       |> Layer.update_name(full_name)
       |> Layer.update_uri(uri)
@@ -41,7 +48,7 @@ defmodule ScoutApm.Plugs.ControllerTimer do
   end
 
   def maybe_mark_error(conn = %{status: 500}) do
-    ScoutApm.TrackedRequest.mark_error()
+    TrackedRequest.mark_error()
     conn
   end
 
@@ -75,6 +82,32 @@ defmodule ScoutApm.Plugs.ControllerTimer do
           |> Enum.join(".")
       end
 
-    ScoutApm.Context.add_user(:ip, remote_ip)
+    Context.add_user(:ip, remote_ip)
+  end
+
+  defp get_queue_time_diff_nanoseconds(conn) do
+    unix_now =
+      DateTime.utc_now()
+      |> DateTime.to_unix(:millisecond)
+
+    queue_start_ms =
+      Enum.find_value(@queue_headers, fn header ->
+        case Plug.Conn.get_req_header(conn, header) do
+          [timestamp] when is_binary(timestamp) ->
+            timestamp
+
+          [] ->
+            nil
+        end
+      end)
+
+    with true <- is_binary(queue_start_ms),
+         {queue_start_ms_unix, ""} <- Integer.parse(queue_start_ms) do
+      (unix_now - queue_start_ms_unix)
+      |> abs()
+      |> System.convert_time_unit(:millisecond, :nanosecond)
+    else
+      _ -> nil
+    end
   end
 end
