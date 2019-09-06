@@ -166,6 +166,10 @@ defmodule ScoutApm.TrackedRequest do
     end)
   end
 
+  def rename(new_transaction_name) when is_binary(new_transaction_name) do
+    ScoutApm.Context.add("transaction.name", new_transaction_name)
+  end
+
   def record_context(%__MODULE__{} = tr, %ScoutApm.Internal.Context{} = context),
     do: %{tr | contexts: [context | tr.contexts]}
 

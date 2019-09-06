@@ -76,4 +76,36 @@ defmodule ScoutApm.Plugs.ControllerTimerTest do
 
     assert ScoutApm.TestCollector.messages() == []
   end
+
+  test "adds queue time context from headers" do
+    # Set queue time to ~10 milliseconds before request returns
+    queue_start =
+      DateTime.utc_now()
+      |> DateTime.to_unix(:millisecond)
+      |> Kernel.-(10)
+
+    conn(:get, "/x-forwarded-for")
+    |> Plug.Conn.put_req_header("x-queue-start", "#{queue_start}")
+    |> ScoutApm.TestPlugApp.call([])
+
+    [%{BatchCommand: %{commands: commands}}] = ScoutApm.TestCollector.messages()
+
+    %{
+      TagRequest: %{
+        value: queue_time
+      }
+    } =
+      Enum.find(commands, fn command ->
+        map = Map.get(command, :TagRequest)
+
+        map && Map.get(map, :tag) == "scout.queue_time_ns" &&
+          is_integer(Map.get(map, :value))
+      end)
+
+    # queue_time should be about 10 million nanoseconds
+    # (between 10ms and 100ms)
+    assert is_integer(queue_time)
+    assert queue_time >= 10_000_000
+    assert queue_time < 100_000_000
+  end
 end
