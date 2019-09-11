@@ -96,7 +96,10 @@ defmodule ScoutApm.Core.AgentManager do
   def register do
     name = ScoutApm.Config.find(:name)
     key = ScoutApm.Config.find(:key)
-    message = ScoutApm.Command.message(%ScoutApm.Command.Register{app: name, key: key})
+    hostname = ScoutApm.Config.find(:hostname)
+
+    message =
+      ScoutApm.Command.message(%ScoutApm.Command.Register{app: name, key: key, host: hostname})
 
     send(message)
   end
