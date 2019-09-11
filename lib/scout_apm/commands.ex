@@ -3,15 +3,16 @@ defprotocol ScoutApm.Command do
 end
 
 defmodule ScoutApm.Command.Register do
-  defstruct [:app, :key]
+  defstruct [:app, :key, :host]
   alias __MODULE__
 
   defimpl ScoutApm.Command, for: __MODULE__ do
-    def message(%Register{app: app, key: key}) do
+    def message(%Register{app: app, key: key, host: host}) do
       %{
         Register: %{
           app: app,
           key: key,
+          host: host,
           language: "elixir",
           api_version: "1.0"
         }
