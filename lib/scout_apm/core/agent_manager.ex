@@ -187,14 +187,14 @@ defmodule ScoutApm.Core.AgentManager do
   end
 
   defp send_message(message, %{socket: socket} = state) do
-    with {:ok, encoded} <- Poison.encode(message),
+    with {:ok, encoded} <- Jason.encode(message),
          message_length <- byte_size(encoded),
          binary_length <- pad_leading(:binary.encode_unsigned(message_length, :big), 4, 0),
          :ok <- :gen_tcp.send(socket, binary_length),
          :ok <- :gen_tcp.send(socket, encoded),
          {:ok, <<message_length::big-unsigned-integer-size(32)>>} <- :gen_tcp.recv(socket, 4),
          {:ok, msg} <- :gen_tcp.recv(socket, message_length),
-         {:ok, decoded_msg} <- Poison.decode(msg) do
+         {:ok, decoded_msg} <- Jason.decode(msg) do
       ScoutApm.Logger.log(
         :debug,
         "Received message of length #{message_length}: #{inspect(decoded_msg)}"

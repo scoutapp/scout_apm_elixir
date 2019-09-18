@@ -28,11 +28,7 @@ defmodule ScoutApm.Mixfile do
   defp deps do
     [
       {:plug, "~>1.0"},
-
-      # We only use `encode!(map) and decode(map)`, which have existed since the start of poison,
-      # so don't restrict the version of poison here. In the unlikely case that
-      # either function is removed in a new version, we'll have to revisit.
-      {:poison, ">= 0.0.0"},
+      {:jason, "~> 1.0"},
 
       # We only use `request/5` from hackney, which hasn't changed in the 1.0 line.
       {:hackney, "~> 1.0"},
