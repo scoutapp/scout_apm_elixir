@@ -1,5 +1,21 @@
 # master
 
+# 1.0.0
+
+* Enhancements
+  * Send platform in metadata (#92)
+  * Use Core Agent to gather and transmit metrics (#93)
+  * Use Jason instead of Poison for JSON encoding (#96)
+  * Add Mix task to check configuration (#97)
+  * Queue time metric and renaming capability for transactions (#98)
+
+* Bug Fixes
+  * Fix error in converting list to string (#90)
+  * Fix mismatched layers during ignored transaction(#95)
+
+* Breaking Changes
+  * Deprecated tracing `@transaction` and `@timing` module attributes have been removed
+
 # 0.4.15
 
 * Fix Ecto 2 support (#88)
