@@ -72,6 +72,13 @@ defmodule ScoutApm.Core do
   end
 
   def libc do
+    case File.read("/etc/alpine-release") do
+      {:ok, _} -> "musl"
+      {:error, _} -> detect_libc_from_ldd()
+    end
+  end
+
+  def detect_libc_from_ldd do
     try do
       ldd_version = System.cmd("ldd", ["--version"])
 
