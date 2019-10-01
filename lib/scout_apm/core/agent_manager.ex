@@ -10,8 +10,6 @@ defmodule ScoutApm.Core.AgentManager do
   @impl GenServer
   def init(_) do
     start_setup()
-    register()
-    app_metadata()
     {:ok, %{socket: nil}}
   end
 
@@ -23,8 +21,9 @@ defmodule ScoutApm.Core.AgentManager do
     dir = ScoutApm.Config.find(:core_agent_dir)
     enabled = ScoutApm.Config.find(:monitor)
     core_agent_launch = ScoutApm.Config.find(:core_agent_launch)
+    key = ScoutApm.Config.find(:key)
 
-    if enabled && core_agent_launch do
+    if enabled && core_agent_launch && key do
       case ScoutApm.Core.verify(dir) do
         {:ok, manifest} ->
           ScoutApm.Logger.log(:info, "Found valid Scout Core Agent")
@@ -35,6 +34,8 @@ defmodule ScoutApm.Core.AgentManager do
         {:error, _reason} ->
           maybe_download()
       end
+    else
+      {:error, :disabled}
     end
   end
 
@@ -54,12 +55,15 @@ defmodule ScoutApm.Core.AgentManager do
       else
         _ ->
           ScoutApm.Logger.log(:warn, "Failed to start ScoutApm Core Agent")
+          {:error, :failed_to_start}
       end
     else
       ScoutApm.Logger.log(
         :warn,
         "Not attempting to download ScoutApm Core Agent due to :core_agent_download configuration"
       )
+
+      {:error, :no_file_download_disabled}
     end
   end
 
@@ -108,9 +112,15 @@ defmodule ScoutApm.Core.AgentManager do
 
   @impl GenServer
   def handle_cast(:setup, state) do
-    tcp_socket = setup()
+    case setup() do
+      {:ok, socket} ->
+        register()
+        app_metadata()
+        {:noreply, %{state | socket: socket}}
 
-    {:noreply, %{state | socket: tcp_socket}}
+      _ ->
+        {:noreply, state}
+    end
   end
 
   @impl GenServer
@@ -174,7 +184,7 @@ defmodule ScoutApm.Core.AgentManager do
 
     with {_, 0} <- System.cmd(bin_path, args),
          {:ok, socket} <- try_connect_twice(ip, port) do
-      socket
+      {:ok, socket}
     else
       e ->
         ScoutApm.Logger.log(
