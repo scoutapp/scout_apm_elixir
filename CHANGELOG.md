@@ -1,5 +1,14 @@
 # master
 
+# 1.0.1
+
+* Enhancements
+  * Better core agent platform detection (#101)
+
+* Bug Fixes
+  * Do not try to start core agent or send messages with no key (#102)
+
+
 # 1.0.0
 
 * Enhancements
