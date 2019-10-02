@@ -1,4 +1,5 @@
 defmodule ScoutApm.Core do
+  @spec socket_path :: String.t()
   def socket_path do
     socket_path = ScoutApm.Config.find(:core_agent_socket_path)
 
@@ -11,11 +12,13 @@ defmodule ScoutApm.Core do
     end
   end
 
+  @spec download_url :: String.t()
   def download_url do
     url = ScoutApm.Config.find(:download_url)
     "#{url}/#{agent_full_name()}.tgz"
   end
 
+  @spec agent_full_name :: String.t()
   def agent_full_name do
     full_name = ScoutApm.Config.find(:core_agent_full_name)
 
@@ -34,10 +37,12 @@ defmodule ScoutApm.Core do
     end
   end
 
+  @spec platform_triple :: String.t()
   def platform_triple do
     "#{architecture()}-#{platform()}"
   end
 
+  @spec platform :: String.t()
   def platform do
     case :os.type() do
       {:unix, :darwin} ->
@@ -52,6 +57,7 @@ defmodule ScoutApm.Core do
     end
   end
 
+  @spec architecture :: String.t()
   def architecture do
     case uname_architecture() do
       "x86_64" -> "x86_64"
@@ -60,6 +66,7 @@ defmodule ScoutApm.Core do
     end
   end
 
+  @spec uname_architecture :: String.t()
   def uname_architecture do
     try do
       case System.cmd("uname", ["-m"]) do
@@ -71,6 +78,7 @@ defmodule ScoutApm.Core do
     end
   end
 
+  @spec libc :: String.t()
   def libc do
     case File.read("/etc/alpine-release") do
       {:ok, _} -> "musl"
@@ -78,9 +86,10 @@ defmodule ScoutApm.Core do
     end
   end
 
+  @spec detect_libc_from_ldd :: String.t()
   def detect_libc_from_ldd do
     try do
-      ldd_version = System.cmd("ldd", ["--version"])
+      {ldd_version, 0} = System.cmd("ldd", ["--version"])
 
       if String.contains?(ldd_version, "musl") do
         "musl"
@@ -92,6 +101,7 @@ defmodule ScoutApm.Core do
     end
   end
 
+  @spec verify(String.t()) :: {:ok, ScoutApm.Core.Manifest.t()} | {:error, :invalid}
   def verify(dir) do
     manifest = ScoutApm.Core.Manifest.build_from_directory(dir)
 

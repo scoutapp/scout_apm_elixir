@@ -2,6 +2,16 @@ defmodule ScoutApm.Core.Manifest do
   defstruct [:version, :bin_version, :bin_name, :sha256, :valid, :directory]
   alias __MODULE__
 
+  @type t :: %__MODULE__{
+          version: String.t() | nil,
+          bin_version: String.t() | nil,
+          bin_name: String.t() | nil,
+          sha256: String.t() | nil,
+          valid: boolean,
+          directory: String.t()
+        }
+
+  @spec build_from_directory(String.t(), String.t()) :: t()
   def build_from_directory(directory, file \\ "manifest.json") do
     manifest_path = Path.join([directory, file])
 
@@ -28,8 +38,10 @@ defmodule ScoutApm.Core.Manifest do
     end
   end
 
+  @spec bin_path(t()) :: String.t()
   def bin_path(%Manifest{directory: dir, bin_name: bin}), do: Path.join([dir, bin])
 
+  @spec sha256_valid?(t()) :: boolean | :error
   def sha256_valid?(%Manifest{valid: true} = manifest) do
     bin_path = Manifest.bin_path(manifest)
 

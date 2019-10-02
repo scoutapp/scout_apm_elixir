@@ -1,6 +1,14 @@
 defmodule ScoutApm.Core.AgentManager do
   use GenServer
+  alias ScoutApm.Core
+  alias ScoutApm.Core.Manifest
   @behaviour ScoutApm.Collector
+
+  defstruct [:socket]
+
+  @type t :: %__MODULE__{
+          socket: :gen_tcp.socket() | nil
+        }
 
   def start_link() do
     options = []
@@ -8,50 +16,51 @@ defmodule ScoutApm.Core.AgentManager do
   end
 
   @impl GenServer
+  @spec init(any) :: {:ok, t()}
   def init(_) do
     start_setup()
-    {:ok, %{socket: nil}}
+    {:ok, %__MODULE__{socket: nil}}
   end
 
   def start_setup do
     GenServer.cast(__MODULE__, :setup)
   end
 
+  @spec setup :: :gen_tcp.socket() | nil
   def setup do
-    dir = ScoutApm.Config.find(:core_agent_dir)
     enabled = ScoutApm.Config.find(:monitor)
     core_agent_launch = ScoutApm.Config.find(:core_agent_launch)
     key = ScoutApm.Config.find(:key)
 
     if enabled && core_agent_launch && key do
-      case ScoutApm.Core.verify(dir) do
-        {:ok, manifest} ->
-          ScoutApm.Logger.log(:info, "Found valid Scout Core Agent")
-
-          ScoutApm.Core.Manifest.bin_path(manifest)
-          |> run()
-
-        {:error, _reason} ->
-          maybe_download()
+      with {:ok, manifest} <- verify_or_download(),
+           bin_path when is_binary(bin_path) <- Manifest.bin_path(manifest),
+           {:ok, socket} <- run(bin_path) do
+        register()
+        app_metadata()
+        socket
+      else
+        _e ->
+          nil
       end
     else
-      {:error, :disabled}
+      nil
     end
   end
 
+  @spec maybe_download :: {:ok, map()} | {:error, any()}
   def maybe_download do
-    dir = ScoutApm.Config.find(:core_agent_dir)
-
     if ScoutApm.Config.find(:core_agent_download) do
       ScoutApm.Logger.log(:info, "Failed to find valid ScoutApm Core Agent. Attempting download.")
 
-      full_name = ScoutApm.Core.agent_full_name()
-      url = ScoutApm.Core.download_url()
+      full_name = Core.agent_full_name()
+      url = Core.download_url()
+      dir = ScoutApm.Config.find(:core_agent_dir)
 
       with :ok <- download_binary(url, dir, "#{full_name}.tgz"),
-           {:ok, manifest} <- ScoutApm.Core.verify(dir) do
-        ScoutApm.Core.Manifest.bin_path(manifest)
-        |> run()
+           {:ok, manifest} <- Core.verify(dir) do
+        ScoutApm.Logger.log(:debug, "Successfully downloaded and verified ScoutApm Core Agent")
+        {:ok, manifest}
       else
         _ ->
           ScoutApm.Logger.log(:warn, "Failed to start ScoutApm Core Agent")
@@ -67,6 +76,7 @@ defmodule ScoutApm.Core.AgentManager do
     end
   end
 
+  @spec download_binary(String.t(), String.t(), String.t()) :: :ok | {:error, any()}
   def download_binary(url, directory, file_name) do
     destination = Path.join([directory, file_name])
 
@@ -83,6 +93,8 @@ defmodule ScoutApm.Core.AgentManager do
           :warn,
           "Failed to download and extract ScoutApm Core Agent: #{inspect(e)}"
         )
+
+        {:error, :failed_to_download_and_extract}
     end
   end
 
@@ -111,16 +123,9 @@ defmodule ScoutApm.Core.AgentManager do
   end
 
   @impl GenServer
+  @spec handle_cast(any, t()) :: {:noreply, t()}
   def handle_cast(:setup, state) do
-    case setup() do
-      {:ok, socket} ->
-        register()
-        app_metadata()
-        {:noreply, %{state | socket: socket}}
-
-      _ ->
-        {:noreply, state}
-    end
+    {:noreply, %{state | socket: setup()}}
   end
 
   @impl GenServer
@@ -140,6 +145,7 @@ defmodule ScoutApm.Core.AgentManager do
   end
 
   @impl GenServer
+  @spec handle_call(any, any(), t()) :: {:reply, any, t()}
   def handle_call({:send, _message}, _from, %{socket: nil} = state) do
     ScoutApm.Logger.log(
       :warn,
@@ -156,6 +162,7 @@ defmodule ScoutApm.Core.AgentManager do
   end
 
   @impl GenServer
+  @spec handle_info(any, t()) :: {:noreply, t()}
   def handle_info(_m, state) do
     {:noreply, state}
   end
@@ -172,13 +179,14 @@ defmodule ScoutApm.Core.AgentManager do
     (<<byte>> |> :binary.copy(len - byte_size(binary))) <> binary
   end
 
+  @spec run(String.t()) :: {:ok, :gen_tcp.socket()} | nil
   def run(bin_path) do
     ip =
       ScoutApm.Config.find(:core_agent_tcp_ip)
       |> :inet_parse.ntoa()
 
     port = ScoutApm.Config.find(:core_agent_tcp_port)
-    socket_path = ScoutApm.Core.socket_path()
+    socket_path = Core.socket_path()
 
     args = ["start", "--socket", socket_path, "--daemonize", "true", "--tcp", "#{ip}:#{port}"]
 
@@ -244,6 +252,22 @@ defmodule ScoutApm.Core.AgentManager do
     end
   end
 
+  @spec verify_or_download :: {:ok, map()} | {:error, any()}
+  def verify_or_download do
+    dir = ScoutApm.Config.find(:core_agent_dir)
+
+    case Core.verify(dir) do
+      {:ok, manifest} ->
+        ScoutApm.Logger.log(:info, "Found valid Scout Core Agent")
+        {:ok, manifest}
+
+      {:error, _reason} ->
+        maybe_download()
+    end
+  end
+
+  @spec try_connect_twice(charlist(), char()) ::
+          {:ok, :gen_tcp.socket()} | {:error, atom()}
   defp try_connect_twice(ip, port) do
     case :gen_tcp.connect(ip, port, [{:active, false}, :binary]) do
       {:ok, socket} ->
