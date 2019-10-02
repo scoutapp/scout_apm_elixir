@@ -101,7 +101,7 @@ defmodule ScoutApm.Core do
     end
   end
 
-  @spec verify(String.t()) :: {:ok, Scout.Apm.Core.Manifest.t()} | {:error, :invalid}
+  @spec verify(String.t()) :: {:ok, ScoutApm.Core.Manifest.t()} | {:error, :invalid}
   def verify(dir) do
     manifest = ScoutApm.Core.Manifest.build_from_directory(dir)
 
