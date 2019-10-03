@@ -1,5 +1,11 @@
 # master
 
+# 1.0.2
+
+* Bug Fixes
+  * Send TrackedRequest error as a TagRequest (#104)
+  * Ensure git\_sha is not nil (#104)
+
 # 1.0.1
 
 * Enhancements
