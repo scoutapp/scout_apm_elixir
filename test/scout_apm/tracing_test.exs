@@ -102,12 +102,12 @@ defmodule ScoutApm.TracingTest do
       ScoutApm.TestCollector.messages()
 
     assert Enum.any?(commands1, fn command ->
-             map = Map.get(command, :TagSpan)
+             map = Map.get(command, :TagRequest)
              map && Map.get(map, :tag) == "error" && Map.get(map, :value) == "true"
            end)
 
     assert Enum.any?(commands2, fn command ->
-             map = Map.get(command, :TagSpan)
+             map = Map.get(command, :TagRequest)
              map && Map.get(map, :tag) == "error" && Map.get(map, :value) == "true"
            end)
   end

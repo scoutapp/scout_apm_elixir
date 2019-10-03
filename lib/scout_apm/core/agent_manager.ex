@@ -167,6 +167,7 @@ defmodule ScoutApm.Core.AgentManager do
     {:noreply, state}
   end
 
+  @spec pad_leading(binary(), integer(), integer()) :: binary()
   def pad_leading(binary, len, byte \\ 0)
 
   def pad_leading(binary, len, byte)

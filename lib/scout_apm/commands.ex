@@ -229,8 +229,8 @@ defmodule ScoutApm.Command.Batch do
       if request.error == true do
         spans ++
           [
-            %Command.TagSpan{
-              timestamp: request.root_layer.started_at,
+            %Command.TagRequest{
+              timestamp: start_request.timestamp,
               request_id: request.id,
               tag: "error",
               value: "true"

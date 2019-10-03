@@ -31,7 +31,7 @@ defmodule ScoutApm.Plugs.ControllerTimerTest do
            end)
 
     assert Enum.any?(commands, fn command ->
-             map = Map.get(command, :TagSpan)
+             map = Map.get(command, :TagRequest)
              map && Map.get(map, :tag) == "error" && Map.get(map, :value) == "true"
            end)
   end
