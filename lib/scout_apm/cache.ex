@@ -22,8 +22,8 @@ defmodule ScoutApm.Cache do
 
   def git_sha do
     case :ets.lookup(@table_name, :git_sha) do
-      [{:git_sha, hostname}] -> hostname
-      _ -> nil
+      [{:git_sha, git_sha}] when is_binary(git_sha) -> git_sha
+      _ -> ""
     end
   end
 
