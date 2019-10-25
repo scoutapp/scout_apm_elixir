@@ -1,5 +1,10 @@
 # master
 
+# 1.0.3
+
+* Enhancements
+  * Update Core Agent default version to v1.2.4 (#105)
+
 # 1.0.2
 
 * Bug Fixes
