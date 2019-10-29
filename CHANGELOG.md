@@ -1,5 +1,10 @@
 # master
 
+# 1.0.4
+
+* Enhancements
+  * Queue time metric for Nginx (#106)
+
 # 1.0.3
 
 * Enhancements
