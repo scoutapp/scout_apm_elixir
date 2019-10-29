@@ -102,12 +102,20 @@ defmodule ScoutApm.Plugs.ControllerTimer do
       end)
 
     with true <- is_binary(queue_start_ms),
-         {queue_start_ms_unix, ""} <- Integer.parse(queue_start_ms) do
+         {queue_start_ms_unix, ""} <- parse_request_start_time(queue_start_ms) do
       (unix_now - queue_start_ms_unix)
       |> abs()
       |> System.convert_time_unit(:millisecond, :nanosecond)
     else
       _ -> nil
     end
+  end
+
+  defp parse_request_start_time("t=" <> queue_start_ms) do
+    Integer.parse(queue_start_ms)
+  end
+
+  defp parse_request_start_time(queue_start_ms) do
+    Integer.parse(queue_start_ms)
   end
 end
