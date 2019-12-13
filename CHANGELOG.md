@@ -1,5 +1,11 @@
 # master
 
+# 1.0.5
+
+* Enhancements
+  * Update CoreAgent to 1.2.6 (#109)
+  * Send Queue Time as String (#110)
+
 # 1.0.4
 
 * Enhancements
