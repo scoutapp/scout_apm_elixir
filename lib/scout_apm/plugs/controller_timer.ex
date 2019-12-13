@@ -11,7 +11,7 @@ defmodule ScoutApm.Plugs.ControllerTimer do
       TrackedRequest.start_layer("Controller", action_name(conn))
 
       if queue_time do
-        Context.add("scout.queue_time_ns", queue_time)
+        Context.add("scout.queue_time_ns", "#{queue_time}")
       end
 
       conn
