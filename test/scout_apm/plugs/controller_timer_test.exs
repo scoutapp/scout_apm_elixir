@@ -98,13 +98,12 @@ defmodule ScoutApm.Plugs.ControllerTimerTest do
       Enum.find(commands, fn command ->
         map = Map.get(command, :TagRequest)
 
-        map && Map.get(map, :tag) == "scout.queue_time_ns" &&
-          is_integer(Map.get(map, :value))
+        map && Map.get(map, :tag) == "scout.queue_time_ns"
       end)
 
     # queue_time should be about 10 million nanoseconds
     # (between 10ms and 100ms)
-    assert is_integer(queue_time)
+    queue_time = String.to_integer(queue_time)
     assert queue_time >= 10_000_000
     assert queue_time < 100_000_000
   end
@@ -130,13 +129,12 @@ defmodule ScoutApm.Plugs.ControllerTimerTest do
       Enum.find(commands, fn command ->
         map = Map.get(command, :TagRequest)
 
-        map && Map.get(map, :tag) == "scout.queue_time_ns" &&
-          is_integer(Map.get(map, :value))
+        map && Map.get(map, :tag) == "scout.queue_time_ns"
       end)
 
     # queue_time should be about 10 million nanoseconds
     # (between 10ms and 100ms)
-    assert is_integer(queue_time)
+    queue_time = String.to_integer(queue_time)
     assert queue_time >= 10_000_000
     assert queue_time < 100_000_000
   end
