@@ -65,11 +65,8 @@ defmodule ScoutApm.Plugs.ControllerTimer do
     action_name = conn.private[:phoenix_action]
 
     conn.private[:phoenix_controller]
-    # String looks like "Elixir.TestappPhoenix.PageController"
-    |> to_string
-    # Split into parts
-    |> String.split(".")
-    # Remove Elixir and app module name (if configured)
+    |> Module.split()
+    # Remove app module name (if configured)
     |> Enum.drop(num_parts_to_drop())
     |> Enum.join(".")
     # Append action
@@ -126,6 +123,6 @@ defmodule ScoutApm.Plugs.ControllerTimer do
   end
 
   defp num_parts_to_drop do
-    if Config.find(:trim_app_module_name), do: 2, else: 1
+    if Config.find(:trim_app_module_name), do: 1, else: 0
   end
 end
