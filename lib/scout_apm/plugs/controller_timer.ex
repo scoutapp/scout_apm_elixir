@@ -66,8 +66,7 @@ defmodule ScoutApm.Plugs.ControllerTimer do
 
     conn.private[:phoenix_controller]
     |> Module.split()
-    # Remove app module name (if configured)
-    |> Enum.drop(num_parts_to_drop())
+    |> trim_app_module_name()
     |> Enum.join(".")
     # Append action
     |> String.replace_suffix("", "##{action_name}")
@@ -122,7 +121,7 @@ defmodule ScoutApm.Plugs.ControllerTimer do
     Integer.parse(queue_start_ms)
   end
 
-  defp num_parts_to_drop do
-    if Config.find(:trim_app_module_name), do: 1, else: 0
+  defp trim_app_module_name(parts) do
+    if Config.find(:trim_app_module_name), do: Enum.drop(parts, 1), else: parts
   end
 end
