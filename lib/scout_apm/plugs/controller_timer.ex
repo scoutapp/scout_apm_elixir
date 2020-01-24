@@ -5,17 +5,17 @@ defmodule ScoutApm.Plugs.ControllerTimer do
 
   def init(default), do: default
 
-  def call(conn, _default) do
+  def call(conn, opts) do
     if !ignore_uri?(conn.request_path) do
       queue_time = get_queue_time_diff_nanoseconds(conn)
-      TrackedRequest.start_layer("Controller", action_name(conn))
+      TrackedRequest.start_layer("Controller", action_name(conn, opts))
 
       if queue_time do
         Context.add("scout.queue_time_ns", "#{queue_time}")
       end
 
       conn
-      |> Plug.Conn.register_before_send(&before_send/1)
+      |> Plug.Conn.register_before_send(&before_send(&1, opts))
     else
       TrackedRequest.ignore()
 
@@ -23,8 +23,8 @@ defmodule ScoutApm.Plugs.ControllerTimer do
     end
   end
 
-  def before_send(conn) do
-    full_name = action_name(conn)
+  def before_send(conn, opts) do
+    full_name = action_name(conn, opts)
     uri = "#{conn.request_path}"
 
     add_ip_context(conn)
@@ -60,13 +60,14 @@ defmodule ScoutApm.Plugs.ControllerTimer do
 
   Returns a string like "PageController#index"
   """
-  @spec action_name(Plug.Conn.t()) :: String.t()
-  def action_name(conn) do
+  @spec action_name(Plug.Conn.t(), list()) :: String.t()
+  def action_name(conn, opts) do
     action_name = conn.private[:phoenix_action]
+    include_app_name = Keyword.get(opts, :include_application_name, false)
 
     conn.private[:phoenix_controller]
     |> Module.split()
-    |> trim_app_module_name()
+    |> trim_app_module_name(include_app_name)
     |> Enum.join(".")
     # Append action
     |> String.replace_suffix("", "##{action_name}")
@@ -121,7 +122,11 @@ defmodule ScoutApm.Plugs.ControllerTimer do
     Integer.parse(queue_start_ms)
   end
 
-  defp trim_app_module_name(parts) do
-    if Config.find(:trim_app_module_name), do: Enum.drop(parts, 1), else: parts
+  defp trim_app_module_name(parts, include_app_name) do
+    if include_app_name do
+      parts
+    else
+      Enum.drop(parts, 1)
+    end
   end
 end

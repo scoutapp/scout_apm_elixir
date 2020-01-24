@@ -13,7 +13,6 @@ defmodule ScoutApm.Config.Defaults do
       core_agent_tcp_ip: {127, 0, 0, 1},
       core_agent_tcp_port: 9000,
       collector_module: ScoutApm.Core.AgentManager,
-      trim_app_module_name: true,
       download_url:
         "https://s3-us-west-1.amazonaws.com/scout-public-downloads/apm_core_agent/release"
     }

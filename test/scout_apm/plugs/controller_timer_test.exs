@@ -148,15 +148,12 @@ defmodule ScoutApm.Plugs.ControllerTimerTest do
     end
 
     test "configured to trim app module name (default)", %{conn: conn} do
-      assert ControllerTimer.action_name(conn) == "PageController#index"
+      assert ControllerTimer.action_name(conn, []) == "PageController#index"
     end
 
     test "configured to not trim app module name", %{conn: conn} do
-      Application.put_env(:scout_apm, :trim_app_module_name, false)
-
-      assert ControllerTimer.action_name(conn) == "MyTestApp.PageController#index"
-
-      Application.put_env(:scout_apm, :trim_app_module_name, true)
+      assert ControllerTimer.action_name(conn, include_application_name: true) ==
+               "MyTestApp.PageController#index"
     end
   end
 end
