@@ -70,7 +70,7 @@ defmodule ScoutApm.Plugs.ControllerTimer do
     |> trim_app_module_name(include_app_name)
     |> Enum.join(".")
     # Append action
-    |> String.replace_suffix("", "##{action_name}")
+    |> Kernel.<>("##{action_name}")
   end
 
   defp add_ip_context(conn) do
