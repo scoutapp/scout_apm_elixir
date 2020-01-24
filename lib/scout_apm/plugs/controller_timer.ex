@@ -1,6 +1,6 @@
 defmodule ScoutApm.Plugs.ControllerTimer do
   alias ScoutApm.Internal.Layer
-  alias ScoutApm.{Context, TrackedRequest, Config}
+  alias ScoutApm.{Context, TrackedRequest}
   @queue_headers ~w(x-queue-start x-request-start)
 
   def init(default), do: default
