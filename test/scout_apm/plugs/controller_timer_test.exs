@@ -147,11 +147,11 @@ defmodule ScoutApm.Plugs.ControllerTimerTest do
       [conn: conn]
     end
 
-    test "configured to trim app module name (default)", %{conn: conn} do
+    test "configured to trim application name (default)", %{conn: conn} do
       assert ControllerTimer.action_name(conn, []) == "PageController#index"
     end
 
-    test "configured to not trim app module name", %{conn: conn} do
+    test "configured to include application name", %{conn: conn} do
       assert ControllerTimer.action_name(conn, include_application_name: true) ==
                "MyTestApp.PageController#index"
     end
