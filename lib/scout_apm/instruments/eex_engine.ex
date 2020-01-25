@@ -25,7 +25,7 @@ defmodule ScoutApm.Instruments.EExEngine do
     quote do
       require ScoutApm.Tracing
 
-      ScoutApm.Tracing.timing("EEx", unquote(scout_name), [scopable: !unquote(is_layout)],
+      ScoutApm.Tracing.timing("EEx", unquote(path), [scopable: !unquote(is_layout)],
         do: unquote(quoted_template)
       )
     end
