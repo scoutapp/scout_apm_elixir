@@ -26,7 +26,7 @@ if Code.ensure_loaded?(PhoenixSlime) do
       quote do
         require ScoutApm.Tracing
 
-        ScoutApm.Tracing.timing("Slime", unquote(scout_name), [scopable: !unquote(is_layout)],
+        ScoutApm.Tracing.timing("Slime", unquote(path), [scopable: !unquote(is_layout)],
           do: unquote(quoted_template)
         )
       end

@@ -1,6 +1,7 @@
 defmodule ScoutApm.Plugs.ControllerTimerTest do
   use ExUnit.Case
   use Plug.Test
+  alias ScoutApm.Plugs.ControllerTimer
 
   setup do
     ScoutApm.TestCollector.clear_messages()
@@ -137,5 +138,22 @@ defmodule ScoutApm.Plugs.ControllerTimerTest do
     queue_time = String.to_integer(queue_time)
     assert queue_time >= 10_000_000
     assert queue_time < 100_000_000
+  end
+
+  describe "action_name/1" do
+    setup do
+      conn = conn(:get, "/") |> ScoutApm.TestPlugApp.call([])
+
+      [conn: conn]
+    end
+
+    test "configured to trim application name (default)", %{conn: conn} do
+      assert ControllerTimer.action_name(conn, []) == "PageController#index"
+    end
+
+    test "configured to include application name", %{conn: conn} do
+      assert ControllerTimer.action_name(conn, include_application_name: true) ==
+               "MyTestApp.PageController#index"
+    end
   end
 end
