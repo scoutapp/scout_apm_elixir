@@ -1,5 +1,10 @@
 # master
 
+# 1.0.6
+
+* Enhancements
+  * Allow expanding app name in template metrics (#111)
+
 # 1.0.5
 
 * Enhancements
