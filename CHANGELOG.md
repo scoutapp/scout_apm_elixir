@@ -1,5 +1,8 @@
 # master
 
+* Enhancements
+  * Add URI to request context (#114)
+
 # 1.0.6
 
 * Enhancements
