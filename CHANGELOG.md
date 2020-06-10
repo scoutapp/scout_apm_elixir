@@ -1,5 +1,7 @@
 # master
 
+# 1.0.7
+
 * Enhancements
   * Add URI to request context (#114)
 
