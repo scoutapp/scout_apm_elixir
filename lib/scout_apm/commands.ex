@@ -221,6 +221,20 @@ defmodule ScoutApm.Command.Batch do
         }
       end)
 
+    tag_requests =
+      if request.root_layer && request.root_layer.uri do
+        uri_tag = %Command.TagRequest{
+          timestamp: start_request.timestamp,
+          request_id: request.id,
+          tag: "path",
+          value: request.root_layer.uri
+        }
+
+        [uri_tag | tag_requests]
+      else
+        tag_requests
+      end
+
     commands = commands ++ tag_requests
 
     spans = build_layer_spans([request.root_layer], request.id, nil, [])
