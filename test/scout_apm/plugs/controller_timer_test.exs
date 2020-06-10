@@ -54,6 +54,23 @@ defmodule ScoutApm.Plugs.ControllerTimerTest do
            end)
   end
 
+  test "adds path context" do
+    conn(:get, "/")
+    |> ScoutApm.TestPlugApp.call([])
+
+    [%{BatchCommand: %{commands: commands}}] = ScoutApm.TestCollector.messages()
+
+    assert Enum.any?(commands, fn command ->
+             map = Map.get(command, :StartSpan)
+             map && Map.get(map, :operation) == "Controller/PageController#index"
+           end)
+
+    assert Enum.any?(commands, fn command ->
+             map = Map.get(command, :TagRequest)
+             map && Map.get(map, :tag) == "path" && Map.get(map, :value) == "/"
+           end)
+  end
+
   test "adds ip context from x-forwarded-for header" do
     conn(:get, "/x-forwarded-for")
     |> ScoutApm.TestPlugApp.call([])
