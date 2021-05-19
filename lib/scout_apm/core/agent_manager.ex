@@ -18,12 +18,20 @@ defmodule ScoutApm.Core.AgentManager do
   @impl GenServer
   @spec init(any) :: {:ok, t()}
   def init(_) do
+    handle_max_heap()
     start_setup()
     {:ok, %__MODULE__{socket: nil}}
   end
 
   def start_setup do
     GenServer.cast(__MODULE__, :setup)
+  end
+
+  defp handle_max_heap do
+    case ScoutApm.Config.find(:max_heap_size) do
+      nil -> nil
+      val -> Process.flag(:max_heap_size, val)
+    end
   end
 
   @spec setup :: :gen_tcp.socket() | nil
