@@ -4,12 +4,11 @@ defmodule ScoutApm.Core.AgentManager do
   alias ScoutApm.Core.Manifest
   @behaviour ScoutApm.Collector
 
-  defstruct [:socket, send_queue: []]
+  defstruct [:socket]
 
   @type t :: %__MODULE__{
-    socket: :gen_tcp.socket() | nil,
-    send_queue: List.t() 
-      }
+    socket: :gen_tcp.socket() | nil
+  }
 
   def start_link() do
     options = []
@@ -183,17 +182,12 @@ defmodule ScoutApm.Core.AgentManager do
 
   @spec run(String.t()) :: {:ok, :gen_tcp.socket()} | nil
   def run(bin_path) do
-    ip =
-      ScoutApm.Config.find(:core_agent_tcp_ip)
-      |> :inet_parse.ntoa()
-
-    port = ScoutApm.Config.find(:core_agent_tcp_port)
     socket_path = Core.socket_path()
 
-    args = ["start", "--socket", socket_path, "--daemonize", "true", "--tcp", "#{ip}:#{port}"]
+    args = ["start", "--socket", socket_path, "--daemonize", "true"]
 
     with {_, 0} <- System.cmd(bin_path, args),
-         {:ok, socket} <- try_connect_twice(ip, port) do
+         {:ok, socket} <- try_connect_twice(socket_path) do
       {:ok, socket}
     else
       e ->
@@ -206,19 +200,8 @@ defmodule ScoutApm.Core.AgentManager do
     end
   end
 
-  defp send_message(message, %{socket: _, send_queue: queue} = state) when length(queue) < 10 do
-    %{ state | send_queue: [message | queue]}
-  end
-
-  defp send_message(message, %{socket: socket, send_queue: queue} = state) when length(queue) == 10 do
-    queue = [message | queue] |> Enum.reverse();
-    command = %{
-      BatchCommand: %{
-        commands: queue
-      }
-    }
-
-    with {:ok, encoded} <- Jason.encode(command),
+  defp send_message(message, %{socket: socket} = state) do
+    with {:ok, encoded} <- Jason.encode(message),
          message_length <- byte_size(encoded),
          binary_length <- pad_leading(:binary.encode_unsigned(message_length, :big), 4, 0),
          :ok <- :gen_tcp.send(socket, binary_length),
@@ -226,16 +209,14 @@ defmodule ScoutApm.Core.AgentManager do
          {:ok, <<message_length::big-unsigned-integer-size(32)>>} <- :gen_tcp.recv(socket, 4),
          {:ok, msg} <- :gen_tcp.recv(socket, message_length) do
 
-      ScoutApm.Logger.log(
-        :debug, fn ->
+      ScoutApm.Logger.log( :debug, fn ->
           "Received message of length #{message_length}: #{inspect(Jason.decode!(msg))}"
-        end
-      )
+        end)
 
-      %{ state | send_queue: []}
+      state
     else
       {:error, :closed} ->
-        :gen_tcp.close(socket)
+        Port.close(socket)
 
         ScoutApm.Logger.log(
           :warn,
@@ -245,7 +226,7 @@ defmodule ScoutApm.Core.AgentManager do
         %{state | socket: setup()}
 
       {:error, :enotconn} ->
-        :gen_tcp.close(socket)
+        Port.close(socket)
 
         ScoutApm.Logger.log(
           :warn,
@@ -255,7 +236,7 @@ defmodule ScoutApm.Core.AgentManager do
         %{state | socket: setup()}
 
       e ->
-        :gen_tcp.close(socket)
+        Port.close(socket)
 
         ScoutApm.Logger.log(
           :warn,
@@ -280,17 +261,17 @@ defmodule ScoutApm.Core.AgentManager do
     end
   end
 
-  @spec try_connect_twice(charlist(), char()) ::
+  @spec try_connect_twice(charlist()) ::
           {:ok, :gen_tcp.socket()} | {:error, atom()}
-  defp try_connect_twice(ip, port) do
-    opts = [{:active, false}, {:nodelay, true}, :binary]
-    case :gen_tcp.connect(ip, port, opts) do
+  defp try_connect_twice(file) do
+    opts = [{:active, false}, :binary]
+    case :gen_tcp.connect({:local, file}, 0, opts) do
       {:ok, socket} ->
         {:ok, socket}
 
       _ ->
         :timer.sleep(500)
-        :gen_tcp.connect(ip, port, opts) 
+        :gen_tcp.connect({:local, file}, 0, opts)
     end
   end
 end
