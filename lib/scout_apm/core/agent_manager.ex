@@ -4,11 +4,12 @@ defmodule ScoutApm.Core.AgentManager do
   alias ScoutApm.Core.Manifest
   @behaviour ScoutApm.Collector
 
-  defstruct [:socket]
+  defstruct [:socket, send_queue: []]
 
   @type t :: %__MODULE__{
-          socket: :gen_tcp.socket() | nil
-        }
+    socket: :gen_tcp.socket() | nil,
+    send_queue: List.t() 
+      }
 
   def start_link() do
     options = []
@@ -205,24 +206,36 @@ defmodule ScoutApm.Core.AgentManager do
     end
   end
 
-  defp send_message(message, %{socket: socket} = state) do
-    with {:ok, encoded} <- Jason.encode(message),
+  defp send_message(message, %{socket: _, send_queue: queue} = state) when length(queue) < 10 do
+    %{ state | send_queue: [message | queue]}
+  end
+
+  defp send_message(message, %{socket: socket, send_queue: queue} = state) when length(queue) == 10 do
+    queue = [message | queue] |> Enum.reverse();
+    command = %{
+      BatchCommand: %{
+        commands: queue
+      }
+    }
+
+    with {:ok, encoded} <- Jason.encode(command),
          message_length <- byte_size(encoded),
          binary_length <- pad_leading(:binary.encode_unsigned(message_length, :big), 4, 0),
          :ok <- :gen_tcp.send(socket, binary_length),
          :ok <- :gen_tcp.send(socket, encoded),
          {:ok, <<message_length::big-unsigned-integer-size(32)>>} <- :gen_tcp.recv(socket, 4),
-         {:ok, msg} <- :gen_tcp.recv(socket, message_length),
-         {:ok, decoded_msg} <- Jason.decode(msg) do
+         {:ok, msg} <- :gen_tcp.recv(socket, message_length) do
+
       ScoutApm.Logger.log(
-        :debug,
-        "Received message of length #{message_length}: #{inspect(decoded_msg)}"
+        :debug, fn ->
+          "Received message of length #{message_length}: #{inspect(Jason.decode!(msg))}"
+        end
       )
 
-      state
+      %{ state | send_queue: []}
     else
       {:error, :closed} ->
-        Port.close(socket)
+        :gen_tcp.close(socket)
 
         ScoutApm.Logger.log(
           :warn,
@@ -232,7 +245,7 @@ defmodule ScoutApm.Core.AgentManager do
         %{state | socket: setup()}
 
       {:error, :enotconn} ->
-        Port.close(socket)
+        :gen_tcp.close(socket)
 
         ScoutApm.Logger.log(
           :warn,
@@ -242,7 +255,7 @@ defmodule ScoutApm.Core.AgentManager do
         %{state | socket: setup()}
 
       e ->
-        Port.close(socket)
+        :gen_tcp.close(socket)
 
         ScoutApm.Logger.log(
           :warn,
@@ -270,13 +283,14 @@ defmodule ScoutApm.Core.AgentManager do
   @spec try_connect_twice(charlist(), char()) ::
           {:ok, :gen_tcp.socket()} | {:error, atom()}
   defp try_connect_twice(ip, port) do
-    case :gen_tcp.connect(ip, port, [{:active, false}, :binary]) do
+    opts = [{:active, false}, {:nodelay, true}, :binary]
+    case :gen_tcp.connect(ip, port, opts) do
       {:ok, socket} ->
         {:ok, socket}
 
       _ ->
         :timer.sleep(500)
-        :gen_tcp.connect(ip, port, [{:active, false}, :binary])
+        :gen_tcp.connect(ip, port, opts) 
     end
   end
 end
