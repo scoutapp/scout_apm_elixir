@@ -4,10 +4,11 @@ defmodule ScoutApm.Core.AgentManager do
   alias ScoutApm.Core.Manifest
   @behaviour ScoutApm.Collector
 
-  defstruct [:socket]
+  defstruct [:socket, send_queue: []]
 
   @type t :: %__MODULE__{
-    socket: :gen_tcp.socket() | nil
+    socket: :gen_tcp.socket() | nil,
+    send_queue: List.t()
   }
 
   def start_link() do
@@ -103,12 +104,16 @@ defmodule ScoutApm.Core.AgentManager do
     GenServer.cast(__MODULE__, {:send, message})
   end
 
+  def send_now(message) when is_map(message) do
+    GenServer.cast(__MODULE__, {:send_now, message})
+  end
+
   def app_metadata do
     message =
       ScoutApm.Command.ApplicationEvent.app_metadata()
       |> ScoutApm.Command.message()
 
-    send(message)
+    send_now(message)
   end
 
   def register do
@@ -119,7 +124,7 @@ defmodule ScoutApm.Core.AgentManager do
     message =
       ScoutApm.Command.message(%ScoutApm.Command.Register{app: name, key: key, host: hostname})
 
-    send(message)
+    send_now(message)
   end
 
   @impl GenServer
@@ -145,6 +150,22 @@ defmodule ScoutApm.Core.AgentManager do
   end
 
   @impl GenServer
+  def handle_cast({:send_now, _message}, %{socket: nil} = state) do
+    ScoutApm.Logger.log(
+      :warn,
+      "ScoutApm Core Agent is not connected. Skipping sending event."
+    )
+
+    {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_cast({:send_now, message}, state) when is_map(message) do
+    state = send_message_now(message, state)
+    {:noreply, state}
+  end
+
+  @impl GenServer
   @spec handle_call(any, any(), t()) :: {:reply, any, t()}
   def handle_call({:send, _message}, _from, %{socket: nil} = state) do
     ScoutApm.Logger.log(
@@ -160,6 +181,7 @@ defmodule ScoutApm.Core.AgentManager do
     state = send_message(message, state)
     {:reply, state, state}
   end
+
 
   @impl GenServer
   @spec handle_info(any, t()) :: {:noreply, t()}
@@ -200,7 +222,16 @@ defmodule ScoutApm.Core.AgentManager do
     end
   end
 
-  defp send_message(message, %{socket: socket} = state) do
+  defp send_message(message, %{send_queue: queue} = state) when length(queue) <= 9 do
+    %{ state | send_queue: [message | queue]}
+  end
+
+  defp send_message(message, %{send_queue: queue} = state) when length(queue) >= 10 do
+    queue = Enum.reverse([message | queue])
+    send_message_now(%{ BatchCommand: %{ commands: queue }}, state)
+  end
+
+  defp send_message_now(message, %{socket: socket} = state) do
     with {:ok, encoded} <- Jason.encode(message),
          message_length <- byte_size(encoded),
          binary_length <- pad_leading(:binary.encode_unsigned(message_length, :big), 4, 0),
