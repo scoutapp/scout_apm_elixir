@@ -93,6 +93,11 @@ defmodule ScoutApm.Plugs.ControllerTimer do
       DateTime.utc_now()
       |> DateTime.to_unix(:millisecond)
 
+    ScoutApm.Logger.log(
+      :error,
+      "Unix Timestamp: #{unix_now}"
+    )
+
     queue_start_ms =
       Enum.find_value(@queue_headers, fn header ->
         case Plug.Conn.get_req_header(conn, header) do
@@ -115,6 +120,11 @@ defmodule ScoutApm.Plugs.ControllerTimer do
   end
 
   defp parse_request_start_time("t=" <> queue_start_ms) do
+    ScoutApm.Logger.log(
+      :error,
+      "Queue start ms: #{queue_start_ms}"
+    )
+
     Integer.parse(queue_start_ms)
   end
 
