@@ -2,143 +2,137 @@ defprotocol ScoutApm.Command do
   def message(data)
 end
 
+alias ScoutApm.Command
+
 defmodule ScoutApm.Command.Register do
   defstruct [:app, :key, :host]
-  alias __MODULE__
+end
 
-  defimpl ScoutApm.Command, for: __MODULE__ do
-    def message(%Register{app: app, key: key, host: host}) do
-      %{
-        Register: %{
-          app: app,
-          key: key,
-          host: host,
-          language: "elixir",
-          api_version: "1.0"
-        }
+defimpl ScoutApm.Command, for: ScoutApm.Command.Register do
+  def message(%Command.Register{app: app, key: key, host: host}) do
+    %{
+      Register: %{
+        app: app,
+        key: key,
+        host: host,
+        language: "elixir",
+        api_version: "1.0"
       }
-    end
+    }
   end
 end
 
 defmodule ScoutApm.Command.StartSpan do
   @enforce_keys [:timestamp]
   defstruct [:timestamp, :request_id, :span_id, :parent, :operation]
-  alias __MODULE__
+end
 
-  defimpl ScoutApm.Command, for: __MODULE__ do
-    def message(%StartSpan{} = span) do
-      %{
-        StartSpan: %{
-          timestamp: "#{NaiveDateTime.to_iso8601(span.timestamp)}Z",
-          request_id: span.request_id,
-          span_id: span.span_id,
-          parent_id: span.parent,
-          operation: span.operation
-        }
+defimpl ScoutApm.Command, for: ScoutApm.Command.StartSpan do
+  def message(%Command.StartSpan{} = span) do
+    %{
+      StartSpan: %{
+        timestamp: "#{NaiveDateTime.to_iso8601(span.timestamp)}Z",
+        request_id: span.request_id,
+        span_id: span.span_id,
+        parent_id: span.parent,
+        operation: span.operation
       }
-    end
+    }
   end
 end
 
 defmodule ScoutApm.Command.StopSpan do
   @enforce_keys [:timestamp]
   defstruct [:timestamp, :request_id, :span_id]
-  alias __MODULE__
+end
 
-  defimpl ScoutApm.Command, for: __MODULE__ do
-    def message(%StopSpan{} = span) do
-      %{
-        StopSpan: %{
-          timestamp: "#{NaiveDateTime.to_iso8601(span.timestamp)}Z",
-          request_id: span.request_id,
-          span_id: span.span_id
-        }
+defimpl ScoutApm.Command, for: ScoutApm.Command.StopSpan do
+  def message(%Command.StopSpan{} = span) do
+    %{
+      StopSpan: %{
+        timestamp: "#{NaiveDateTime.to_iso8601(span.timestamp)}Z",
+        request_id: span.request_id,
+        span_id: span.span_id
       }
-    end
+    }
   end
 end
 
 defmodule ScoutApm.Command.StartRequest do
   @enforce_keys [:timestamp]
   defstruct [:timestamp, :request_id]
-  alias __MODULE__
+end
 
-  defimpl ScoutApm.Command, for: __MODULE__ do
-    def message(%StartRequest{} = request) do
-      %{
-        StartRequest: %{
-          timestamp: "#{NaiveDateTime.to_iso8601(request.timestamp)}Z",
-          request_id: request.request_id
-        }
+defimpl ScoutApm.Command, for: ScoutApm.Command.StartRequest do
+  def message(%Command.StartRequest{} = request) do
+    %{
+      StartRequest: %{
+        timestamp: "#{NaiveDateTime.to_iso8601(request.timestamp)}Z",
+        request_id: request.request_id
       }
-    end
+    }
   end
 end
 
 defmodule ScoutApm.Command.FinishRequest do
   @enforce_keys [:timestamp]
   defstruct [:timestamp, :request_id]
-  alias __MODULE__
+end
 
-  defimpl ScoutApm.Command, for: __MODULE__ do
-    def message(%FinishRequest{} = request) do
-      %{
-        FinishRequest: %{
-          timestamp: "#{NaiveDateTime.to_iso8601(request.timestamp)}Z",
-          request_id: request.request_id
-        }
+defimpl ScoutApm.Command, for: ScoutApm.Command.FinishRequest do
+  def message(%Command.FinishRequest{} = request) do
+    %{
+      FinishRequest: %{
+        timestamp: "#{NaiveDateTime.to_iso8601(request.timestamp)}Z",
+        request_id: request.request_id
       }
-    end
+    }
   end
 end
 
 defmodule ScoutApm.Command.TagSpan do
   @enforce_keys [:timestamp]
   defstruct [:timestamp, :request_id, :span_id, :tag, :value]
-  alias __MODULE__
+end
 
-  defimpl ScoutApm.Command, for: __MODULE__ do
-    def message(%TagSpan{} = span) do
-      %{
-        TagSpan: %{
-          timestamp: "#{NaiveDateTime.to_iso8601(span.timestamp)}Z",
-          request_id: span.request_id,
-          span_id: span.span_id,
-          tag: span.tag,
-          value: span.value
-        }
+defimpl ScoutApm.Command, for: ScoutApm.Command.TagSpan do
+  def message(%Command.TagSpan{} = span) do
+    %{
+      TagSpan: %{
+        timestamp: "#{NaiveDateTime.to_iso8601(span.timestamp)}Z",
+        request_id: span.request_id,
+        span_id: span.span_id,
+        tag: span.tag,
+        value: span.value
       }
-    end
+    }
   end
 end
 
 defmodule ScoutApm.Command.TagRequest do
   @enforce_keys [:timestamp]
   defstruct [:timestamp, :request_id, :tag, :value]
-  alias __MODULE__
+end
 
-  defimpl ScoutApm.Command, for: __MODULE__ do
-    def message(%TagRequest{} = request) do
-      %{
-        TagRequest: %{
-          timestamp: "#{NaiveDateTime.to_iso8601(request.timestamp)}Z",
-          request_id: request.request_id,
-          tag: request.tag,
-          value: request.value
-        }
+defimpl ScoutApm.Command, for: ScoutApm.Command.TagRequest do
+  def message(%Command.TagRequest{} = request) do
+    %{
+      TagRequest: %{
+        timestamp: "#{NaiveDateTime.to_iso8601(request.timestamp)}Z",
+        request_id: request.request_id,
+        tag: request.tag,
+        value: request.value
       }
-    end
+    }
   end
 end
 
 defmodule ScoutApm.Command.ApplicationEvent do
   @enforce_keys [:timestamp]
   defstruct [:timestamp, :event_type, :event_value, :source]
-  alias __MODULE__
 
   def app_metadata do
-    %ApplicationEvent{
+    %Command.ApplicationEvent{
       timestamp: NaiveDateTime.utc_now(),
       event_type: "scout.metadata",
       event_value: %{
@@ -168,38 +162,36 @@ defmodule ScoutApm.Command.ApplicationEvent do
       fn {name, _desc, version} -> [to_string(name), to_string(version)] end
     )
   end
+end
 
-  defimpl ScoutApm.Command, for: __MODULE__ do
-    def message(%ApplicationEvent{} = event) do
-      %{
-        ApplicationEvent: %{
-          timestamp: "#{NaiveDateTime.to_iso8601(event.timestamp)}Z",
-          event_type: event.event_type,
-          event_value: event.event_value,
-          source: event.source
-        }
+defimpl ScoutApm.Command, for: __MODULE__ do
+  def message(%Command.ApplicationEvent{} = event) do
+    %{
+      ApplicationEvent: %{
+        timestamp: "#{NaiveDateTime.to_iso8601(event.timestamp)}Z",
+        event_type: event.event_type,
+        event_value: event.event_value,
+        source: event.source
       }
-    end
+    }
   end
 end
 
 defmodule ScoutApm.Command.CoreAgentVersion do
   defstruct []
-  alias __MODULE__
+end
 
-  defimpl ScoutApm.Command, for: __MODULE__ do
-    def message(%CoreAgentVersion{} = _version) do
-      %{
-        CoreAgentVersion: %{}
-      }
-    end
+defimpl ScoutApm.Command, for: ScoutApm.Command.CoreAgentVersion do
+  def message(%Command.CoreAgentVersion{} = _version) do
+    %{
+      CoreAgentVersion: %{}
+    }
   end
 end
 
 defmodule ScoutApm.Command.Batch do
   @enforce_keys [:commands]
   defstruct [:commands]
-  alias __MODULE__
   alias ScoutApm.Command
   alias ScoutApm.Internal.Layer
 
@@ -263,19 +255,9 @@ defmodule ScoutApm.Command.Batch do
 
     commands = commands ++ [finish_request]
 
-    %Batch{
+    %Command.Batch{
       commands: commands
     }
-  end
-
-  defimpl ScoutApm.Command, for: __MODULE__ do
-    def message(%Batch{commands: commands}) do
-      %{
-        BatchCommand: %{
-          commands: Enum.map(commands, &ScoutApm.Command.message(&1))
-        }
-      }
-    end
   end
 
   defp build_layer_spans(children, request_id, parent_id, spans) do
@@ -346,4 +328,14 @@ defmodule ScoutApm.Command.Batch do
   end
 
   defp tag_spans(_layer, _request_id, _span_id), do: []
+end
+
+defimpl ScoutApm.Command, for: ScoutApm.Command.Batch do
+  def message(%Command.Batch{commands: commands}) do
+    %{
+      BatchCommand: %{
+        commands: Enum.map(commands, &ScoutApm.Command.message(&1))
+      }
+    }
+  end
 end
