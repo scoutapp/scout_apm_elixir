@@ -5,7 +5,7 @@ defmodule ScoutApm.Mixfile do
     [
       app: :scout_apm,
       version: "1.0.7",
-      elixir: "~> 1.4",
+      elixir: "~> 1.14",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
       elixirc_paths: elixirc_paths(Mix.env()),
