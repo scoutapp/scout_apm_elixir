@@ -2,7 +2,7 @@ defmodule ScoutApm.ConfigTest do
   use ExUnit.Case, async: false
 
   test "find/1 with plain value" do
-    Mix.Config.persist(scout_apm: [key: "abc123"])
+    Application.put_env(:scout_apm, :key, "abc123")
 
     key = ScoutApm.Config.find(:key)
 
@@ -12,7 +12,7 @@ defmodule ScoutApm.ConfigTest do
 
   test "find/1 with application defined ENV variable" do
     System.put_env("APM_API_KEY", "xyz123")
-    Mix.Config.persist(scout_apm: [key: {:system, "APM_API_KEY"}])
+    Application.put_env(:scout_apm, :key, {:system, "APM_API_KEY"})
 
     key = ScoutApm.Config.find(:key)
     System.delete_env("APM_API_KEY")

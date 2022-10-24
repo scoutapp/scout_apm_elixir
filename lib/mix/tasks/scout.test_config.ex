@@ -7,7 +7,7 @@ defmodule Mix.Tasks.Scout.TestConfig do
 
   def run(args) do
     unless "--no-compile" in args do
-      Mix.Project.compile(args)
+      Mix.Task.run("compile", args)
     end
 
     Application.ensure_all_started(:scout_apm)

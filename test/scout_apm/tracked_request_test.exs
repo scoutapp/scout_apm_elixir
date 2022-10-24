@@ -98,7 +98,7 @@ defmodule ScoutApm.TrackedRequestTest do
   end
 
   test "Correctly discards and logs warning when layer is not stopped" do
-    Mix.Config.persist(scout_apm: [monitor: true, key: "abc123"])
+    Application.put_all_env(scout_apm: [monitor: true, key: "abc123"])
     pid = self()
 
     assert capture_log(fn ->

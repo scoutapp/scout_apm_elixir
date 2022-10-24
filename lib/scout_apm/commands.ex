@@ -132,7 +132,7 @@ defmodule ScoutApm.Command.ApplicationEvent do
   defstruct [:timestamp, :event_type, :event_value, :source]
 
   def app_metadata do
-    %Command.ApplicationEvent{
+    %ScoutApm.Command.ApplicationEvent{
       timestamp: NaiveDateTime.utc_now(),
       event_type: "scout.metadata",
       event_value: %{
@@ -164,7 +164,7 @@ defmodule ScoutApm.Command.ApplicationEvent do
   end
 end
 
-defimpl ScoutApm.Command, for: __MODULE__ do
+defimpl ScoutApm.Command, for: ScoutApm.Command  do
   def message(%Command.ApplicationEvent{} = event) do
     %{
       ApplicationEvent: %{

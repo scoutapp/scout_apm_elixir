@@ -26,7 +26,7 @@ defmodule ScoutApm.CacheTest do
   end
 
   test "determines git sha from revision_sha application setting" do
-    Mix.Config.persist(scout_apm: [revision_sha: "abc123"])
+    Application.put_all_env(scout_apm: [revision_sha: "abc123"])
     assert ScoutApm.Cache.determine_git_sha() == "abc123"
     Application.delete_env(:scout_apm, :revision_sha)
   end

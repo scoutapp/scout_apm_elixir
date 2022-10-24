@@ -3,7 +3,7 @@ defmodule ScoutApm.LoggerTest do
   import ExUnit.CaptureLog
 
   test "always logs errors" do
-    Mix.Config.persist(scout_apm: [monitor: true, key: "abc123"])
+    Application.put_all_env(scout_apm: [monitor: true, key: "abc123"])
 
     Application.put_env(:scout_apm, :log_level, :debug)
 
@@ -35,7 +35,7 @@ defmodule ScoutApm.LoggerTest do
   end
 
   test "only logs debug in debug level" do
-    Mix.Config.persist(scout_apm: [monitor: true, key: "abc123"])
+    Application.put_all_env(scout_apm: [monitor: true, key: "abc123"])
 
     Application.put_env(:scout_apm, :log_level, :debug)
 
@@ -67,7 +67,7 @@ defmodule ScoutApm.LoggerTest do
   end
 
   test "never logs if key is not configured" do
-    Mix.Config.persist(scout_apm: [monitor: true, key: nil, log_level: :debug])
+    Application.put_all_env(scout_apm: [monitor: true, key: nil, log_level: :debug])
 
     assert capture_log(fn ->
              ScoutApm.Logger.log(:error, "Log")

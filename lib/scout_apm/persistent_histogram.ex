@@ -1,7 +1,8 @@
 defmodule ScoutApm.PersistentHistogram do
+  use Agent
   @name __MODULE__
 
-  def start_link() do
+  def start_link(_) do
     Agent.start_link(fn -> %{} end, name: @name)
   end
 

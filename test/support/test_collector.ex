@@ -2,7 +2,7 @@ defmodule ScoutApm.TestCollector do
   use GenServer
   @behaviour ScoutApm.Collector
 
-  def start_link() do
+  def start_link(_) do
     options = []
     GenServer.start_link(__MODULE__, options, name: __MODULE__)
   end
