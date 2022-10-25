@@ -164,7 +164,7 @@ defmodule ScoutApm.Command.ApplicationEvent do
   end
 end
 
-defimpl ScoutApm.Command, for: ScoutApm.Command  do
+defimpl ScoutApm.Command, for: ScoutApm.Command.ApplicationEvent  do
   def message(%Command.ApplicationEvent{} = event) do
     %{
       ApplicationEvent: %{
