@@ -33,7 +33,7 @@ defmodule ScoutApm.Mixfile do
       # We only use `request/5` from hackney, which hasn't changed in the 1.0 line.
       {:hackney, "~> 1.0"},
       {:approximate_histogram, "~>0.1.1"},
-      {:telemetry, "~> 0.4.0 or ~> 0.3.0", optional: true},
+      {:telemetry, "~> 1.0", optional: true},
 
       #########################
       # Dev & Testing Deps
