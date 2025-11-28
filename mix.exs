@@ -35,6 +35,9 @@ defmodule ScoutApm.Mixfile do
       {:approximate_histogram, "~> 0.1.1"},
       {:telemetry, "~> 1.0", optional: true},
 
+      # Optional runtime dependencies for instrumentation
+      {:phoenix_live_view, "~> 0.18 or ~> 1.0", optional: true},
+
       #########################
       # Dev & Testing Deps
 
@@ -50,7 +53,7 @@ defmodule ScoutApm.Mixfile do
     # Conditionally add template engine dependencies based on MIX_TEMPLATE_ENGINES
     template_deps =
       if include_live_view?() do
-        [{:phoenix_live_view, "~> 0.18", only: [:dev, :test]}]
+        []
       else
         [{:phoenix_slime, "~> 0.9.0", only: [:dev, :test]}]
       end

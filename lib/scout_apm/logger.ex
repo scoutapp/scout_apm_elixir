@@ -13,13 +13,14 @@ defmodule ScoutApm.Logger do
 
   @default_level :info
 
-  @valid_levels [:debug, :info, :warn, :error]
+  # Support both :warn (deprecated) and :warning for backwards compatibility
+  @valid_levels [:debug, :info, :warn, :warning, :error]
 
   # If you request to log a message at the left level, check if the
   # logger's current level is one of the right before letting it through
   #
-  # For instance, if you ScoutApm.Logger.log(:warn, "foo"), it should be
-  # printed if you're at warn, info, or debug levels
+  # For instance, if you ScoutApm.Logger.log(:warning, "foo"), it should be
+  # printed if you're at warning, info, or debug levels
   #
   # Msg Lvl       Logger Lvl
   #  |              |
@@ -27,13 +28,14 @@ defmodule ScoutApm.Logger do
   #  v              v
   @debug_levels [:debug]
   @info_levels [:debug, :info]
-  @warn_levels [:debug, :info, :warn]
-  @error_levels [:debug, :info, :warn, :error]
+  @warn_levels [:debug, :info, :warn, :warning]
+  @error_levels [:debug, :info, :warn, :warning, :error]
 
   @log_levels %{
     debug: @debug_levels,
     info: @info_levels,
     warn: @warn_levels,
+    warning: @warn_levels,
     error: @error_levels
   }
 
@@ -42,7 +44,9 @@ defmodule ScoutApm.Logger do
 
     with {:ok, levels} <- logging_enabled() && Map.fetch(@log_levels, level),
          true <- log_level in levels do
-      Logger.log(level, chardata_or_fun, metadata)
+      # Convert :warn to :warning for Elixir 1.15+ compatibility
+      erlang_level = if level == :warn, do: :warning, else: level
+      Logger.log(erlang_level, chardata_or_fun, metadata)
     else
       _ -> :ok
     end
