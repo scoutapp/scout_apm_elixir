@@ -1,6 +1,6 @@
 import Config
 
-config :logger, backends: []
+config :logger, :default_handler, false
 
 config :scout_apm,
   collector_module: ScoutApm.TestCollector
