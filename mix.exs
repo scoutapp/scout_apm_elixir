@@ -26,26 +26,36 @@ defmodule ScoutApm.Mixfile do
   end
 
   defp deps do
-    [
-      {:plug, "~>1.0"},
+    base_deps = [
+      {:plug, "~> 1.0"},
       {:jason, "~> 1.0"},
 
       # We only use `request/5` from hackney, which hasn't changed in the 1.0 line.
       {:hackney, "~> 1.0"},
-      {:approximate_histogram, "~>0.1.1"},
+      {:approximate_histogram, "~> 0.1.1"},
       {:telemetry, "~> 1.0", optional: true},
 
       #########################
       # Dev & Testing Deps
 
       {:ex_doc, ">= 0.0.0", only: [:dev]},
-      {:credo, "~> 0.5", only: [:dev, :test]},
+      # {:credo, "~> 0.5", only: [:dev, :test]},  # Temporarily disabled - incompatible with Elixir 1.19
       {:dialyxir, "~> 0.5", only: [:dev], runtime: false},
 
-      # TODO: Should this be in the dev-only dependencies? It is needed for dialyzer to complete correctly.
-      {:phoenix, "~> 1.0", only: [:dev, :test]},
-      {:phoenix_slime, "~> 0.9.0", only: [:dev, :test]}
+      # Phoenix core - always included for dev/test
+      {:phoenix, "~> 1.6", only: [:dev, :test]},
+      {:phoenix_html, phoenix_html_version(), only: [:dev, :test]}
     ]
+
+    # Conditionally add template engine dependencies based on MIX_TEMPLATE_ENGINES
+    template_deps =
+      if include_live_view?() do
+        [{:phoenix_live_view, "~> 0.18", only: [:dev, :test]}]
+      else
+        [{:phoenix_slime, "~> 0.9.0", only: [:dev, :test]}]
+      end
+
+    base_deps ++ template_deps
   end
 
   defp description() do
@@ -70,4 +80,22 @@ defmodule ScoutApm.Mixfile do
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
+
+  # Template engine testing configuration
+  # Set MIX_TEMPLATE_ENGINES=legacy to test with phoenix_slime instead of phoenix_live_view
+  defp template_engines_mode do
+    System.get_env("MIX_TEMPLATE_ENGINES", "modern")
+  end
+
+  defp include_live_view? do
+    template_engines_mode() != "legacy"
+  end
+
+  defp phoenix_html_version do
+    if include_live_view?() do
+      "~> 3.0"
+    else
+      "~> 2.14"
+    end
+  end
 end
