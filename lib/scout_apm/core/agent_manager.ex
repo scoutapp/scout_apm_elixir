@@ -63,12 +63,12 @@ defmodule ScoutApm.Core.AgentManager do
         {:ok, manifest}
       else
         _ ->
-          ScoutApm.Logger.log(:warn, "Failed to start ScoutApm Core Agent")
+          ScoutApm.Logger.log(:warning, "Failed to start ScoutApm Core Agent")
           {:error, :failed_to_start}
       end
     else
       ScoutApm.Logger.log(
-        :warn,
+        :warning,
         "Not attempting to download ScoutApm Core Agent due to :core_agent_download configuration"
       )
 
@@ -79,6 +79,7 @@ defmodule ScoutApm.Core.AgentManager do
   @spec download_binary(String.t(), String.t(), String.t()) :: :ok | {:error, any()}
   def download_binary(url, directory, file_name) do
     destination = Path.join([directory, file_name])
+    ScoutApm.Logger.log(:info, "Attempting to download ScoutApm Core Agent from: #{url}")
 
     with :ok <- File.mkdir_p(directory),
          {:ok, 200, _headers, client_ref} <- :hackney.get(url, [], "", follow_redirect: true),
@@ -90,8 +91,8 @@ defmodule ScoutApm.Core.AgentManager do
     else
       e ->
         ScoutApm.Logger.log(
-          :warn,
-          "Failed to download and extract ScoutApm Core Agent: #{inspect(e)}"
+          :warning,
+          "Failed to download and extract ScoutApm Core Agent from #{url}: #{inspect(e)}"
         )
 
         {:error, :failed_to_download_and_extract}
@@ -131,7 +132,7 @@ defmodule ScoutApm.Core.AgentManager do
   @impl GenServer
   def handle_cast({:send, _message}, %{socket: nil} = state) do
     ScoutApm.Logger.log(
-      :warn,
+      :warning,
       "ScoutApm Core Agent is not connected. Skipping sending event."
     )
 
@@ -148,7 +149,7 @@ defmodule ScoutApm.Core.AgentManager do
   @spec handle_call(any, any(), t()) :: {:reply, any, t()}
   def handle_call({:send, _message}, _from, %{socket: nil} = state) do
     ScoutApm.Logger.log(
-      :warn,
+      :warning,
       "ScoutApm Core Agent is not connected. Skipping sending event."
     )
 
@@ -197,7 +198,7 @@ defmodule ScoutApm.Core.AgentManager do
     else
       e ->
         ScoutApm.Logger.log(
-          :warn,
+          :warning,
           "Unable to start and connect to ScoutApm Core Agent: #{inspect(e)}"
         )
 
@@ -225,7 +226,7 @@ defmodule ScoutApm.Core.AgentManager do
         Port.close(socket)
 
         ScoutApm.Logger.log(
-          :warn,
+          :warning,
           "ScoutApm Core Agent TCP socket closed. Attempting to reconnect."
         )
 
@@ -235,7 +236,7 @@ defmodule ScoutApm.Core.AgentManager do
         Port.close(socket)
 
         ScoutApm.Logger.log(
-          :warn,
+          :warning,
           "ScoutApm Core Agent TCP socket disconnected. Attempting to reconnect."
         )
 
@@ -245,7 +246,7 @@ defmodule ScoutApm.Core.AgentManager do
         Port.close(socket)
 
         ScoutApm.Logger.log(
-          :warn,
+          :warning,
           "Error in ScoutApm Core Agent TCP socket: #{inspect(e)}. Attempting to reconnect."
         )
 
