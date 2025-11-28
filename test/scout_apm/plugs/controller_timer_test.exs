@@ -1,6 +1,6 @@
 defmodule ScoutApm.Plugs.ControllerTimerTest do
+  import Plug.Test
   use ExUnit.Case
-  use Plug.Test
   alias ScoutApm.Plugs.ControllerTimer
 
   setup do

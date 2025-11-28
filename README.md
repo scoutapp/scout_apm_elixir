@@ -33,3 +33,25 @@ config :scout_apm,
 ## Instrumentation
 
 See [our docs](http://docs.scoutapm.com/#elixir-instrumented-libaries) for information on libraries we auto-instrument (like Phoenix controller-actions) and guides for instrumenting Phoenix channels, Task, HTTPoison, GenServer, and more.
+
+### Supported Template Engines
+
+Scout APM automatically instruments the following Phoenix template engines:
+
+- **EEx** (`.eex`) - Standard Embedded Elixir templates
+- **ExS** (`.exs`) - ExScript templates
+- **HEEx** (`.heex`) - HTML-aware Embedded Elixir (requires `phoenix_live_view ~> 0.17`)
+- **Slime** (`.slim`, `.slime`) - Slim-like templates (requires `phoenix_slime`)
+
+Template engines are enabled automatically based on your project's dependencies. To use Scout's instrumented engines, add to your `config/config.exs`:
+
+```elixir
+config :phoenix, :template_engines,
+  eex: ScoutApm.Instruments.EExEngine,
+  exs: ScoutApm.Instruments.ExsEngine,
+  heex: ScoutApm.Instruments.HEExEngine  # Only if phoenix_live_view is installed
+```
+
+## Development
+
+See [TESTING.md](TESTING.md) for information on testing with different template engine configurations.
