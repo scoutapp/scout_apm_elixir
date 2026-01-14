@@ -191,6 +191,7 @@ defmodule ScoutApm.Core.AgentManager do
     socket_path = Core.socket_path()
 
     args = ["start", "--socket", socket_path, "--daemonize", "true", "--tcp", "#{ip}:#{port}"]
+    args = maybe_add_config_file(args)
 
     with {_, 0} <- System.cmd(bin_path, args),
          {:ok, socket} <- try_connect_twice(ip, port) do
@@ -265,6 +266,18 @@ defmodule ScoutApm.Core.AgentManager do
 
       {:error, _reason} ->
         maybe_download()
+    end
+  end
+
+  @spec maybe_add_config_file(list(String.t())) :: list(String.t())
+  defp maybe_add_config_file(args) do
+    case ScoutApm.Config.find(:core_agent_config_file) do
+      nil ->
+        args
+
+      path when is_binary(path) ->
+        expanded_path = Path.expand(path)
+        args ++ ["--config-file", expanded_path]
     end
   end
 
