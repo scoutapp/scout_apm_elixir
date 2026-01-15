@@ -37,4 +37,16 @@ defmodule ScoutApm.Config.Coercions do
   end
 
   def json(_), do: :error
+
+  @valid_log_levels [:debug, :info, :warn, :warning, :error]
+  def log_level(level) when is_atom(level) and level in @valid_log_levels, do: {:ok, level}
+
+  def log_level(level) when is_binary(level) do
+    atom_level = String.to_existing_atom(String.downcase(level))
+    log_level(atom_level)
+  rescue
+    ArgumentError -> :error
+  end
+
+  def log_level(_), do: :error
 end

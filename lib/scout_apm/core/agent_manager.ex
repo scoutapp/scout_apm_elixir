@@ -181,6 +181,9 @@ defmodule ScoutApm.Core.AgentManager do
     (<<byte>> |> :binary.copy(len - byte_size(binary))) <> binary
   end
 
+  # Exit code returned by core agent when it's already running
+  @ca_already_running_exit_code 3
+
   @spec run(String.t()) :: {:ok, :gen_tcp.socket()} | nil
   def run(bin_path) do
     ip =
@@ -191,19 +194,83 @@ defmodule ScoutApm.Core.AgentManager do
     socket_path = Core.socket_path()
 
     args = ["start", "--socket", socket_path, "--daemonize", "true", "--tcp", "#{ip}:#{port}"]
-    args = maybe_add_config_file(args)
 
-    with {_, 0} <- System.cmd(bin_path, args),
-         {:ok, socket} <- try_connect_twice(ip, port) do
-      {:ok, socket}
-    else
-      e ->
+    args =
+      args
+      |> maybe_add_log_level()
+      |> maybe_add_log_file()
+      |> maybe_add_config_file()
+
+    ScoutApm.Logger.log(:debug, "Starting Core Agent: #{bin_path} #{Enum.join(args, " ")}")
+
+    case System.cmd(bin_path, args) do
+      {_, 0} ->
+        try_connect(socket_path, ip, port)
+
+      {_, @ca_already_running_exit_code} ->
+        ScoutApm.Logger.log(:debug, "Core Agent already running, connecting to existing instance")
+        try_connect(socket_path, ip, port)
+
+      {output, exit_code} ->
         ScoutApm.Logger.log(
           :warning,
-          "Unable to start and connect to ScoutApm Core Agent: #{inspect(e)}"
+          "Unable to start ScoutApm Core Agent (exit code #{exit_code}): #{output}"
         )
 
         nil
+    end
+  end
+
+  @spec try_connect(String.t(), charlist(), char()) :: {:ok, :gen_tcp.socket()} | nil
+  defp try_connect(socket_path, ip, port) do
+    case try_connect_socket(socket_path) do
+      {:ok, socket} ->
+        ScoutApm.Logger.log(:debug, "Connected to Core Agent via Unix socket")
+        {:ok, socket}
+
+      {:error, socket_reason} ->
+        ScoutApm.Logger.log(
+          :debug,
+          "Unix socket connection failed (#{inspect(socket_reason)}), trying TCP"
+        )
+
+        case try_connect_tcp(ip, port) do
+          {:ok, socket} ->
+            ScoutApm.Logger.log(:debug, "Connected to Core Agent via TCP")
+            {:ok, socket}
+
+          {:error, tcp_reason} ->
+            ScoutApm.Logger.log(
+              :warning,
+              "Unable to connect to ScoutApm Core Agent via socket (#{inspect(socket_reason)}) or TCP (#{inspect(tcp_reason)})"
+            )
+
+            nil
+        end
+    end
+  end
+
+  @spec try_connect_socket(String.t()) :: {:ok, :gen_tcp.socket()} | {:error, atom()}
+  defp try_connect_socket(socket_path) do
+    case :gen_tcp.connect({:local, socket_path}, 0, [{:active, false}, :binary]) do
+      {:ok, socket} ->
+        {:ok, socket}
+
+      _ ->
+        :timer.sleep(500)
+        :gen_tcp.connect({:local, socket_path}, 0, [{:active, false}, :binary])
+    end
+  end
+
+  @spec try_connect_tcp(charlist(), char()) :: {:ok, :gen_tcp.socket()} | {:error, atom()}
+  defp try_connect_tcp(ip, port) do
+    case :gen_tcp.connect(ip, port, [{:active, false}, :binary]) do
+      {:ok, socket} ->
+        {:ok, socket}
+
+      _ ->
+        :timer.sleep(500)
+        :gen_tcp.connect(ip, port, [{:active, false}, :binary])
     end
   end
 
@@ -269,6 +336,29 @@ defmodule ScoutApm.Core.AgentManager do
     end
   end
 
+  @spec maybe_add_log_level(list(String.t())) :: list(String.t())
+  defp maybe_add_log_level(args) do
+    case ScoutApm.Config.find(:core_agent_log_level) do
+      nil ->
+        args
+
+      level when is_binary(level) ->
+        args ++ ["--log-level", level]
+    end
+  end
+
+  @spec maybe_add_log_file(list(String.t())) :: list(String.t())
+  defp maybe_add_log_file(args) do
+    case ScoutApm.Config.find(:core_agent_log_file) do
+      nil ->
+        args
+
+      path when is_binary(path) ->
+        expanded_path = Path.expand(path)
+        args ++ ["--log-file", expanded_path]
+    end
+  end
+
   @spec maybe_add_config_file(list(String.t())) :: list(String.t())
   defp maybe_add_config_file(args) do
     case ScoutApm.Config.find(:core_agent_config_file) do
@@ -278,19 +368,6 @@ defmodule ScoutApm.Core.AgentManager do
       path when is_binary(path) ->
         expanded_path = Path.expand(path)
         args ++ ["--config-file", expanded_path]
-    end
-  end
-
-  @spec try_connect_twice(charlist(), char()) ::
-          {:ok, :gen_tcp.socket()} | {:error, atom()}
-  defp try_connect_twice(ip, port) do
-    case :gen_tcp.connect(ip, port, [{:active, false}, :binary]) do
-      {:ok, socket} ->
-        {:ok, socket}
-
-      _ ->
-        :timer.sleep(500)
-        :gen_tcp.connect(ip, port, [{:active, false}, :binary])
     end
   end
 end
