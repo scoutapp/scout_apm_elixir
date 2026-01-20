@@ -105,9 +105,10 @@ defmodule ScoutApm.Tracing do
       try do
         (fn -> unquote(block) end).()
       rescue
-        e in RuntimeError ->
-          # TODO - Add real error tracking
-          raise e
+        e ->
+          ScoutApm.Error.capture(e, stacktrace: __STACKTRACE__)
+          TrackedRequest.mark_error()
+          reraise e, __STACKTRACE__
       after
         TrackedRequest.stop_layer()
       end

@@ -17,7 +17,9 @@ defmodule ScoutApm.Application do
     :core_agent_tcp_port,
     :core_agent_log_level,
     :core_agent_log_file,
-    :core_agent_config_file
+    :core_agent_config_file,
+    :errors_enabled,
+    :errors_host
   ]
 
   def start(_type, _args) do
@@ -28,7 +30,8 @@ defmodule ScoutApm.Application do
       Supervisor.child_spec({ScoutApm.Watcher, ScoutApm.PersistentHistogram},
         id: :histogram_watcher
       ),
-      collector_module
+      collector_module,
+      ScoutApm.Error.ErrorService
     ]
 
     ScoutApm.Cache.setup()

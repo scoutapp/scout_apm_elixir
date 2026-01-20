@@ -95,12 +95,18 @@ if Code.ensure_loaded?(Telemetry) || Code.ensure_loaded?(:telemetry) do
     def handle_event(
           [:oban, :job, :exception],
           _measurements,
-          %{job: job, kind: kind, reason: reason} = _metadata,
+          %{job: job, kind: kind, reason: reason, stacktrace: stacktrace} = _metadata,
           _config
         ) do
       name = job_name(job)
 
       TrackedRequest.mark_error()
+
+      # Capture full error details
+      ScoutApm.Error.capture_from_telemetry(kind, reason, stacktrace,
+        custom_controller: name,
+        custom_params: %{queue: job.queue, worker: job.worker}
+      )
 
       TrackedRequest.stop_layer(fn layer ->
         layer
