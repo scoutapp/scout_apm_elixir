@@ -4,6 +4,7 @@ defmodule ScoutApm.Config.Defaults do
       host: "https://checkin.scoutapm.com",
       direct_host: "https://apm.scoutapp.com",
       dev_trace: false,
+      log_level: :info,
       monitor: true,
       ignore: [],
       core_agent_dir: "/tmp/scout_apm_core",

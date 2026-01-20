@@ -26,7 +26,7 @@ defmodule ScoutApm.Mixfile do
   end
 
   defp deps do
-    base_deps = [
+    [
       {:plug, "~> 1.0"},
       {:jason, "~> 1.0"},
 
@@ -35,30 +35,15 @@ defmodule ScoutApm.Mixfile do
       {:approximate_histogram, "~> 0.1.1"},
       {:telemetry, "~> 1.0", optional: true},
 
-      # Optional runtime dependencies for instrumentation
+      # Optional Phoenix instrumentation dependencies
+      {:phoenix, "~> 1.6", optional: true},
+      {:phoenix_html, "~> 3.0 or ~> 4.0", optional: true},
       {:phoenix_live_view, "~> 0.18 or ~> 1.0", optional: true},
 
-      #########################
       # Dev & Testing Deps
-
       {:ex_doc, ">= 0.0.0", only: [:dev]},
-      # {:credo, "~> 0.5", only: [:dev, :test]},  # Temporarily disabled - incompatible with Elixir 1.19
-      {:dialyxir, "~> 0.5", only: [:dev], runtime: false},
-
-      # Phoenix core - always included for dev/test
-      {:phoenix, "~> 1.6", only: [:dev, :test]},
-      {:phoenix_html, phoenix_html_version(), only: [:dev, :test]}
+      {:dialyxir, "~> 0.5", only: [:dev], runtime: false}
     ]
-
-    # Conditionally add template engine dependencies based on MIX_TEMPLATE_ENGINES
-    template_deps =
-      if include_live_view?() do
-        []
-      else
-        [{:phoenix_slime, "~> 0.9.0", only: [:dev, :test]}]
-      end
-
-    base_deps ++ template_deps
   end
 
   defp description() do
@@ -83,22 +68,4 @@ defmodule ScoutApm.Mixfile do
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
-
-  # Template engine testing configuration
-  # Set MIX_TEMPLATE_ENGINES=legacy to test with phoenix_slime instead of phoenix_live_view
-  defp template_engines_mode do
-    System.get_env("MIX_TEMPLATE_ENGINES", "modern")
-  end
-
-  defp include_live_view? do
-    template_engines_mode() != "legacy"
-  end
-
-  defp phoenix_html_version do
-    if include_live_view?() do
-      "~> 3.0"
-    else
-      "~> 2.14"
-    end
-  end
 end

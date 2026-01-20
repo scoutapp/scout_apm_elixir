@@ -69,9 +69,7 @@ defmodule ScoutApm.DevTrace.Plug do
   defp body_tags do
     """
     <script src="#{apm_host()}/instant/scout_instant.js?cachebust=#{cachebust_time()}"></script>
-    <script>var scoutInstantPageTrace=#{payload()};window.scoutInstant=window.scoutInstant('#{
-      apm_host()
-    }', scoutInstantPageTrace)</script>
+    <script>var scoutInstantPageTrace=#{payload()};window.scoutInstant=window.scoutInstant('#{apm_host()}', scoutInstantPageTrace)</script>
     """
   end
 

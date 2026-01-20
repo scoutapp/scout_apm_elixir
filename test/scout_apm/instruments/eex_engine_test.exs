@@ -1,30 +1,21 @@
 defmodule ScoutApm.Instruments.EExEngineTest do
   use ExUnit.Case
 
-  defmodule EExView do
-    use Phoenix.Template,
-      root: "./test/support/templates",
-      template_engines: %{
-        eex: ScoutApm.Instruments.EExEngine
-      }
-
-    def render(template, assigns) do
-      render_template(template, assigns)
-    end
-  end
-
   describe "compile/2" do
-    test "can compile" do
-      ScoutApm.Instruments.EExEngine.compile(
-        "./test/support/templates/simple.html.eex",
-        "simple.html"
-      )
-    end
-  end
+    test "can compile EEx templates" do
+      result =
+        ScoutApm.Instruments.EExEngine.compile(
+          "./test/support/templates/simple.html.eex",
+          "simple.html"
+        )
 
-  describe "render/2" do
-    test "can render" do
-      assert EExView.render("test/support/templates/simple.html", %{})
+      # Verify it returns quoted code (AST)
+      assert is_tuple(result)
+
+      # Verify it includes our timing instrumentation
+      result_string = Macro.to_string(result)
+      assert result_string =~ "ScoutApm.Tracing.timing"
+      assert result_string =~ "EEx"
     end
   end
 end
