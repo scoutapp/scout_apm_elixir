@@ -76,6 +76,7 @@ if Code.ensure_loaded?(Telemetry) || Code.ensure_loaded?(:telemetry) do
 
       # Check existing state before starting
       existing = Process.get(:scout_apm_request)
+
       Logger.info("scout_liveview mount:start",
         scout_event: "mount:start",
         view: inspect(view_module),
@@ -86,11 +87,13 @@ if Code.ensure_loaded?(Telemetry) || Code.ensure_loaded?(:telemetry) do
       # Use "Controller" type so Scout APM backend recognizes it as a web transaction
       result = TrackedRequest.start_layer("Controller", name)
       after_start = Process.get(:scout_apm_request)
+
       Logger.info("scout_liveview mount:start complete",
         scout_event: "mount:start:after",
         layers: after_start && length(after_start.layers),
         success: result != nil
       )
+
       result
     end
 
@@ -106,6 +109,7 @@ if Code.ensure_loaded?(Telemetry) || Code.ensure_loaded?(:telemetry) do
       uri = get_uri_from_socket(socket)
 
       before_stop = Process.get(:scout_apm_request)
+
       Logger.info("scout_liveview mount:stop",
         scout_event: "mount:stop:before",
         view: inspect(view_module),
@@ -115,18 +119,21 @@ if Code.ensure_loaded?(Telemetry) || Code.ensure_loaded?(:telemetry) do
         layers: before_stop && length(before_stop.layers)
       )
 
-      result = TrackedRequest.stop_layer(fn layer ->
-        layer
-        |> Layer.update_name(name)
-        |> maybe_update_uri(uri)
-      end)
+      result =
+        TrackedRequest.stop_layer(fn layer ->
+          layer
+          |> Layer.update_name(name)
+          |> maybe_update_uri(uri)
+        end)
 
       after_stop = Process.get(:scout_apm_request)
+
       Logger.info("scout_liveview mount:stop complete",
         scout_event: "mount:stop:after",
         request_cleared: after_stop == nil,
         result: inspect(result)
       )
+
       result
     end
 
@@ -158,7 +165,9 @@ if Code.ensure_loaded?(Telemetry) || Code.ensure_loaded?(:telemetry) do
       view_module = socket.view
       name = live_view_name(view_module, "handle_event:#{event}")
 
-      Logger.info("[ScoutApm.LiveViewTelemetry] handle_event:start - view=#{inspect(view_module)} event=#{event} name=#{name}")
+      Logger.info(
+        "[ScoutApm.LiveViewTelemetry] handle_event:start - view=#{inspect(view_module)} event=#{event} name=#{name}"
+      )
 
       # Use "Controller" type so Scout APM backend recognizes it as a web transaction
       TrackedRequest.start_layer("Controller", name)
@@ -175,7 +184,9 @@ if Code.ensure_loaded?(Telemetry) || Code.ensure_loaded?(:telemetry) do
       name = live_view_name(view_module, "handle_event:#{event}")
       uri = get_uri_from_socket(socket)
 
-      Logger.info("[ScoutApm.LiveViewTelemetry] handle_event:stop - view=#{inspect(view_module)} event=#{event} name=#{name} duration=#{inspect(measurements[:duration])}")
+      Logger.info(
+        "[ScoutApm.LiveViewTelemetry] handle_event:stop - view=#{inspect(view_module)} event=#{event} name=#{name} duration=#{inspect(measurements[:duration])}"
+      )
 
       TrackedRequest.stop_layer(fn layer ->
         layer
@@ -260,7 +271,8 @@ if Code.ensure_loaded?(Telemetry) || Code.ensure_loaded?(:telemetry) do
     defp live_view_name(view_module, action) do
       view_module
       |> Module.split()
-      |> Enum.drop(1)  # Drop the app name prefix (e.g., "GaggleWeb")
+      # Drop the app name prefix (e.g., "GaggleWeb")
+      |> Enum.drop(1)
       |> Enum.join(".")
       |> Kernel.<>("##{action}")
     end
