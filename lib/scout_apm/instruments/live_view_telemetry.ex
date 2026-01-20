@@ -141,13 +141,19 @@ if Code.ensure_loaded?(Telemetry) || Code.ensure_loaded?(:telemetry) do
     def handle_event(
           [:phoenix, :live_view, :mount, :exception],
           _measurements,
-          %{socket: socket} = _metadata,
+          %{socket: socket, kind: kind, reason: reason, stacktrace: stacktrace} = _metadata,
           _config
         ) do
       view_module = socket.view
       name = live_view_name(view_module, "mount")
 
       TrackedRequest.mark_error()
+
+      # Capture full error details
+      ScoutApm.Error.capture_from_telemetry(kind, reason, stacktrace,
+        request_path: get_uri_from_socket(socket),
+        custom_controller: name
+      )
 
       TrackedRequest.stop_layer(fn layer ->
         layer
@@ -199,13 +205,20 @@ if Code.ensure_loaded?(Telemetry) || Code.ensure_loaded?(:telemetry) do
     def handle_event(
           [:phoenix, :live_view, :handle_event, :exception],
           _measurements,
-          %{socket: socket, event: event} = _metadata,
+          %{socket: socket, event: event, kind: kind, reason: reason, stacktrace: stacktrace} =
+            _metadata,
           _config
         ) do
       view_module = socket.view
       name = live_view_name(view_module, "handle_event:#{event}")
 
       TrackedRequest.mark_error()
+
+      # Capture full error details
+      ScoutApm.Error.capture_from_telemetry(kind, reason, stacktrace,
+        request_path: get_uri_from_socket(socket),
+        custom_controller: name
+      )
 
       TrackedRequest.stop_layer(fn layer ->
         layer
@@ -248,13 +261,19 @@ if Code.ensure_loaded?(Telemetry) || Code.ensure_loaded?(:telemetry) do
     def handle_event(
           [:phoenix, :live_view, :handle_params, :exception],
           _measurements,
-          %{socket: socket} = _metadata,
+          %{socket: socket, kind: kind, reason: reason, stacktrace: stacktrace} = _metadata,
           _config
         ) do
       view_module = socket.view
       name = live_view_name(view_module, "handle_params")
 
       TrackedRequest.mark_error()
+
+      # Capture full error details
+      ScoutApm.Error.capture_from_telemetry(kind, reason, stacktrace,
+        request_path: get_uri_from_socket(socket),
+        custom_controller: name
+      )
 
       TrackedRequest.stop_layer(fn layer ->
         layer
