@@ -23,7 +23,16 @@ defmodule ScoutApm.Config.Defaults do
       errors_max_queue_size: 500,
       errors_flush_interval_ms: 1_000,
       errors_ignored_exceptions: [],
-      errors_filter_parameters: []
+      errors_filter_parameters: [],
+      # OTLP Logging configuration
+      logs_enabled: false,
+      logs_endpoint: "https://otlp.scoutotel.com:4318",
+      logs_ingest_key: nil,
+      logs_batch_size: 100,
+      logs_max_queue_size: 5000,
+      logs_flush_interval_ms: 5_000,
+      logs_level: :info,
+      logs_filter_modules: []
     }
   end
 
