@@ -41,7 +41,9 @@ defmodule ScoutApm.Config do
   defp coercion(:core_agent_download), do: &Coercions.boolean/1
   defp coercion(:dev_trace), do: &Coercions.boolean/1
   defp coercion(:errors_enabled), do: &Coercions.boolean/1
+  defp coercion(:logs_enabled), do: &Coercions.boolean/1
   defp coercion(:log_level), do: &Coercions.log_level/1
+  defp coercion(:logs_level), do: &Coercions.log_level/1
   defp coercion(:ignore), do: &Coercions.json/1
   defp coercion(_), do: fn x -> {:ok, x} end
 end

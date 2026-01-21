@@ -19,7 +19,9 @@ defmodule ScoutApm.Application do
     :core_agent_log_file,
     :core_agent_config_file,
     :errors_enabled,
-    :errors_host
+    :errors_host,
+    :logs_enabled,
+    :logs_endpoint
   ]
 
   def start(_type, _args) do
@@ -31,7 +33,8 @@ defmodule ScoutApm.Application do
         id: :histogram_watcher
       ),
       collector_module,
-      ScoutApm.Error.ErrorService
+      ScoutApm.Error.ErrorService,
+      ScoutApm.Logging.LogService
     ]
 
     ScoutApm.Cache.setup()
