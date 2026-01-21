@@ -52,6 +52,68 @@ config :phoenix, :template_engines,
   heex: ScoutApm.Instruments.HEExEngine  # Only if phoenix_live_view is installed
 ```
 
+## Error Tracking
+
+Scout APM captures errors automatically and allows manual error capture.
+
+### Automatic Error Capture
+
+Errors are automatically captured from:
+- Phoenix controller exceptions (via telemetry)
+- LiveView exceptions (mount, handle_event, handle_params)
+- Oban job failures
+- Code wrapped in `transaction` blocks
+
+To enable Phoenix router-level error capture, add to your application startup:
+
+```elixir
+# In your application.ex start/2
+def start(_type, _args) do
+  ScoutApm.Instruments.PhoenixErrorTelemetry.attach()
+  # ... rest of supervision tree
+end
+```
+
+### Manual Error Capture
+
+Capture errors manually with `ScoutApm.Error.capture/2`:
+
+```elixir
+try do
+  risky_operation()
+rescue
+  e ->
+    ScoutApm.Error.capture(e, stacktrace: __STACKTRACE__)
+    reraise e, __STACKTRACE__
+end
+```
+
+With additional context:
+
+```elixir
+ScoutApm.Error.capture(exception,
+  stacktrace: __STACKTRACE__,
+  context: %{user_id: user.id},
+  request_path: conn.request_path,
+  request_params: conn.params
+)
+```
+
+### Configuration
+
+```elixir
+config :scout_apm,
+  # Enable/disable error capture (default: true)
+  errors_enabled: true,
+
+  # Exceptions to ignore (default: [])
+  errors_ignored_exceptions: [Phoenix.Router.NoRouteError],
+
+  # Additional parameter keys to filter (default: [])
+  # Built-in: password, token, secret, api_key, auth, credentials, etc.
+  errors_filter_parameters: ["credit_card", "cvv"]
+```
+
 ## Development
 
 See [TESTING.md](TESTING.md) for information on testing with different template engine configurations.
