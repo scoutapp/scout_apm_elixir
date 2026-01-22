@@ -304,7 +304,7 @@ defmodule ScoutApm.Command.Batch do
   defp operation(layer), do: "#{layer.type}/#{layer.name}"
 
   defp tag_spans(%Layer{type: "Ecto"} = layer, request_id, span_id) do
-    [
+    base_tags = [
       %Command.TagSpan{
         timestamp: layer.started_at,
         request_id: request_id,
@@ -313,6 +313,38 @@ defmodule ScoutApm.Command.Batch do
         value: layer.desc
       }
     ]
+
+    rows_tag =
+      if layer.db_rows do
+        [
+          %Command.TagSpan{
+            timestamp: layer.started_at,
+            request_id: request_id,
+            span_id: span_id,
+            tag: "db.rows_returned",
+            value: to_string(layer.db_rows)
+          }
+        ]
+      else
+        []
+      end
+
+    op_tag =
+      if layer.db_command do
+        [
+          %Command.TagSpan{
+            timestamp: layer.started_at,
+            request_id: request_id,
+            span_id: span_id,
+            tag: "db.operation",
+            value: layer.db_command
+          }
+        ]
+      else
+        []
+      end
+
+    base_tags ++ rows_tag ++ op_tag
   end
 
   defp tag_spans(%Layer{type: type} = layer, request_id, span_id) when type in ["EEx", "Exs"] do

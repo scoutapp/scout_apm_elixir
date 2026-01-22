@@ -17,11 +17,15 @@ defmodule ScoutApm.Instruments.EctoLogger do
   def log(entry) do
     case query_time_log_entry(entry) do
       {:ok, duration} ->
+        {command, num_rows} = extract_result_info(entry)
+
         ScoutApm.TrackedRequest.track_layer(
           "Ecto",
           query_name_log_entry(entry),
           duration,
-          desc: Map.get(entry, :query)
+          desc: Map.get(entry, :query),
+          db_command: command,
+          db_rows: num_rows
         )
 
       {:error, _} ->
@@ -34,11 +38,15 @@ defmodule ScoutApm.Instruments.EctoLogger do
   def record(value, metadata) do
     case query_time(value, metadata) do
       {:ok, duration} ->
+        {command, num_rows} = extract_result_info(metadata)
+
         ScoutApm.TrackedRequest.track_layer(
           "Ecto",
           query_name(value, metadata),
           duration,
-          desc: Map.get(metadata, :query)
+          desc: Map.get(metadata, :query),
+          db_command: command,
+          db_rows: num_rows
         )
 
       {:error, _} ->
@@ -95,4 +103,20 @@ defmodule ScoutApm.Instruments.EctoLogger do
   def query_time_log_entry(_entry) do
     {:error, :non_integer_query_time}
   end
+
+  @doc false
+  def extract_result_info(%{result: {:ok, result}}) do
+    command = Map.get(result, :command)
+    num_rows = Map.get(result, :num_rows)
+    {normalize_command(command), num_rows}
+  end
+
+  def extract_result_info(_), do: {nil, nil}
+
+  defp normalize_command(:select), do: "Select"
+  defp normalize_command(:insert), do: "Insert"
+  defp normalize_command(:update), do: "Update"
+  defp normalize_command(:delete), do: "Delete"
+  defp normalize_command(cmd) when is_atom(cmd) and not is_nil(cmd), do: cmd |> to_string() |> String.capitalize()
+  defp normalize_command(_), do: nil
 end
