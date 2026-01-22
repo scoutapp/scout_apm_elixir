@@ -15,7 +15,9 @@ defmodule ScoutApm.Internal.Layer do
           stopped_at: nil | Integer,
           scopable: boolean,
           manual_duration: nil | ScoutApm.Internal.Duration.t(),
-          children: list(%__MODULE__{})
+          children: list(%__MODULE__{}),
+          db_command: nil | String.t(),
+          db_rows: nil | non_neg_integer()
         }
 
   defstruct [
@@ -30,6 +32,10 @@ defmodule ScoutApm.Internal.Layer do
     # If this is set, ignore started_at -> stopped_at valuse when calculating
     # how long this layer ran
     :manual_duration,
+
+    # Database-specific fields for Ecto layers
+    :db_command,
+    :db_rows,
     scopable: true,
     children: []
   ]
@@ -88,6 +94,14 @@ defmodule ScoutApm.Internal.Layer do
     %{layer | manual_duration: duration}
   end
 
+  def update_db_command(layer, db_command) do
+    %{layer | db_command: db_command}
+  end
+
+  def update_db_rows(layer, db_rows) do
+    %{layer | db_rows: db_rows}
+  end
+
   ##################
   #  Update Fields #
   ##################
@@ -103,6 +117,8 @@ defmodule ScoutApm.Internal.Layer do
 
   defp update_field(layer, :desc, value), do: update_desc(layer, value)
   defp update_field(layer, :backtrace, value), do: update_backtrace(layer, value)
+  defp update_field(layer, :db_command, value), do: update_db_command(layer, value)
+  defp update_field(layer, :db_rows, value), do: update_db_rows(layer, value)
 
   #############
   #  Queries  #
