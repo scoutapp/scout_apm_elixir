@@ -137,19 +137,20 @@ defmodule ScoutApm.Command.ApplicationEvent do
       event_type: "scout.metadata",
       event_value: %{
         language: "elixir",
+        language_version: language_version(),
         version: System.version(),
         server_time: "#{NaiveDateTime.to_iso8601(NaiveDateTime.utc_now())}Z",
-        framework: "",
-        framework_version: "",
+        framework: detect_framework(),
+        framework_version: detect_framework_version(),
         environment: "",
-        app_server: "",
+        app_server: detect_app_server(),
         hostname: ScoutApm.Cache.hostname(),
         database_engine: "",
-        database_adapter: "",
+        database_adapter: detect_database_adapter(),
         application_name: ScoutApm.Config.find(:name),
         libraries: libraries(),
         paas: "",
-        application_root: "",
+        application_root: application_root(),
         git_sha: ScoutApm.Cache.git_sha()
       },
       source: inspect(self())
@@ -161,6 +162,74 @@ defmodule ScoutApm.Command.ApplicationEvent do
       Application.loaded_applications(),
       fn {name, _desc, version} -> [to_string(name), to_string(version)] end
     )
+  end
+
+  defp language_version do
+    otp_release = :erlang.system_info(:otp_release) |> to_string()
+    erts_version = :erlang.system_info(:version) |> to_string()
+    "#{System.version()} (OTP #{otp_release}, ERTS #{erts_version})"
+  end
+
+  defp detect_framework do
+    cond do
+      app_loaded?(:phoenix) -> "Phoenix"
+      app_loaded?(:plug) -> "Plug"
+      true -> ""
+    end
+  end
+
+  defp detect_framework_version do
+    cond do
+      app_loaded?(:phoenix) -> app_version(:phoenix)
+      app_loaded?(:plug) -> app_version(:plug)
+      true -> ""
+    end
+  end
+
+  defp detect_app_server do
+    cond do
+      app_loaded?(:bandit) -> "Bandit"
+      app_loaded?(:cowboy) -> "Cowboy"
+      true -> ""
+    end
+  end
+
+  defp detect_database_adapter do
+    adapters = [
+      {:postgrex, "PostgreSQL"},
+      {:myxql, "MySQL"},
+      {:tds, "MSSQL"},
+      {:exqlite, "SQLite"},
+      {:ecto_sqlite3, "SQLite"}
+    ]
+
+    adapters
+    |> Enum.find(fn {app, _name} -> app_loaded?(app) end)
+    |> case do
+      {_app, name} -> name
+      nil -> ""
+    end
+  end
+
+  defp application_root do
+    case File.cwd() do
+      {:ok, cwd} -> cwd
+      _ -> ""
+    end
+  end
+
+  defp app_loaded?(app) do
+    Application.loaded_applications()
+    |> Enum.any?(fn {name, _desc, _version} -> name == app end)
+  end
+
+  defp app_version(app) do
+    Application.loaded_applications()
+    |> Enum.find(fn {name, _desc, _version} -> name == app end)
+    |> case do
+      {_name, _desc, version} -> to_string(version)
+      nil -> ""
+    end
   end
 end
 
