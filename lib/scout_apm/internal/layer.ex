@@ -17,7 +17,10 @@ defmodule ScoutApm.Internal.Layer do
           manual_duration: nil | ScoutApm.Internal.Duration.t(),
           children: list(%__MODULE__{}),
           db_command: nil | String.t(),
-          db_rows: nil | non_neg_integer()
+          db_rows: nil | non_neg_integer(),
+          http_method: nil | String.t(),
+          http_url: nil | String.t(),
+          http_status_code: nil | non_neg_integer()
         }
 
   defstruct [
@@ -36,6 +39,11 @@ defmodule ScoutApm.Internal.Layer do
     # Database-specific fields for Ecto layers
     :db_command,
     :db_rows,
+
+    # HTTP-specific fields for External Service layers
+    :http_method,
+    :http_url,
+    :http_status_code,
     scopable: true,
     children: []
   ]
@@ -102,6 +110,18 @@ defmodule ScoutApm.Internal.Layer do
     %{layer | db_rows: db_rows}
   end
 
+  def update_http_method(layer, http_method) do
+    %{layer | http_method: http_method}
+  end
+
+  def update_http_url(layer, http_url) do
+    %{layer | http_url: http_url}
+  end
+
+  def update_http_status_code(layer, http_status_code) do
+    %{layer | http_status_code: http_status_code}
+  end
+
   ##################
   #  Update Fields #
   ##################
@@ -119,6 +139,9 @@ defmodule ScoutApm.Internal.Layer do
   defp update_field(layer, :backtrace, value), do: update_backtrace(layer, value)
   defp update_field(layer, :db_command, value), do: update_db_command(layer, value)
   defp update_field(layer, :db_rows, value), do: update_db_rows(layer, value)
+  defp update_field(layer, :http_method, value), do: update_http_method(layer, value)
+  defp update_field(layer, :http_url, value), do: update_http_url(layer, value)
+  defp update_field(layer, :http_status_code, value), do: update_http_status_code(layer, value)
 
   #############
   #  Queries  #
