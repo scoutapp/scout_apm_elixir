@@ -370,6 +370,7 @@ defmodule ScoutApm.Command.Batch do
   defp operation(%Layer{type: "Ecto"}), do: "SQL/Query"
   defp operation(%Layer{type: "EEx"}), do: "Template/Render"
   defp operation(%Layer{type: "Exs"}), do: "Template/Render"
+  defp operation(%Layer{type: "HTTP"} = layer), do: "HTTP/#{layer.name}"
   defp operation(layer), do: "#{layer.type}/#{layer.name}"
 
   defp tag_spans(%Layer{type: "Ecto"} = layer, request_id, span_id) do
@@ -426,6 +427,49 @@ defmodule ScoutApm.Command.Batch do
         value: layer.name
       }
     ]
+  end
+
+  defp tag_spans(%Layer{type: "HTTP"} = layer, request_id, span_id) do
+    # Send "url" tag for core agent domain extraction (it looks for "uri" then "url")
+    # Keep "http.url" for any downstream consumers that may depend on it
+    url_tags =
+      if layer.http_url do
+        [
+          %Command.TagSpan{
+            timestamp: layer.started_at,
+            request_id: request_id,
+            span_id: span_id,
+            tag: "url",
+            value: layer.http_url
+          },
+          %Command.TagSpan{
+            timestamp: layer.started_at,
+            request_id: request_id,
+            span_id: span_id,
+            tag: "http.url",
+            value: layer.http_url
+          }
+        ]
+      else
+        []
+      end
+
+    status_tag =
+      if layer.http_status_code do
+        [
+          %Command.TagSpan{
+            timestamp: layer.started_at,
+            request_id: request_id,
+            span_id: span_id,
+            tag: "http.status_code",
+            value: to_string(layer.http_status_code)
+          }
+        ]
+      else
+        []
+      end
+
+    url_tags ++ status_tag
   end
 
   defp tag_spans(_layer, _request_id, _span_id), do: []
