@@ -4,10 +4,11 @@ defmodule ScoutApm.Core.AgentManager do
   alias ScoutApm.Core.Manifest
   @behaviour ScoutApm.Collector
 
-  defstruct [:socket]
+  defstruct [:socket, :port]
 
   @type t :: %__MODULE__{
-          socket: :gen_tcp.socket() | nil
+          socket: :gen_tcp.socket() | nil,
+          port: port() | nil
         }
 
   def start_link(_) do
@@ -18,15 +19,16 @@ defmodule ScoutApm.Core.AgentManager do
   @impl GenServer
   @spec init(any) :: {:ok, t()}
   def init(_) do
+    Process.flag(:trap_exit, true)
     start_setup()
-    {:ok, %__MODULE__{socket: nil}}
+    {:ok, %__MODULE__{socket: nil, port: nil}}
   end
 
   def start_setup do
     GenServer.cast(__MODULE__, :setup)
   end
 
-  @spec setup :: :gen_tcp.socket() | nil
+  @spec setup :: {port() | nil, :gen_tcp.socket() | nil}
   def setup do
     enabled = ScoutApm.Config.find(:monitor)
     core_agent_launch = ScoutApm.Config.find(:core_agent_launch)
@@ -35,16 +37,16 @@ defmodule ScoutApm.Core.AgentManager do
     if enabled && core_agent_launch && key do
       with {:ok, manifest} <- verify_or_download(),
            bin_path when is_binary(bin_path) <- Manifest.bin_path(manifest),
-           {:ok, socket} <- run(bin_path) do
+           {:ok, port_or_nil, socket} <- run(bin_path) do
         register()
         app_metadata()
-        socket
+        {port_or_nil, socket}
       else
         _e ->
-          nil
+          {nil, nil}
       end
     else
-      nil
+      {nil, nil}
     end
   end
 
@@ -126,7 +128,8 @@ defmodule ScoutApm.Core.AgentManager do
   @impl GenServer
   @spec handle_cast(any, t()) :: {:noreply, t()}
   def handle_cast(:setup, state) do
-    {:noreply, %{state | socket: setup()}}
+    {port, socket} = setup()
+    {:noreply, %{state | port: port, socket: socket}}
   end
 
   @impl GenServer
@@ -164,8 +167,44 @@ defmodule ScoutApm.Core.AgentManager do
 
   @impl GenServer
   @spec handle_info(any, t()) :: {:noreply, t()}
+  def handle_info({port, {:exit_status, status}}, %{port: port} = state) do
+    ScoutApm.Logger.log(
+      :warning,
+      "ScoutApm Core Agent exited with status #{status}"
+    )
+
+    {:noreply, %{state | port: nil, socket: nil}}
+  end
+
+  def handle_info({port, {:data, _data}}, %{port: port} = state) do
+    # Discard stdout/stderr data from the core agent
+    {:noreply, state}
+  end
+
   def handle_info(_m, state) do
     {:noreply, state}
+  end
+
+  @impl GenServer
+  def terminate(_reason, %{port: port} = state) do
+    if port != nil do
+      ScoutApm.Logger.log(:info, "Shutting down ScoutApm Core Agent")
+      close_port(port)
+    end
+
+    if state.socket != nil do
+      :gen_tcp.close(state.socket)
+    end
+
+    :ok
+  end
+
+  defp close_port(port) do
+    try do
+      Port.close(port)
+    rescue
+      ArgumentError -> :ok
+    end
   end
 
   @spec pad_leading(binary(), integer(), integer()) :: binary()
@@ -181,19 +220,24 @@ defmodule ScoutApm.Core.AgentManager do
     (<<byte>> |> :binary.copy(len - byte_size(binary))) <> binary
   end
 
-  # Exit code returned by core agent when it's already running
-  @ca_already_running_exit_code 3
-
-  @spec run(String.t()) :: {:ok, :gen_tcp.socket()} | nil
+  @spec run(String.t()) :: {:ok, port() | nil, :gen_tcp.socket()} | nil
   def run(bin_path) do
     ip =
       ScoutApm.Config.find(:core_agent_tcp_ip)
       |> :inet_parse.ntoa()
 
-    port = ScoutApm.Config.find(:core_agent_tcp_port)
+    tcp_port = ScoutApm.Config.find(:core_agent_tcp_port)
     socket_path = Core.socket_path()
 
-    args = ["start", "--socket", socket_path, "--daemonize", "true", "--tcp", "#{ip}:#{port}"]
+    args = [
+      "start",
+      "--socket",
+      socket_path,
+      "--daemonize",
+      "false",
+      "--tcp",
+      "#{ip}:#{tcp_port}"
+    ]
 
     args =
       args
@@ -203,21 +247,78 @@ defmodule ScoutApm.Core.AgentManager do
 
     ScoutApm.Logger.log(:debug, "Starting Core Agent: #{bin_path} #{Enum.join(args, " ")}")
 
-    case System.cmd(bin_path, args) do
-      {_, 0} ->
-        try_connect(socket_path, ip, port)
+    port = launch_core_agent(bin_path, args)
 
-      {_, @ca_already_running_exit_code} ->
-        ScoutApm.Logger.log(:debug, "Core Agent already running, connecting to existing instance")
-        try_connect(socket_path, ip, port)
+    # Give the core agent time to start listening, then check if
+    # the launched process exited quickly (e.g. already running).
+    Process.sleep(500)
+    port = drain_port_exit(port)
 
-      {output, exit_code} ->
+    case try_connect(socket_path, ip, tcp_port) do
+      {:ok, socket} ->
+        {:ok, port, socket}
+
+      nil ->
+        ScoutApm.Logger.log(:warning, "Unable to connect to ScoutApm Core Agent")
+
+        if port do
+          close_port(port)
+        end
+
+        nil
+    end
+  end
+
+  # Launch the core agent through a shell wrapper that monitors stdin.
+  # When the BEAM exits for ANY reason (graceful shutdown, ctrl-c abort,
+  # crash), the stdin pipe closes, `cat` returns, and the wrapper kills
+  # the core agent. This ensures cleanup even when terminate/2 is skipped.
+  defp launch_core_agent(bin_path, args) do
+    shell_cmd = Enum.map_join([bin_path | args], " ", &shell_escape/1)
+
+    wrapper =
+      ~s(#{shell_cmd} & PID=$!; cat > /dev/null; kill $PID 2>/dev/null; wait $PID 2>/dev/null)
+
+    Port.open({:spawn_executable, ~c"/bin/sh"}, [
+      :binary,
+      :exit_status,
+      :stderr_to_stdout,
+      :use_stdio,
+      args: ["-c", wrapper]
+    ])
+  rescue
+    e ->
+      ScoutApm.Logger.log(
+        :warning,
+        "Unable to start ScoutApm Core Agent: #{inspect(e)}"
+      )
+
+      nil
+  end
+
+  defp shell_escape(arg) do
+    "'" <> String.replace(arg, "'", "'\\''") <> "'"
+  end
+
+  # Check if the port process already exited. If so, consume the
+  # exit_status message so it doesn't trigger handle_info later,
+  # and return nil (we don't own the running agent).
+  defp drain_port_exit(nil), do: nil
+
+  defp drain_port_exit(port) do
+    receive do
+      {^port, {:exit_status, _status}} ->
         ScoutApm.Logger.log(
-          :warning,
-          "Unable to start ScoutApm Core Agent (exit code #{exit_code}): #{output}"
+          :debug,
+          "Core Agent process exited quickly (likely already running)"
         )
 
         nil
+
+      {^port, {:data, _data}} ->
+        drain_port_exit(port)
+    after
+      0 -> port
     end
   end
 
@@ -291,35 +392,40 @@ defmodule ScoutApm.Core.AgentManager do
       state
     else
       {:error, :closed} ->
-        Port.close(socket)
+        :gen_tcp.close(socket)
 
         ScoutApm.Logger.log(
           :warning,
           "ScoutApm Core Agent TCP socket closed. Attempting to reconnect."
         )
 
-        %{state | socket: setup()}
+        reconnect(state)
 
       {:error, :enotconn} ->
-        Port.close(socket)
+        :gen_tcp.close(socket)
 
         ScoutApm.Logger.log(
           :warning,
           "ScoutApm Core Agent TCP socket disconnected. Attempting to reconnect."
         )
 
-        %{state | socket: setup()}
+        reconnect(state)
 
       e ->
-        Port.close(socket)
+        :gen_tcp.close(socket)
 
         ScoutApm.Logger.log(
           :warning,
           "Error in ScoutApm Core Agent TCP socket: #{inspect(e)}. Attempting to reconnect."
         )
 
-        %{state | socket: setup()}
+        reconnect(state)
     end
+  end
+
+  defp reconnect(state) do
+    {port, socket} = setup()
+    %{state | port: port, socket: socket}
   end
 
   @spec verify_or_download :: {:ok, map()} | {:error, any()}
