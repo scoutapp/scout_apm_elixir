@@ -43,8 +43,8 @@ defmodule ScoutApm.Logging.OTLP.EncoderTest do
       assert result["severityText"] == "WARN"
       assert result["severityNumber"] == 13
       assert result["body"]["stringValue"] == "Warning message"
-      assert is_binary(result["timeUnixNano"])
-      assert is_binary(result["observedTimeUnixNano"])
+      assert is_integer(result["timeUnixNano"])
+      assert is_integer(result["observedTimeUnixNano"])
     end
 
     test "encodes attributes" do
