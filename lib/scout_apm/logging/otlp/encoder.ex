@@ -47,8 +47,8 @@ defmodule ScoutApm.Logging.OTLP.Encoder do
   @spec encode_log_record(LogRecord.t()) :: map()
   def encode_log_record(%LogRecord{} = record) do
     base = %{
-      "timeUnixNano" => to_string(record.timestamp_nanos),
-      "observedTimeUnixNano" => to_string(record.observed_timestamp_nanos),
+      "timeUnixNano" => record.timestamp_nanos,
+      "observedTimeUnixNano" => record.observed_timestamp_nanos,
       "severityNumber" => Severity.to_number(record.severity),
       "severityText" => Severity.to_text(record.severity),
       "body" => encode_body(record.message)

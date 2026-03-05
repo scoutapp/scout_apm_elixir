@@ -25,6 +25,14 @@ defmodule ScoutApm.Logging.OTLP.Exporter do
     case Jason.encode(payload) do
       {:ok, json} ->
         {body, content_encoding} = maybe_compress(json)
+
+        url = build_url()
+        headers = build_headers(content_encoding)
+
+        ScoutApm.Logger.log(:debug, "OTLP logs export URL: #{url}")
+        ScoutApm.Logger.log(:debug, "OTLP logs export headers: #{inspect(headers)}")
+        ScoutApm.Logger.log(:debug, "OTLP logs export payload (#{byte_size(json)} bytes): #{json}")
+
         do_http_send(body, content_encoding, length(log_records))
 
       {:error, reason} ->
