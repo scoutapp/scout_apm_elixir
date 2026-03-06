@@ -14,6 +14,8 @@ defmodule ScoutApm.Logging.ContextExtractor do
   - service.name - From config
   """
 
+  require Logger
+
   alias ScoutApm.TrackedRequest
   alias ScoutApm.Internal.Context
 
@@ -28,7 +30,7 @@ defmodule ScoutApm.Logging.ContextExtractor do
         extract_from_tracked_request(tr)
 
       _ ->
-        base_context()
+        base_context() ++ extract_from_logger_metadata()
     end
   end
 
@@ -51,7 +53,60 @@ defmodule ScoutApm.Logging.ContextExtractor do
     |> Enum.filter(fn {_k, v} -> v != nil end)
   end
 
+  @doc """
+  Stashes Scout context into Logger metadata so it survives TrackedRequest cleanup.
+
+  Call this when a Controller or Job layer starts. The metadata persists on the
+  process for the entire request lifetime, so logs emitted after TrackedRequest
+  is cleaned up (e.g., Phoenix endpoint stop logs) still get Scout context.
+  """
+  @spec stash_context(String.t(), String.t()) :: :ok
+  def stash_context(type, name) when is_binary(type) and is_binary(name) do
+    {key, _} = entrypoint_key_value(type, name)
+
+    transaction_id =
+      case Process.get(:scout_apm_request) do
+        %TrackedRequest{id: id} -> id
+        _ -> nil
+      end
+
+    metadata =
+      [scout_entrypoint_key: key, scout_entrypoint_name: name] ++
+        if(transaction_id, do: [scout_transaction_id: transaction_id], else: [])
+
+    Logger.metadata(metadata)
+
+    :ok
+  end
+
   # Private functions
+
+  defp extract_from_logger_metadata do
+    meta = Logger.metadata()
+    key = meta[:scout_entrypoint_key]
+    name = meta[:scout_entrypoint_name]
+    transaction_id = meta[:scout_transaction_id]
+
+    entrypoint =
+      if key && name do
+        [{key, name}]
+      else
+        []
+      end
+
+    tx_id =
+      if transaction_id do
+        [{"scout_transaction_id", transaction_id}]
+      else
+        []
+      end
+
+    tx_id ++ entrypoint
+  end
+
+  defp entrypoint_key_value("Controller", name), do: {"controller_entrypoint", name}
+  defp entrypoint_key_value("Job", name), do: {"job_entrypoint", name}
+  defp entrypoint_key_value(_type, name), do: {"custom_entrypoint", name}
 
   defp base_context do
     service_name = ScoutApm.Config.find(:name)
@@ -91,13 +146,26 @@ defmodule ScoutApm.Logging.ContextExtractor do
 
   defp extract_layer_context(%TrackedRequest{layers: layers, root_layer: root_layer})
        when is_list(layers) do
-    # Determine the entrypoint layer (root or outermost active layer)
+    # Determine the entrypoint layer: prefer Controller/Job from root_layer,
+    # then search the layers stack (outermost = last element), then fall back
+    # to root_layer or the outermost active layer.
     entrypoint_layer =
-      case {layers, root_layer} do
-        {_, %{type: type} = rl} when type in ["Controller", "Job"] -> rl
-        {[first | _], nil} -> first
-        {[], nil} -> nil
-        {_, rl} -> rl
+      cond do
+        root_layer != nil and root_layer.type in ["Controller", "Job"] ->
+          root_layer
+
+        # Search layers stack for a Controller/Job (last = outermost)
+        (found = Enum.find(Enum.reverse(layers), &(&1.type in ["Controller", "Job"]))) != nil ->
+          found
+
+        root_layer != nil ->
+          root_layer
+
+        layers != [] ->
+          List.last(layers)
+
+        true ->
+          nil
       end
 
     # Current operation from active layer stack
@@ -149,7 +217,8 @@ defmodule ScoutApm.Logging.ContextExtractor do
     {"scout_tag_#{key}", safe_value(value)}
   end
 
-  defp context_to_attribute(%Context{type: :user, key: "ip", value: _value}) do
+  defp context_to_attribute(%Context{type: :user, key: key, value: _value})
+       when key in ["ip", :ip] do
     {nil, nil}
   end
 
