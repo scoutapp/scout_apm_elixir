@@ -5,132 +5,217 @@ defmodule ScoutApm.Logging.ContextExtractorTest do
   alias ScoutApm.TrackedRequest
   alias ScoutApm.Internal.Context
 
+  defp find_attr(context, key) do
+    Enum.find_value(context, fn
+      {^key, v} -> v
+      _ -> nil
+    end)
+  end
+
+  defp has_attr?(context, key) do
+    Enum.any?(context, fn {k, _v} -> k == key end)
+  end
+
+  defp make_tr(overrides \\ %{}) do
+    defaults = %{
+      id: "test-123",
+      root_layer: nil,
+      layers: [],
+      children: [],
+      contexts: [],
+      collector_fn: nil,
+      error: false,
+      ignored: false,
+      ignoring_depth: 0
+    }
+
+    struct(TrackedRequest, Map.merge(defaults, overrides))
+  end
+
+  defp make_layer(type, name, opts \\ %{}) do
+    defaults = %{
+      type: type,
+      name: name,
+      started_at: ~N[2026-03-06 12:00:00.000000],
+      children: []
+    }
+
+    struct(ScoutApm.Internal.Layer, Map.merge(defaults, opts))
+  end
+
   describe "extract/0" do
     test "returns empty context when no tracked request" do
-      # Make sure there's no tracked request
       Process.delete(:scout_apm_request)
-
       context = ContextExtractor.extract()
-
-      # Should only have service.name if configured
       assert is_list(context)
     end
 
     test "extracts context from tracked request" do
-      # Create a tracked request with some data
-      tr = %TrackedRequest{
-        id: "test-request-123",
-        root_layer: %ScoutApm.Internal.Layer{
-          type: "Controller",
-          name: "UsersController#show",
-          started_at: NaiveDateTime.utc_now(),
-          children: []
-        },
-        layers: [],
-        children: [],
-        contexts: [],
-        collector_fn: nil,
-        error: false,
-        ignored: false,
-        ignoring_depth: 0
-      }
+      tr =
+        make_tr(%{
+          id: "test-request-123",
+          root_layer: make_layer("Controller", "UsersController#show")
+        })
 
       Process.put(:scout_apm_request, tr)
 
       try do
         context = ContextExtractor.extract()
-
-        # Find the request_id in context
-        request_id =
-          Enum.find_value(context, fn
-            {"scout.request_id", v} -> v
-            _ -> nil
-          end)
-
-        assert request_id == "test-request-123"
-
-        # Find transaction name
-        tx_name =
-          Enum.find_value(context, fn
-            {"scout.transaction_name", v} -> v
-            _ -> nil
-          end)
-
-        assert tx_name == "Controller/UsersController#show"
+        assert find_attr(context, "scout_transaction_id") == "test-request-123"
       after
         Process.delete(:scout_apm_request)
       end
     end
+  end
 
-    test "extracts custom context tags" do
-      tr = %TrackedRequest{
-        id: "test-123",
-        root_layer: nil,
-        layers: [],
-        children: [],
-        contexts: [
-          %Context{type: :extra, key: "feature", value: "checkout"},
-          %Context{type: :user, key: "id", value: "user-456"}
-        ],
-        collector_fn: nil,
-        error: false,
-        ignored: false,
-        ignoring_depth: 0
-      }
+  describe "scout_transaction_id" do
+    test "uses scout_transaction_id naming (matching Python/Ruby)" do
+      context = ContextExtractor.extract_from_tracked_request(make_tr(%{id: "req-abc"}))
+      assert find_attr(context, "scout_transaction_id") == "req-abc"
+      refute has_attr?(context, "scout.request_id")
+    end
+  end
 
-      Process.put(:scout_apm_request, tr)
+  describe "timing attributes" do
+    test "includes scout_start_time from root layer" do
+      tr =
+        make_tr(%{
+          root_layer: make_layer("Controller", "Test", %{started_at: ~N[2026-03-06 12:00:00.000000]})
+        })
 
-      try do
-        context = ContextExtractor.extract()
-
-        tag_value =
-          Enum.find_value(context, fn
-            {"scout.tag.feature", v} -> v
-            _ -> nil
-          end)
-
-        assert tag_value == "checkout"
-
-        user_value =
-          Enum.find_value(context, fn
-            {"scout.user.id", v} -> v
-            _ -> nil
-          end)
-
-        assert user_value == "user-456"
-      after
-        Process.delete(:scout_apm_request)
-      end
+      context = ContextExtractor.extract_from_tracked_request(tr)
+      assert find_attr(context, "scout_start_time") == "2026-03-06T12:00:00.000000Z"
     end
 
-    test "includes error flag when request has error" do
-      tr = %TrackedRequest{
-        id: "test-123",
-        root_layer: nil,
-        layers: [],
-        children: [],
-        contexts: [],
-        collector_fn: nil,
-        error: true,
-        ignored: false,
-        ignoring_depth: 0
-      }
+    test "includes scout_end_time and scout_duration when root layer is stopped" do
+      tr =
+        make_tr(%{
+          root_layer:
+            make_layer("Controller", "Test", %{
+              started_at: ~N[2026-03-06 12:00:00.000000],
+              stopped_at: ~N[2026-03-06 12:00:01.500000]
+            })
+        })
 
-      Process.put(:scout_apm_request, tr)
+      context = ContextExtractor.extract_from_tracked_request(tr)
+      assert find_attr(context, "scout_end_time") == "2026-03-06T12:00:01.500000Z"
+      assert find_attr(context, "scout_duration") == 1.5
+    end
 
-      try do
-        context = ContextExtractor.extract()
+    test "omits end_time and duration when root layer not stopped" do
+      tr = make_tr(%{root_layer: make_layer("Controller", "Test")})
+      context = ContextExtractor.extract_from_tracked_request(tr)
+      assert find_attr(context, "scout_start_time") != nil
+      refute has_attr?(context, "scout_end_time")
+      refute has_attr?(context, "scout_duration")
+    end
 
-        has_error =
-          Enum.find_value(context, fn
-            {"scout.has_error", v} -> v
-            _ -> nil
-          end)
+    test "omits timing when no root layer" do
+      context = ContextExtractor.extract_from_tracked_request(make_tr())
+      refute has_attr?(context, "scout_start_time")
+    end
+  end
 
-        assert has_error == true
-      after
-        Process.delete(:scout_apm_request)
-      end
+  describe "scout_current_operation" do
+    test "includes current operation from active layer stack" do
+      tr =
+        make_tr(%{
+          layers: [make_layer("Ecto", "MyApp.Repo")]
+        })
+
+      context = ContextExtractor.extract_from_tracked_request(tr)
+      assert find_attr(context, "scout_current_operation") == "Ecto/MyApp.Repo"
+    end
+
+    test "omits current operation when no active layers" do
+      context = ContextExtractor.extract_from_tracked_request(make_tr())
+      refute has_attr?(context, "scout_current_operation")
+    end
+  end
+
+  describe "entrypoint attributes" do
+    test "adds controller_entrypoint from active layer" do
+      tr = make_tr(%{layers: [make_layer("Controller", "UsersController#show")]})
+      context = ContextExtractor.extract_from_tracked_request(tr)
+      assert find_attr(context, "controller_entrypoint") == "UsersController#show"
+    end
+
+    test "adds job_entrypoint for Job layers" do
+      tr = make_tr(%{layers: [make_layer("Job", "MyApp.Workers.EmailWorker")]})
+      context = ContextExtractor.extract_from_tracked_request(tr)
+      assert find_attr(context, "job_entrypoint") == "MyApp.Workers.EmailWorker"
+    end
+
+    test "adds custom_entrypoint for other layer types" do
+      tr = make_tr(%{layers: [make_layer("Template", "index.html")]})
+      context = ContextExtractor.extract_from_tracked_request(tr)
+      assert find_attr(context, "custom_entrypoint") == "index.html"
+    end
+
+    test "falls back to root_layer when layers stack is empty" do
+      tr = make_tr(%{root_layer: make_layer("Controller", "UsersController#index")})
+      context = ContextExtractor.extract_from_tracked_request(tr)
+      assert find_attr(context, "controller_entrypoint") == "UsersController#index"
+    end
+
+    test "prefers root_layer Controller/Job over active non-Controller layer" do
+      tr =
+        make_tr(%{
+          root_layer: make_layer("Controller", "UsersController#show"),
+          layers: [make_layer("Ecto", "MyApp.Repo")]
+        })
+
+      context = ContextExtractor.extract_from_tracked_request(tr)
+      assert find_attr(context, "controller_entrypoint") == "UsersController#show"
+      refute has_attr?(context, "custom_entrypoint")
+    end
+
+    test "no entrypoint when no layers and no root_layer" do
+      context = ContextExtractor.extract_from_tracked_request(make_tr())
+
+      refute has_attr?(context, "controller_entrypoint")
+      refute has_attr?(context, "job_entrypoint")
+      refute has_attr?(context, "custom_entrypoint")
+    end
+  end
+
+  describe "custom context - tags" do
+    test "uses scout_tag_{key} naming (matching Python)" do
+      tr =
+        make_tr(%{
+          contexts: [%Context{type: :extra, key: "feature", value: "checkout"}]
+        })
+
+      context = ContextExtractor.extract_from_tracked_request(tr)
+      assert find_attr(context, "scout_tag_feature") == "checkout"
+      refute has_attr?(context, "scout.tag.feature")
+    end
+  end
+
+  describe "custom context - user" do
+    test "uses user.{key} naming (matching Ruby)" do
+      tr =
+        make_tr(%{
+          contexts: [%Context{type: :user, key: "id", value: "user-456"}]
+        })
+
+      context = ContextExtractor.extract_from_tracked_request(tr)
+      assert find_attr(context, "user.id") == "user-456"
+      refute has_attr?(context, "scout.user.id")
+    end
+
+    test "excludes user ip (matching Ruby)" do
+      tr =
+        make_tr(%{
+          contexts: [
+            %Context{type: :user, key: "ip", value: "127.0.0.1"},
+            %Context{type: :user, key: "id", value: "user-456"}
+          ]
+        })
+
+      context = ContextExtractor.extract_from_tracked_request(tr)
+      refute has_attr?(context, "user.ip")
+      assert find_attr(context, "user.id") == "user-456"
     end
   end
 end
