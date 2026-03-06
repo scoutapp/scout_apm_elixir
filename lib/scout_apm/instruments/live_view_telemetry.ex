@@ -86,6 +86,7 @@ if Code.ensure_loaded?(Telemetry) || Code.ensure_loaded?(:telemetry) do
 
       # Use "Controller" type so Scout APM backend recognizes it as a web transaction
       result = TrackedRequest.start_layer("Controller", name)
+      ScoutApm.Logging.ContextExtractor.stash_context("Controller", name)
       after_start = Process.get(:scout_apm_request)
 
       Logger.info("scout_liveview mount:start complete",
@@ -177,6 +178,7 @@ if Code.ensure_loaded?(Telemetry) || Code.ensure_loaded?(:telemetry) do
 
       # Use "Controller" type so Scout APM backend recognizes it as a web transaction
       TrackedRequest.start_layer("Controller", name)
+      ScoutApm.Logging.ContextExtractor.stash_context("Controller", name)
     end
 
     # Handle event stop
@@ -238,6 +240,7 @@ if Code.ensure_loaded?(Telemetry) || Code.ensure_loaded?(:telemetry) do
 
       # Use "Controller" type so Scout APM backend recognizes it as a web transaction
       TrackedRequest.start_layer("Controller", name)
+      ScoutApm.Logging.ContextExtractor.stash_context("Controller", name)
     end
 
     # Handle params stop

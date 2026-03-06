@@ -68,6 +68,7 @@ if Code.ensure_loaded?(Telemetry) || Code.ensure_loaded?(:telemetry) do
 
       # "Job" is the internal layer type for background transactions
       TrackedRequest.start_layer("Job", name)
+      ScoutApm.Logging.ContextExtractor.stash_context("Job", name)
     end
 
     # Job stop - completes the transaction
