@@ -143,14 +143,18 @@ end
 
 Logs captured within Scout-tracked requests are automatically enriched with:
 
-- `scout.request_id` - Unique request identifier for correlation
-- `scout.transaction_name` - e.g., "Controller/UsersController#show"
-- `scout.layer_type` - Current operation type (Controller, Ecto, etc.)
-- `scout.layer_name` - Current operation name
-- `scout.has_error` - Whether the request has encountered an error
-- `scout.tag.{key}` - Custom tags from `ScoutApm.Context.add/2`
-- `scout.user.{key}` - User context from `ScoutApm.Context.add_user/2`
+- `scout_transaction_id` - Unique request identifier for correlation
+- `controller_entrypoint` - Controller action name (e.g., "UsersController#show")
+- `job_entrypoint` - Background job name (e.g., "Job/EmailWorker")
+- `scout_current_operation` - Current span type/name (e.g., "Ecto/MyApp.Repo")
+- `scout_start_time` - Request start time (ISO 8601)
+- `scout_end_time` - Request end time, if completed
+- `scout_duration` - Request duration in seconds, if completed
+- `scout_tag_{key}` - Custom tags from `ScoutApm.Context.add/2`
+- `user.{key}` - User context from `ScoutApm.Context.add_user/2`
 - `service.name` - Application name from config
+
+Entrypoint and transaction ID attributes persist through the entire request lifecycle, including logs emitted after the Scout transaction completes (e.g., Phoenix endpoint logs).
 
 Example - logs are automatically enriched when inside a Scout-tracked request:
 
@@ -170,7 +174,7 @@ Add custom context that appears in your logs:
 ScoutApm.Context.add("feature_flag", "new_checkout")
 ScoutApm.Context.add_user("id", current_user.id)
 
-Logger.info("Processing checkout")  # Includes scout.tag.feature_flag and scout.user.id
+Logger.info("Processing checkout")  # Includes scout_tag_feature_flag and user.id
 ```
 
 ### Configuration
@@ -235,3 +239,51 @@ The following Elixir log levels are mapped to OTLP severity:
 ## Development
 
 See [TESTING.md](TESTING.md) for information on testing with different template engine configurations.
+
+## Releasing
+
+Releases are published to [Hex.pm](https://hex.pm/packages/scout_apm) automatically via GitHub Actions when a version tag is pushed.
+
+### Standard Release
+
+1. Update the version in `mix.exs`:
+   ```elixir
+   version: "2.0.0",
+   ```
+
+2. Commit the version bump:
+   ```bash
+   git commit -am "Bump version to 2.0.0"
+   ```
+
+3. Tag and push:
+   ```bash
+   git tag v2.0.0
+   git push origin v2.0.0
+   ```
+
+The workflow will run tests, verify the tag matches `mix.exs`, publish to Hex.pm, and create a GitHub Release.
+
+### Pre-release / RC Version
+
+Use Elixir's pre-release version format. The tag must match `mix.exs` exactly.
+
+1. Update `mix.exs`:
+   ```elixir
+   version: "2.0.0-rc.1",
+   ```
+
+2. Tag and push:
+   ```bash
+   git tag v2.0.0-rc.1
+   git push origin v2.0.0-rc.1
+   ```
+
+Pre-release versions (tags containing `-rc`, `-alpha`, `-beta`, or `-dev`) are automatically marked as pre-release on GitHub. On Hex.pm, pre-release versions are not installed by default -- users must opt in with `{:scout_apm, "~> 2.0.0-rc.1"}`.
+
+### Requirements
+
+- A `HEX_API_KEY` secret must be configured in the repository settings. Generate one with:
+  ```bash
+  mix hex.user key generate --key-name github-actions
+  ```

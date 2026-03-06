@@ -4,7 +4,7 @@ defmodule ScoutApm.Mixfile do
   def project do
     [
       app: :scout_apm,
-      version: "1.0.7",
+      version: "2.0.0-rc.1",
       elixir: "~> 1.14",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
@@ -48,7 +48,7 @@ defmodule ScoutApm.Mixfile do
 
   defp description() do
     """
-    ScoutAPM agent for Phoenix & Elixir projects. For more information, visit https://scoutapm.com/elixir.
+    ScoutAPM agent for Phoenix & Elixir projects. For more information, visit https://www.scoutapm.com/agents/elixir-phoenix-monitoring.
     """
   end
 
