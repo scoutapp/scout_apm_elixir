@@ -4,11 +4,29 @@ defmodule ScoutApm.Core.AgentManager do
   alias ScoutApm.Core.Manifest
   @behaviour ScoutApm.Collector
 
-  defstruct [:socket, :port]
+  # TCP recv/send timeout in milliseconds (matches Python agent's 3s, with extra buffer)
+  @tcp_timeout 5_000
+
+  # Maximum queued messages before dropping (Python agent uses 500)
+  @max_queue_size 500
+
+  # Consecutive errors before attempting reconnect
+  @max_errors_before_reconnect 3
+
+  # Consecutive reconnect failures before restarting the core agent process
+  @max_reconnect_failures 5
+
+  # Exponential backoff schedule for reconnection attempts (milliseconds)
+  @reconnect_backoff_ms [1_000, 5_000, 15_000, 30_000, 60_000]
+
+  defstruct [:socket, :port, error_count: 0, reconnect_failures: 0, last_reconnect_at: nil]
 
   @type t :: %__MODULE__{
           socket: :gen_tcp.socket() | nil,
-          port: port() | nil
+          port: port() | nil,
+          error_count: non_neg_integer(),
+          reconnect_failures: non_neg_integer(),
+          last_reconnect_at: integer() | nil
         }
 
   def start_link(_) do
@@ -21,7 +39,7 @@ defmodule ScoutApm.Core.AgentManager do
   def init(_) do
     Process.flag(:trap_exit, true)
     start_setup()
-    {:ok, %__MODULE__{socket: nil, port: nil}}
+    {:ok, %__MODULE__{}}
   end
 
   def start_setup do
@@ -65,12 +83,12 @@ defmodule ScoutApm.Core.AgentManager do
         {:ok, manifest}
       else
         _ ->
-          ScoutApm.Logger.log(:warning, "Failed to start ScoutApm Core Agent")
+          ScoutApm.Logger.log(:error, "Failed to start ScoutApm Core Agent")
           {:error, :failed_to_start}
       end
     else
       ScoutApm.Logger.log(
-        :warning,
+        :info,
         "Not attempting to download ScoutApm Core Agent due to :core_agent_download configuration"
       )
 
@@ -93,7 +111,7 @@ defmodule ScoutApm.Core.AgentManager do
     else
       e ->
         ScoutApm.Logger.log(
-          :warning,
+          :error,
           "Failed to download and extract ScoutApm Core Agent from #{url}: #{inspect(e)}"
         )
 
@@ -135,7 +153,7 @@ defmodule ScoutApm.Core.AgentManager do
   @impl GenServer
   def handle_cast({:send, _message}, %{socket: nil} = state) do
     ScoutApm.Logger.log(
-      :warning,
+      :debug,
       "ScoutApm Core Agent is not connected. Skipping sending event."
     )
 
@@ -144,15 +162,26 @@ defmodule ScoutApm.Core.AgentManager do
 
   @impl GenServer
   def handle_cast({:send, message}, state) when is_map(message) do
-    state = send_message(message, state)
-    {:noreply, state}
+    case Process.info(self(), :message_queue_len) do
+      {:message_queue_len, len} when len > @max_queue_size ->
+        ScoutApm.Logger.log(
+          :error,
+          "ScoutApm message queue full (#{len} > #{@max_queue_size}), dropping message"
+        )
+
+        {:noreply, state}
+
+      _ ->
+        state = send_message(message, state)
+        {:noreply, state}
+    end
   end
 
   @impl GenServer
   @spec handle_call(any, any(), t()) :: {:reply, any, t()}
   def handle_call({:send, _message}, _from, %{socket: nil} = state) do
     ScoutApm.Logger.log(
-      :warning,
+      :error,
       "ScoutApm Core Agent is not connected. Skipping sending event."
     )
 
@@ -169,7 +198,7 @@ defmodule ScoutApm.Core.AgentManager do
   @spec handle_info(any, t()) :: {:noreply, t()}
   def handle_info({port, {:exit_status, status}}, %{port: port} = state) do
     ScoutApm.Logger.log(
-      :warning,
+      :error,
       "ScoutApm Core Agent exited with status #{status}"
     )
 
@@ -259,7 +288,7 @@ defmodule ScoutApm.Core.AgentManager do
         {:ok, port, socket}
 
       nil ->
-        ScoutApm.Logger.log(:warning, "Unable to connect to ScoutApm Core Agent")
+        ScoutApm.Logger.log(:error, "Unable to connect to ScoutApm Core Agent")
 
         if port do
           close_port(port)
@@ -289,7 +318,7 @@ defmodule ScoutApm.Core.AgentManager do
   rescue
     e ->
       ScoutApm.Logger.log(
-        :warning,
+        :error,
         "Unable to start ScoutApm Core Agent: #{inspect(e)}"
       )
 
@@ -342,7 +371,7 @@ defmodule ScoutApm.Core.AgentManager do
 
           {:error, tcp_reason} ->
             ScoutApm.Logger.log(
-              :warning,
+              :error,
               "Unable to connect to ScoutApm Core Agent via socket (#{inspect(socket_reason)}) or TCP (#{inspect(tcp_reason)})"
             )
 
@@ -351,27 +380,29 @@ defmodule ScoutApm.Core.AgentManager do
     end
   end
 
+  @socket_opts [{:active, false}, :binary, {:send_timeout, @tcp_timeout}]
+
   @spec try_connect_socket(String.t()) :: {:ok, :gen_tcp.socket()} | {:error, atom()}
   defp try_connect_socket(socket_path) do
-    case :gen_tcp.connect({:local, socket_path}, 0, [{:active, false}, :binary]) do
+    case :gen_tcp.connect({:local, socket_path}, 0, @socket_opts) do
       {:ok, socket} ->
         {:ok, socket}
 
       _ ->
         :timer.sleep(500)
-        :gen_tcp.connect({:local, socket_path}, 0, [{:active, false}, :binary])
+        :gen_tcp.connect({:local, socket_path}, 0, @socket_opts)
     end
   end
 
   @spec try_connect_tcp(charlist(), char()) :: {:ok, :gen_tcp.socket()} | {:error, atom()}
   defp try_connect_tcp(ip, port) do
-    case :gen_tcp.connect(ip, port, [{:active, false}, :binary]) do
+    case :gen_tcp.connect(ip, port, @socket_opts) do
       {:ok, socket} ->
         {:ok, socket}
 
       _ ->
         :timer.sleep(500)
-        :gen_tcp.connect(ip, port, [{:active, false}, :binary])
+        :gen_tcp.connect(ip, port, @socket_opts)
     end
   end
 
@@ -381,51 +412,125 @@ defmodule ScoutApm.Core.AgentManager do
          binary_length <- pad_leading(:binary.encode_unsigned(message_length, :big), 4, 0),
          :ok <- :gen_tcp.send(socket, binary_length),
          :ok <- :gen_tcp.send(socket, encoded),
-         {:ok, <<message_length::big-unsigned-integer-size(32)>>} <- :gen_tcp.recv(socket, 4),
-         {:ok, msg} <- :gen_tcp.recv(socket, message_length),
+         {:ok, <<message_length::big-unsigned-integer-size(32)>>} <-
+           :gen_tcp.recv(socket, 4, @tcp_timeout),
+         {:ok, msg} <- :gen_tcp.recv(socket, message_length, @tcp_timeout),
          {:ok, decoded_msg} <- Jason.decode(msg) do
       ScoutApm.Logger.log(
         :debug,
         "Received message of length #{message_length}: #{inspect(decoded_msg)}"
       )
 
-      state
+      %{state | error_count: 0, reconnect_failures: 0}
     else
-      {:error, :closed} ->
-        :gen_tcp.close(socket)
-
+      {:error, :timeout} ->
         ScoutApm.Logger.log(
           :warning,
-          "ScoutApm Core Agent TCP socket closed. Attempting to reconnect."
+          "ScoutApm Core Agent TCP recv timed out after #{@tcp_timeout}ms"
         )
 
-        reconnect(state)
+        handle_send_error(socket, state)
+
+      {:error, :closed} ->
+        ScoutApm.Logger.log(
+          :error,
+          "ScoutApm Core Agent TCP socket closed"
+        )
+
+        handle_send_error(socket, state)
 
       {:error, :enotconn} ->
-        :gen_tcp.close(socket)
-
         ScoutApm.Logger.log(
-          :warning,
-          "ScoutApm Core Agent TCP socket disconnected. Attempting to reconnect."
+          :error,
+          "ScoutApm Core Agent TCP socket disconnected"
         )
 
-        reconnect(state)
+        handle_send_error(socket, state)
 
       e ->
-        :gen_tcp.close(socket)
-
         ScoutApm.Logger.log(
-          :warning,
-          "Error in ScoutApm Core Agent TCP socket: #{inspect(e)}. Attempting to reconnect."
+          :error,
+          "Error in ScoutApm Core Agent TCP socket: #{inspect(e)}"
         )
 
-        reconnect(state)
+        handle_send_error(socket, state)
     end
   end
 
-  defp reconnect(state) do
-    {port, socket} = setup()
-    %{state | port: port, socket: socket}
+  defp handle_send_error(socket, state) do
+    :gen_tcp.close(socket)
+    error_count = state.error_count + 1
+    state = %{state | socket: nil, error_count: error_count}
+
+    if error_count >= @max_errors_before_reconnect do
+      maybe_reconnect(state)
+    else
+      ScoutApm.Logger.log(
+        :debug,
+        "ScoutApm Core Agent error #{error_count}/#{@max_errors_before_reconnect} before reconnect attempt"
+      )
+
+      state
+    end
+  end
+
+  defp maybe_reconnect(state) do
+    now = System.monotonic_time(:millisecond)
+    last = state.last_reconnect_at || 0
+
+    backoff_index =
+      min(state.reconnect_failures, length(@reconnect_backoff_ms) - 1)
+
+    backoff = Enum.at(@reconnect_backoff_ms, backoff_index)
+
+    if now - last < backoff do
+      ScoutApm.Logger.log(
+        :debug,
+        "ScoutApm Core Agent reconnect backing off (#{backoff}ms between attempts)"
+      )
+
+      state
+    else
+      # If we own the core agent process and have failed too many times, restart it
+      state =
+        if state.port && state.reconnect_failures >= @max_reconnect_failures do
+          ScoutApm.Logger.log(
+            :error,
+            "Restarting ScoutApm Core Agent after #{state.reconnect_failures} reconnect failures"
+          )
+
+          close_port(state.port)
+          %{state | port: nil}
+        else
+          state
+        end
+
+      ScoutApm.Logger.log(
+        :info,
+        "Attempting ScoutApm Core Agent reconnect (failure #{state.reconnect_failures + 1})"
+      )
+
+      {port, socket} = setup()
+
+      if socket do
+        %{
+          state
+          | port: port,
+            socket: socket,
+            error_count: 0,
+            reconnect_failures: 0,
+            last_reconnect_at: now
+        }
+      else
+        %{
+          state
+          | port: port,
+            socket: nil,
+            reconnect_failures: state.reconnect_failures + 1,
+            last_reconnect_at: now
+        }
+      end
+    end
   end
 
   @spec verify_or_download :: {:ok, map()} | {:error, any()}
