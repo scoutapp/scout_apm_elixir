@@ -39,8 +39,15 @@ defmodule ScoutApm.Core do
 
   @spec platform_triple :: String.t()
   def platform_triple do
-    "#{architecture()}-#{platform()}"
+    triple = "#{architecture()}-#{platform()}"
+    # For Apple Silicon (M1/M2/M3), use x86_64 binary via Rosetta 2
+    # since there's no native ARM build of the Core Agent.
+    # See https://github.com/scoutapp/scout_apm_python/issues/683
+    apple_darwin_aarch64_override(triple)
   end
+
+  defp apple_darwin_aarch64_override("aarch64-apple-darwin"), do: "x86_64-apple-darwin"
+  defp apple_darwin_aarch64_override(triple), do: triple
 
   @spec platform :: String.t()
   def platform do
@@ -62,7 +69,9 @@ defmodule ScoutApm.Core do
     case uname_architecture() do
       "x86_64" -> "x86_64"
       "i686" -> "i686"
-      _ -> "unknown"
+      "arm64" -> "aarch64"
+      "aarch64" -> "aarch64"
+      other -> other
     end
   end
 

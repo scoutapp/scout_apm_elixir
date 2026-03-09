@@ -137,19 +137,20 @@ defmodule ScoutApm.Command.ApplicationEvent do
       event_type: "scout.metadata",
       event_value: %{
         language: "elixir",
+        language_version: language_version(),
         version: System.version(),
         server_time: "#{NaiveDateTime.to_iso8601(NaiveDateTime.utc_now())}Z",
-        framework: "",
-        framework_version: "",
+        framework: detect_framework(),
+        framework_version: detect_framework_version(),
         environment: "",
-        app_server: "",
+        app_server: detect_app_server(),
         hostname: ScoutApm.Cache.hostname(),
         database_engine: "",
-        database_adapter: "",
+        database_adapter: detect_database_adapter(),
         application_name: ScoutApm.Config.find(:name),
         libraries: libraries(),
         paas: "",
-        application_root: "",
+        application_root: application_root(),
         git_sha: ScoutApm.Cache.git_sha()
       },
       source: inspect(self())
@@ -162,9 +163,77 @@ defmodule ScoutApm.Command.ApplicationEvent do
       fn {name, _desc, version} -> [to_string(name), to_string(version)] end
     )
   end
+
+  defp language_version do
+    otp_release = :erlang.system_info(:otp_release) |> to_string()
+    erts_version = :erlang.system_info(:version) |> to_string()
+    "#{System.version()} (OTP #{otp_release}, ERTS #{erts_version})"
+  end
+
+  defp detect_framework do
+    cond do
+      app_loaded?(:phoenix) -> "Phoenix"
+      app_loaded?(:plug) -> "Plug"
+      true -> ""
+    end
+  end
+
+  defp detect_framework_version do
+    cond do
+      app_loaded?(:phoenix) -> app_version(:phoenix)
+      app_loaded?(:plug) -> app_version(:plug)
+      true -> ""
+    end
+  end
+
+  defp detect_app_server do
+    cond do
+      app_loaded?(:bandit) -> "Bandit"
+      app_loaded?(:cowboy) -> "Cowboy"
+      true -> ""
+    end
+  end
+
+  defp detect_database_adapter do
+    adapters = [
+      {:postgrex, "PostgreSQL"},
+      {:myxql, "MySQL"},
+      {:tds, "MSSQL"},
+      {:exqlite, "SQLite"},
+      {:ecto_sqlite3, "SQLite"}
+    ]
+
+    adapters
+    |> Enum.find(fn {app, _name} -> app_loaded?(app) end)
+    |> case do
+      {_app, name} -> name
+      nil -> ""
+    end
+  end
+
+  defp application_root do
+    case File.cwd() do
+      {:ok, cwd} -> cwd
+      _ -> ""
+    end
+  end
+
+  defp app_loaded?(app) do
+    Application.loaded_applications()
+    |> Enum.any?(fn {name, _desc, _version} -> name == app end)
+  end
+
+  defp app_version(app) do
+    Application.loaded_applications()
+    |> Enum.find(fn {name, _desc, _version} -> name == app end)
+    |> case do
+      {_name, _desc, version} -> to_string(version)
+      nil -> ""
+    end
+  end
 end
 
-defimpl ScoutApm.Command, for: ScoutApm.Command.ApplicationEvent  do
+defimpl ScoutApm.Command, for: ScoutApm.Command.ApplicationEvent do
   def message(%Command.ApplicationEvent{} = event) do
     %{
       ApplicationEvent: %{
@@ -301,10 +370,11 @@ defmodule ScoutApm.Command.Batch do
   defp operation(%Layer{type: "Ecto"}), do: "SQL/Query"
   defp operation(%Layer{type: "EEx"}), do: "Template/Render"
   defp operation(%Layer{type: "Exs"}), do: "Template/Render"
+  defp operation(%Layer{type: "HTTP"} = layer), do: "HTTP/#{layer.name}"
   defp operation(layer), do: "#{layer.type}/#{layer.name}"
 
   defp tag_spans(%Layer{type: "Ecto"} = layer, request_id, span_id) do
-    [
+    base_tags = [
       %Command.TagSpan{
         timestamp: layer.started_at,
         request_id: request_id,
@@ -313,6 +383,38 @@ defmodule ScoutApm.Command.Batch do
         value: layer.desc
       }
     ]
+
+    rows_tag =
+      if layer.db_rows do
+        [
+          %Command.TagSpan{
+            timestamp: layer.started_at,
+            request_id: request_id,
+            span_id: span_id,
+            tag: "db.rows_returned",
+            value: to_string(layer.db_rows)
+          }
+        ]
+      else
+        []
+      end
+
+    op_tag =
+      if layer.db_command do
+        [
+          %Command.TagSpan{
+            timestamp: layer.started_at,
+            request_id: request_id,
+            span_id: span_id,
+            tag: "db.operation",
+            value: layer.db_command
+          }
+        ]
+      else
+        []
+      end
+
+    base_tags ++ rows_tag ++ op_tag
   end
 
   defp tag_spans(%Layer{type: type} = layer, request_id, span_id) when type in ["EEx", "Exs"] do
@@ -325,6 +427,49 @@ defmodule ScoutApm.Command.Batch do
         value: layer.name
       }
     ]
+  end
+
+  defp tag_spans(%Layer{type: "HTTP"} = layer, request_id, span_id) do
+    # Send "url" tag for core agent domain extraction (it looks for "uri" then "url")
+    # Keep "http.url" for any downstream consumers that may depend on it
+    url_tags =
+      if layer.http_url do
+        [
+          %Command.TagSpan{
+            timestamp: layer.started_at,
+            request_id: request_id,
+            span_id: span_id,
+            tag: "url",
+            value: layer.http_url
+          },
+          %Command.TagSpan{
+            timestamp: layer.started_at,
+            request_id: request_id,
+            span_id: span_id,
+            tag: "http.url",
+            value: layer.http_url
+          }
+        ]
+      else
+        []
+      end
+
+    status_tag =
+      if layer.http_status_code do
+        [
+          %Command.TagSpan{
+            timestamp: layer.started_at,
+            request_id: request_id,
+            span_id: span_id,
+            tag: "http.status_code",
+            value: to_string(layer.http_status_code)
+          }
+        ]
+      else
+        []
+      end
+
+    url_tags ++ status_tag
   end
 
   defp tag_spans(_layer, _request_id, _span_id), do: []

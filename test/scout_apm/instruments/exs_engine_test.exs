@@ -1,30 +1,21 @@
 defmodule ScoutApm.Instruments.ExsEngineTest do
   use ExUnit.Case
 
-  defmodule ExsView do
-    use Phoenix.Template,
-      root: "./test/support/templates",
-      template_engines: %{
-        exs: ScoutApm.Instruments.ExsEngine
-      }
-
-    def render(template, assigns) do
-      render_template(template, assigns)
-    end
-  end
-
   describe "compile/2" do
-    test "can compile" do
-      ScoutApm.Instruments.ExsEngine.compile(
-        "./test/support/templates/simple.json.exs",
-        "simple.json"
-      )
-    end
-  end
+    test "can compile ExS templates" do
+      result =
+        ScoutApm.Instruments.ExsEngine.compile(
+          "./test/support/templates/simple.json.exs",
+          "simple.json"
+        )
 
-  describe "render/2" do
-    test "can render" do
-      assert ExsView.render("test/support/templates/simple.json", %{})
+      # Verify it returns quoted code (AST)
+      assert is_tuple(result)
+
+      # Verify it includes our timing instrumentation
+      result_string = Macro.to_string(result)
+      assert result_string =~ "ScoutApm.Tracing.timing"
+      assert result_string =~ "Exs"
     end
   end
 end

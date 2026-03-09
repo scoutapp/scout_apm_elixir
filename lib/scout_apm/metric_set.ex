@@ -105,9 +105,7 @@ defmodule ScoutApm.MetricSet do
   defp scoped_key(metric, %{compare_desc: compare_desc}) do
     case compare_desc do
       true ->
-        "#{metric.type}/#{metric.name}/scope/#{metric.scope[:type]}/#{metric.scope[:name]}/desc/#{
-          metric.desc
-        }"
+        "#{metric.type}/#{metric.name}/scope/#{metric.scope[:type]}/#{metric.scope[:name]}/desc/#{metric.desc}"
 
       false ->
         "#{metric.type}/#{metric.name}/scope/#{metric.scope[:type]}/#{metric.scope[:name]}"

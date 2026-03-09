@@ -4,7 +4,7 @@ defmodule ScoutApm.Mixfile do
   def project do
     [
       app: :scout_apm,
-      version: "1.0.7",
+      version: "2.0.0-rc.1",
       elixir: "~> 1.14",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
@@ -27,30 +27,28 @@ defmodule ScoutApm.Mixfile do
 
   defp deps do
     [
-      {:plug, "~>1.0"},
+      {:plug, "~> 1.0"},
       {:jason, "~> 1.0"},
 
       # We only use `request/5` from hackney, which hasn't changed in the 1.0 line.
       {:hackney, "~> 1.0"},
-      {:approximate_histogram, "~>0.1.1"},
+      {:approximate_histogram, "~> 0.1.1"},
       {:telemetry, "~> 1.0", optional: true},
 
-      #########################
+      # Optional Phoenix instrumentation dependencies
+      {:phoenix, "~> 1.6", optional: true},
+      {:phoenix_html, "~> 3.0 or ~> 4.0", optional: true},
+      {:phoenix_live_view, "~> 0.18 or ~> 1.0", optional: true},
+
       # Dev & Testing Deps
-
       {:ex_doc, ">= 0.0.0", only: [:dev]},
-      {:credo, "~> 0.5", only: [:dev, :test]},
-      {:dialyxir, "~> 0.5", only: [:dev], runtime: false},
-
-      # TODO: Should this be in the dev-only dependencies? It is needed for dialyzer to complete correctly.
-      {:phoenix, "~> 1.0", only: [:dev, :test]},
-      {:phoenix_slime, "~> 0.9.0", only: [:dev, :test]}
+      {:dialyxir, "~> 0.5", only: [:dev], runtime: false}
     ]
   end
 
   defp description() do
     """
-    ScoutAPM agent for Phoenix & Elixir projects. For more information, visit https://scoutapm.com/elixir.
+    ScoutAPM agent for Phoenix & Elixir projects. For more information, visit https://www.scoutapm.com/agents/elixir-phoenix-monitoring.
     """
   end
 

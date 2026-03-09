@@ -28,7 +28,7 @@ defmodule ScoutApm.Payload.Metadata do
       payload_version: 1,
       agent_version: ScoutApm.Utils.agent_version(),
       agent_time: timestamp |> DateTime.from_naive!("Etc/UTC") |> DateTime.to_iso8601(),
-      agent_pid: System.get_pid() |> String.to_integer(),
+      agent_pid: System.pid() |> String.to_integer(),
       platform: "elixir",
       platform_version: System.version(),
       language: "elixir",

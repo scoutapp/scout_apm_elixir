@@ -8,7 +8,9 @@ defmodule ScoutApm.Plugs.ControllerTimer do
   def call(conn, opts) do
     if !ignore_uri?(conn.request_path) do
       queue_time = get_queue_time_diff_nanoseconds(conn)
-      TrackedRequest.start_layer("Controller", action_name(conn, opts))
+      name = action_name(conn, opts)
+      TrackedRequest.start_layer("Controller", name)
+      ScoutApm.Logging.ContextExtractor.stash_context("Controller", name)
 
       if queue_time do
         Context.add("scout.queue_time_ns", "#{queue_time}")
