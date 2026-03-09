@@ -80,7 +80,8 @@ defmodule ScoutApm.Logging.ContextExtractorTest do
     test "includes scout_start_time from root layer" do
       tr =
         make_tr(%{
-          root_layer: make_layer("Controller", "Test", %{started_at: ~N[2026-03-06 12:00:00.000000]})
+          root_layer:
+            make_layer("Controller", "Test", %{started_at: ~N[2026-03-06 12:00:00.000000]})
         })
 
       context = ContextExtractor.extract_from_tracked_request(tr)
@@ -279,7 +280,12 @@ defmodule ScoutApm.Logging.ContextExtractorTest do
       assert Logger.metadata()[:scout_transaction_id] == "req-xyz"
     after
       Process.delete(:scout_apm_request)
-      Logger.metadata(scout_entrypoint_key: nil, scout_entrypoint_name: nil, scout_transaction_id: nil)
+
+      Logger.metadata(
+        scout_entrypoint_key: nil,
+        scout_entrypoint_name: nil,
+        scout_transaction_id: nil
+      )
     end
 
     test "extract/0 uses Logger metadata when no TrackedRequest exists" do
@@ -293,7 +299,11 @@ defmodule ScoutApm.Logging.ContextExtractorTest do
       assert find_attr(context, "controller_entrypoint") == "MessageController#create"
       assert find_attr(context, "scout_transaction_id") == "req-abc"
     after
-      Logger.metadata(scout_entrypoint_key: nil, scout_entrypoint_name: nil, scout_transaction_id: nil)
+      Logger.metadata(
+        scout_entrypoint_key: nil,
+        scout_entrypoint_name: nil,
+        scout_transaction_id: nil
+      )
     end
 
     test "extract/0 uses Logger metadata for Job entrypoint" do
@@ -303,7 +313,11 @@ defmodule ScoutApm.Logging.ContextExtractorTest do
       context = ContextExtractor.extract()
       assert find_attr(context, "job_entrypoint") == "Job/EmailWorker"
     after
-      Logger.metadata(scout_entrypoint_key: nil, scout_entrypoint_name: nil, scout_transaction_id: nil)
+      Logger.metadata(
+        scout_entrypoint_key: nil,
+        scout_entrypoint_name: nil,
+        scout_transaction_id: nil
+      )
     end
 
     test "TrackedRequest takes priority over Logger metadata" do
@@ -317,7 +331,12 @@ defmodule ScoutApm.Logging.ContextExtractorTest do
         assert find_attr(context, "controller_entrypoint") == "NewController#action"
       after
         Process.delete(:scout_apm_request)
-        Logger.metadata(scout_entrypoint_key: nil, scout_entrypoint_name: nil, scout_transaction_id: nil)
+
+        Logger.metadata(
+          scout_entrypoint_key: nil,
+          scout_entrypoint_name: nil,
+          scout_transaction_id: nil
+        )
       end
     end
   end

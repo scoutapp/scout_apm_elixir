@@ -70,7 +70,8 @@ defmodule ScoutApm.Command.ApplicationEventTest do
       assert is_binary(metadata.framework_version)
 
       # If Phoenix is loaded, should detect it
-      if Application.loaded_applications() |> Enum.any?(fn {name, _, _} -> name == :phoenix end) do
+      if Application.loaded_applications()
+         |> Enum.any?(fn {name, _, _} -> name == :phoenix end) do
         assert metadata.framework == "Phoenix"
         assert metadata.framework_version =~ ~r/^\d+\.\d+/
       end
@@ -100,11 +101,20 @@ defmodule ScoutApm.Command.ApplicationEventTest do
       loaded_apps = Application.loaded_applications() |> Enum.map(fn {name, _, _} -> name end)
 
       cond do
-        :postgrex in loaded_apps -> assert metadata.database_adapter == "PostgreSQL"
-        :myxql in loaded_apps -> assert metadata.database_adapter == "MySQL"
-        :tds in loaded_apps -> assert metadata.database_adapter == "MSSQL"
-        :exqlite in loaded_apps or :ecto_sqlite3 in loaded_apps -> assert metadata.database_adapter == "SQLite"
-        true -> assert metadata.database_adapter == ""
+        :postgrex in loaded_apps ->
+          assert metadata.database_adapter == "PostgreSQL"
+
+        :myxql in loaded_apps ->
+          assert metadata.database_adapter == "MySQL"
+
+        :tds in loaded_apps ->
+          assert metadata.database_adapter == "MSSQL"
+
+        :exqlite in loaded_apps or :ecto_sqlite3 in loaded_apps ->
+          assert metadata.database_adapter == "SQLite"
+
+        true ->
+          assert metadata.database_adapter == ""
       end
     end
 

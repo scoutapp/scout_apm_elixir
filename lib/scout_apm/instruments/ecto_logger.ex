@@ -117,6 +117,9 @@ defmodule ScoutApm.Instruments.EctoLogger do
   defp normalize_command(:insert), do: "Insert"
   defp normalize_command(:update), do: "Update"
   defp normalize_command(:delete), do: "Delete"
-  defp normalize_command(cmd) when is_atom(cmd) and not is_nil(cmd), do: cmd |> to_string() |> String.capitalize()
+
+  defp normalize_command(cmd) when is_atom(cmd) and not is_nil(cmd),
+    do: cmd |> to_string() |> String.capitalize()
+
   defp normalize_command(_), do: nil
 end
