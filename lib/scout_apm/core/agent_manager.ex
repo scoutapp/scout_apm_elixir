@@ -19,8 +19,14 @@ defmodule ScoutApm.Core.AgentManager do
   # Backoff schedule for reconnection attempts (milliseconds)
   @reconnect_backoff_ms [100, 500, 1_000, 1_000, 5_000]
 
-
-  defstruct [:socket, :port, error_count: 0, reconnect_failures: 0, last_reconnect_at: nil, reconnecting: false]
+  defstruct [
+    :socket,
+    :port,
+    error_count: 0,
+    reconnect_failures: 0,
+    last_reconnect_at: nil,
+    reconnecting: false
+  ]
 
   @type t :: %__MODULE__{
           socket: :gen_tcp.socket() | nil,
@@ -255,10 +261,25 @@ defmodule ScoutApm.Core.AgentManager do
 
     if socket do
       {:noreply,
-       %{state | port: port, socket: socket, error_count: 0, reconnect_failures: 0, reconnecting: false, last_reconnect_at: now}}
+       %{
+         state
+         | port: port,
+           socket: socket,
+           error_count: 0,
+           reconnect_failures: 0,
+           reconnecting: false,
+           last_reconnect_at: now
+       }}
     else
       {:noreply,
-       %{state | port: port, socket: nil, reconnect_failures: state.reconnect_failures + 1, reconnecting: false, last_reconnect_at: now}}
+       %{
+         state
+         | port: port,
+           socket: nil,
+           reconnect_failures: state.reconnect_failures + 1,
+           reconnecting: false,
+           last_reconnect_at: now
+       }}
     end
   end
 
@@ -287,7 +308,6 @@ defmodule ScoutApm.Core.AgentManager do
       ArgumentError -> :ok
     end
   end
-
 
   @spec pad_leading(binary(), integer(), integer()) :: binary()
   def pad_leading(binary, len, byte \\ 0)
@@ -586,7 +606,14 @@ defmodule ScoutApm.Core.AgentManager do
           # would trigger recursive reconnect logic.
           case probe_socket(socket) do
             :ok ->
-              state = %{state | socket: socket, error_count: 0, reconnect_failures: 0, last_reconnect_at: now}
+              state = %{
+                state
+                | socket: socket,
+                  error_count: 0,
+                  reconnect_failures: 0,
+                  last_reconnect_at: now
+              }
+
               send_app_metadata(state)
 
             :error ->
@@ -615,7 +642,8 @@ defmodule ScoutApm.Core.AgentManager do
          binary_length <- pad_leading(:binary.encode_unsigned(message_length, :big), 4, 0),
          :ok <- :gen_tcp.send(socket, binary_length),
          :ok <- :gen_tcp.send(socket, encoded),
-         {:ok, <<resp_len::big-unsigned-integer-size(32)>>} <- :gen_tcp.recv(socket, 4, @tcp_timeout),
+         {:ok, <<resp_len::big-unsigned-integer-size(32)>>} <-
+           :gen_tcp.recv(socket, 4, @tcp_timeout),
          {:ok, _msg} <- :gen_tcp.recv(socket, resp_len, @tcp_timeout) do
       ScoutApm.Logger.log(:info, "ScoutApm Core Agent socket probe succeeded (Register accepted)")
       :ok
