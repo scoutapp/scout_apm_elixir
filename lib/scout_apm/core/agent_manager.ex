@@ -4,8 +4,8 @@ defmodule ScoutApm.Core.AgentManager do
   alias ScoutApm.Core.Manifest
   @behaviour ScoutApm.Collector
 
-  # TCP recv/send timeout in milliseconds (matches Python agent's 3s, with extra buffer)
-  @tcp_timeout 5_000
+  # TCP recv/send timeout in milliseconds (matches Python agent's 3s)
+  @tcp_timeout 3_000
 
   # Maximum queued messages before dropping (Python agent uses 500)
   @max_queue_size 500
@@ -16,17 +16,19 @@ defmodule ScoutApm.Core.AgentManager do
   # Consecutive reconnect failures before restarting the core agent process
   @max_reconnect_failures 5
 
-  # Exponential backoff schedule for reconnection attempts (milliseconds)
-  @reconnect_backoff_ms [1_000, 5_000, 15_000, 30_000, 60_000]
+  # Backoff schedule for reconnection attempts (milliseconds)
+  @reconnect_backoff_ms [100, 500, 1_000, 1_000, 5_000]
 
-  defstruct [:socket, :port, error_count: 0, reconnect_failures: 0, last_reconnect_at: nil]
+
+  defstruct [:socket, :port, error_count: 0, reconnect_failures: 0, last_reconnect_at: nil, reconnecting: false]
 
   @type t :: %__MODULE__{
           socket: :gen_tcp.socket() | nil,
           port: port() | nil,
           error_count: non_neg_integer(),
           reconnect_failures: non_neg_integer(),
-          last_reconnect_at: integer() | nil
+          last_reconnect_at: integer() | nil,
+          reconnecting: boolean()
         }
 
   def start_link(_) do
@@ -56,9 +58,15 @@ defmodule ScoutApm.Core.AgentManager do
       with {:ok, manifest} <- verify_or_download(),
            bin_path when is_binary(bin_path) <- Manifest.bin_path(manifest),
            {:ok, port_or_nil, socket} <- run(bin_path) do
-        register()
-        app_metadata()
-        {port_or_nil, socket}
+        # Send Register and app_metadata directly on the socket, not via cast.
+        # setup() runs inside handle_cast(:setup), so any cast from here goes to
+        # the back of the mailbox. If app requests arrive before those casts are
+        # processed, a BatchCommand hits the core agent before Register, and the
+        # core agent rejects it as an unregistered client.
+        state = %__MODULE__{socket: socket, port: port_or_nil}
+        state = send_register(state)
+        state = send_app_metadata(state)
+        {state.port, state.socket}
       else
         _e ->
           {nil, nil}
@@ -121,18 +129,28 @@ defmodule ScoutApm.Core.AgentManager do
 
   @impl ScoutApm.Collector
   def send(message) when is_map(message) do
-    GenServer.cast(__MODULE__, {:send, message})
+    # Check the GenServer's mailbox size from the caller's process BEFORE
+    # casting. This prevents messages from accumulating in the mailbox while
+    # the GenServer is blocked on TCP or reconnection. The internal check
+    # in handle_cast is a second line of defense.
+    case GenServer.whereis(__MODULE__) do
+      nil ->
+        :ok
+
+      pid ->
+        case Process.info(pid, :message_queue_len) do
+          {:message_queue_len, len} when len > @max_queue_size ->
+            :ok
+
+          _ ->
+            GenServer.cast(__MODULE__, {:send, message})
+        end
+    end
   end
 
-  def app_metadata do
-    message =
-      ScoutApm.Command.ApplicationEvent.app_metadata()
-      |> ScoutApm.Command.message()
+  defp send_register(%{socket: nil} = state), do: state
 
-    send(message)
-  end
-
-  def register do
+  defp send_register(state) do
     name = ScoutApm.Config.find(:name)
     key = ScoutApm.Config.find(:key)
     hostname = ScoutApm.Config.find(:hostname)
@@ -140,7 +158,17 @@ defmodule ScoutApm.Core.AgentManager do
     message =
       ScoutApm.Command.message(%ScoutApm.Command.Register{app: name, key: key, host: hostname})
 
-    send(message)
+    send_message(message, state)
+  end
+
+  defp send_app_metadata(%{socket: nil} = state), do: state
+
+  defp send_app_metadata(state) do
+    message =
+      ScoutApm.Command.ApplicationEvent.app_metadata()
+      |> ScoutApm.Command.message()
+
+    send_message(message, state)
   end
 
   @impl GenServer
@@ -151,11 +179,21 @@ defmodule ScoutApm.Core.AgentManager do
   end
 
   @impl GenServer
+  def handle_cast({:send, _message}, %{socket: nil, reconnecting: true} = state) do
+    # Reconnect already scheduled, just drop the message
+    {:noreply, state}
+  end
+
+  @impl GenServer
   def handle_cast({:send, _message}, %{socket: nil} = state) do
-    ScoutApm.Logger.log(
-      :debug,
-      "ScoutApm Core Agent is not connected. Skipping sending event."
-    )
+    state = maybe_reconnect(state)
+
+    if state.socket == nil do
+      ScoutApm.Logger.log(
+        :debug,
+        "ScoutApm Core Agent is not connected. Skipping sending event."
+      )
+    end
 
     {:noreply, state}
   end
@@ -210,6 +248,20 @@ defmodule ScoutApm.Core.AgentManager do
     {:noreply, state}
   end
 
+  def handle_info(:do_full_restart, state) do
+    ScoutApm.Logger.log(:info, "Launching new ScoutApm Core Agent after restart delay")
+    {port, socket} = setup()
+    now = System.monotonic_time(:millisecond)
+
+    if socket do
+      {:noreply,
+       %{state | port: port, socket: socket, error_count: 0, reconnect_failures: 0, reconnecting: false, last_reconnect_at: now}}
+    else
+      {:noreply,
+       %{state | port: port, socket: nil, reconnect_failures: state.reconnect_failures + 1, reconnecting: false, last_reconnect_at: now}}
+    end
+  end
+
   def handle_info(_m, state) do
     {:noreply, state}
   end
@@ -235,6 +287,7 @@ defmodule ScoutApm.Core.AgentManager do
       ArgumentError -> :ok
     end
   end
+
 
   @spec pad_leading(binary(), integer(), integer()) :: binary()
   def pad_leading(binary, len, byte \\ 0)
@@ -305,8 +358,10 @@ defmodule ScoutApm.Core.AgentManager do
   defp launch_core_agent(bin_path, args) do
     shell_cmd = Enum.map_join([bin_path | args], " ", &shell_escape/1)
 
+    # When stdin closes (BEAM exit or close_port): send SIGTERM, wait up to 5s,
+    # then SIGKILL if the process is still alive (e.g. frozen by SIGSTOP).
     wrapper =
-      ~s(#{shell_cmd} & PID=$!; cat > /dev/null; kill $PID 2>/dev/null; wait $PID 2>/dev/null)
+      ~s(#{shell_cmd} & PID=$!; cat > /dev/null; kill $PID 2>/dev/null; for i in 1 2 3 4 5; do kill -0 $PID 2>/dev/null || exit 0; sleep 1; done; kill -9 $PID 2>/dev/null; wait $PID 2>/dev/null)
 
     Port.open({:spawn_executable, ~c"/bin/sh"}, [
       :binary,
@@ -476,14 +531,16 @@ defmodule ScoutApm.Core.AgentManager do
 
   defp maybe_reconnect(state) do
     now = System.monotonic_time(:millisecond)
-    last = state.last_reconnect_at || 0
 
     backoff_index =
       min(state.reconnect_failures, length(@reconnect_backoff_ms) - 1)
 
     backoff = Enum.at(@reconnect_backoff_ms, backoff_index)
 
-    if now - last < backoff do
+    # Allow immediate reconnect on first attempt (last_reconnect_at is nil)
+    elapsed = if state.last_reconnect_at, do: now - state.last_reconnect_at, else: backoff
+
+    if elapsed < backoff do
       ScoutApm.Logger.log(
         :debug,
         "ScoutApm Core Agent reconnect backing off (#{backoff}ms between attempts)"
@@ -491,46 +548,94 @@ defmodule ScoutApm.Core.AgentManager do
 
       state
     else
-      # If we own the core agent process and have failed too many times, restart it
-      state =
-        if state.port && state.reconnect_failures >= @max_reconnect_failures do
-          ScoutApm.Logger.log(
-            :error,
-            "Restarting ScoutApm Core Agent after #{state.reconnect_failures} reconnect failures"
-          )
+      do_reconnect(state, now)
+    end
+  end
 
-          close_port(state.port)
-          %{state | port: nil}
-        else
-          state
-        end
-
+  defp do_reconnect(state, now) do
+    # If we own the port and have exceeded max failures, kill the old process
+    # and do a full setup (launch + connect). This is done asynchronously via
+    # handle_info(:do_full_restart) so the GenServer stays responsive and can
+    # drop incoming messages instead of letting them pile up in the mailbox.
+    if state.port && state.reconnect_failures >= @max_reconnect_failures do
       ScoutApm.Logger.log(
-        :info,
-        "Attempting ScoutApm Core Agent reconnect (failure #{state.reconnect_failures + 1})"
+        :error,
+        "Scheduling ScoutApm Core Agent restart after #{state.reconnect_failures} reconnect failures"
       )
 
-      {port, socket} = setup()
+      close_port(state.port)
+      # Schedule the full restart after giving the shell wrapper time to
+      # SIGTERM → SIGKILL the hung process and release the TCP port.
+      Process.send_after(self(), :do_full_restart, 6_000)
 
-      if socket do
-        %{
-          state
-          | port: port,
-            socket: socket,
-            error_count: 0,
-            reconnect_failures: 0,
-            last_reconnect_at: now
-        }
-      else
-        %{
-          state
-          | port: port,
-            socket: nil,
-            reconnect_failures: state.reconnect_failures + 1,
-            last_reconnect_at: now
-        }
+      %{state | port: nil, reconnecting: true, last_reconnect_at: now}
+    else
+      # Try to reconnect the socket only — don't launch a new process.
+      # The existing core agent may have recovered (e.g. SIGCONT after SIGSTOP).
+      ScoutApm.Logger.log(
+        :info,
+        "Attempting ScoutApm Core Agent socket reconnect (failure #{state.reconnect_failures + 1})"
+      )
+
+      case try_reconnect_socket() do
+        {:ok, socket} ->
+          # Validate the socket is actually responsive before trusting it.
+          # A SIGSTOP'd agent accepts TCP connections (kernel backlog) but
+          # never responds. We probe with Register and check the result
+          # directly — NOT through send_message/handle_send_error, which
+          # would trigger recursive reconnect logic.
+          case probe_socket(socket) do
+            :ok ->
+              state = %{state | socket: socket, error_count: 0, reconnect_failures: 0, last_reconnect_at: now}
+              send_app_metadata(state)
+
+            :error ->
+              :gen_tcp.close(socket)
+              %{state | reconnect_failures: state.reconnect_failures + 1, last_reconnect_at: now}
+          end
+
+        nil ->
+          %{state | reconnect_failures: state.reconnect_failures + 1, last_reconnect_at: now}
       end
     end
+  end
+
+  # Send Register on the socket and verify we get a response. Returns :ok or :error.
+  # This avoids the send_message → handle_send_error → maybe_reconnect recursion.
+  defp probe_socket(socket) do
+    name = ScoutApm.Config.find(:name)
+    key = ScoutApm.Config.find(:key)
+    hostname = ScoutApm.Config.find(:hostname)
+
+    message =
+      ScoutApm.Command.message(%ScoutApm.Command.Register{app: name, key: key, host: hostname})
+
+    with {:ok, encoded} <- Jason.encode(message),
+         message_length <- byte_size(encoded),
+         binary_length <- pad_leading(:binary.encode_unsigned(message_length, :big), 4, 0),
+         :ok <- :gen_tcp.send(socket, binary_length),
+         :ok <- :gen_tcp.send(socket, encoded),
+         {:ok, <<resp_len::big-unsigned-integer-size(32)>>} <- :gen_tcp.recv(socket, 4, @tcp_timeout),
+         {:ok, _msg} <- :gen_tcp.recv(socket, resp_len, @tcp_timeout) do
+      ScoutApm.Logger.log(:info, "ScoutApm Core Agent socket probe succeeded (Register accepted)")
+      :ok
+    else
+      _ ->
+        ScoutApm.Logger.log(:warning, "ScoutApm Core Agent socket probe failed (unresponsive)")
+        :error
+    end
+  end
+
+  # Try to connect to an already-running core agent without launching a new one.
+  defp try_reconnect_socket do
+    ip =
+      ScoutApm.Config.find(:core_agent_tcp_ip)
+      |> :inet_parse.ntoa()
+
+    tcp_port = ScoutApm.Config.find(:core_agent_tcp_port)
+    socket_path = Core.socket_path()
+
+    try_connect(socket_path, ip, tcp_port)
   end
 
   @spec verify_or_download :: {:ok, map()} | {:error, any()}
