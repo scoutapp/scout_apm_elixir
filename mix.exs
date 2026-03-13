@@ -4,7 +4,7 @@ defmodule ScoutApm.Mixfile do
   def project do
     [
       app: :scout_apm,
-      version: "2.0.0-rc.1",
+      version: "2.0.0",
       elixir: "~> 1.14",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
@@ -33,7 +33,7 @@ defmodule ScoutApm.Mixfile do
       # We only use `request/5` from hackney, which hasn't changed in the 1.0 line.
       {:hackney, "~> 1.0"},
       {:approximate_histogram, "~> 0.1.1"},
-      {:telemetry, "~> 1.0", optional: true},
+      {:telemetry, "~> 1.0"},
 
       # Optional Phoenix instrumentation dependencies
       {:phoenix, "~> 1.6", optional: true},
@@ -61,7 +61,7 @@ defmodule ScoutApm.Mixfile do
       licenses: ["Scout Software Agent License"],
       links: %{
         "GitHub" => "https://github.com/scoutapp/scout_apm_elixir",
-        "Docs" => "http://docs.scoutapm.com/#elixir-agent"
+        "Docs" => "http://docs.scoutapm.com/elixir"
       }
     ]
   end
