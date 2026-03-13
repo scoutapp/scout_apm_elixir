@@ -1,7 +1,6 @@
 defmodule ScoutApm.Error.ErrorData do
   @moduledoc """
   Internal representation of an error to be sent to Scout APM.
-  Matches the Python agent's error data structure for backend compatibility.
   """
 
   alias ScoutApm.Error.ParameterFilter
@@ -167,7 +166,7 @@ defmodule ScoutApm.Error.ErrorData do
     scm_subdirectory = ScoutApm.Config.find(:scm_subdirectory) || ""
 
     stacktrace
-    # Limit to 50 frames like Python
+    # Limit to 50 frames
     |> Enum.take(50)
     |> Enum.map(fn
       {mod, fun, arity, location} when is_integer(arity) ->

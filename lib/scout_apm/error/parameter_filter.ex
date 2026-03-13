@@ -1,7 +1,6 @@
 defmodule ScoutApm.Error.ParameterFilter do
   @moduledoc """
   Filters sensitive parameters from request data before sending to Scout APM.
-  Matches the Python agent's FILTER_PARAMETERS list.
   """
 
   @default_filter_parameters MapSet.new([

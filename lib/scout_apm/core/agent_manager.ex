@@ -4,10 +4,10 @@ defmodule ScoutApm.Core.AgentManager do
   alias ScoutApm.Core.Manifest
   @behaviour ScoutApm.Collector
 
-  # TCP recv/send timeout in milliseconds (matches Python agent's 3s)
+  # TCP recv/send timeout in milliseconds
   @tcp_timeout 3_000
 
-  # Maximum queued messages before dropping (Python agent uses 500)
+  # Maximum queued messages before dropping
   @max_queue_size 500
 
   # Consecutive errors before attempting reconnect

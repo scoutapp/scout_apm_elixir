@@ -42,7 +42,7 @@ defmodule ScoutApm.Core do
     triple = "#{architecture()}-#{platform()}"
     # For Apple Silicon (M1/M2/M3), use x86_64 binary via Rosetta 2
     # since there's no native ARM build of the Core Agent.
-    # See https://github.com/scoutapp/scout_apm_python/issues/683
+    # No native ARM build of the Core Agent exists yet.
     apple_darwin_aarch64_override(triple)
   end
 

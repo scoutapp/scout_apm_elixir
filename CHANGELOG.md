@@ -14,7 +14,7 @@
   * Metadata Capture — Improved application metadata reporting including Elixir version, loaded libraries, hostname, and git SHA.
 
 * Enhancements
-  * Update Core Agent to v1.5.0 (from v1.2.6)
+  * Update Core Agent to v1.5.1 (from v1.2.6)
   * Update telemetry dependency to `~> 1.0` (from `~> 0.3.0 or ~> 0.4.0`)
   * Phoenix, phoenix_html, and phoenix_live_view are now optional dependencies (enables compile-time HEEx instrumentation)
   * Ecto logger extracts SQL command type and row counts from query results
