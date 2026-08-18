@@ -115,9 +115,13 @@ defmodule ScoutApm.Core.AgentManager do
     destination = Path.join([directory, file_name])
     ScoutApm.Logger.log(:info, "Attempting to download ScoutApm Core Agent from: #{url}")
 
+    # `:with_body` makes hackney 1.x return the body directly in the response
+    # tuple, matching the (only) behavior of hackney 3.0+, where
+    # `:hackney.body/1` no longer exists for regular requests. This form works
+    # on both the 1.x and 4.x lines.
     with :ok <- File.mkdir_p(directory),
-         {:ok, 200, _headers, client_ref} <- :hackney.get(url, [], "", follow_redirect: true),
-         {:ok, body} <- :hackney.body(client_ref),
+         {:ok, 200, _headers, body} <-
+           :hackney.get(url, [], "", [:with_body, {:follow_redirect, true}]),
          :ok <- File.write(destination, body),
          :ok <- :erl_tar.extract(destination, [:compressed, {:cwd, directory}]) do
       ScoutApm.Logger.log(:info, "Downloaded and extracted ScoutApm Core Agent")
