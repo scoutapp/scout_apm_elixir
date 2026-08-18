@@ -11,6 +11,16 @@ defmodule ScoutApm.Error.ErrorServiceHTTPTest do
   setup do
     bypass = Bypass.open()
     previous = Application.get_env(:scout_apm, :errors_host)
+
+    # Clear anything other tests left in the shared queue BEFORE pointing
+    # errors_host at this test's server — the drain itself sends queued
+    # batches, and a batch arriving at Bypass before an expectation is
+    # declared fails the test ("got an HTTP request but wasn't expecting
+    # one"). Draining against a dead port fails fast, and failed batches are
+    # dequeued, leaving the queue empty.
+    Application.put_env(:scout_apm, :errors_host, "http://127.0.0.1:9")
+    ErrorService.drain(5_000)
+
     Application.put_env(:scout_apm, :errors_host, "http://localhost:#{bypass.port}")
 
     on_exit(fn ->
@@ -19,10 +29,6 @@ defmodule ScoutApm.Error.ErrorServiceHTTPTest do
         value -> Application.put_env(:scout_apm, :errors_host, value)
       end
     end)
-
-    # Clear anything other tests left in the shared queue so it doesn't get
-    # flushed into this test's expectations.
-    ErrorService.drain(5_000)
 
     {:ok, bypass: bypass}
   end
