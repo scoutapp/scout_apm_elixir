@@ -63,7 +63,7 @@ defmodule ScoutApm.Mixfile do
       name: :scout_apm,
       files: ["lib", "priv", "mix.exs", "README*", "LICENSE*"],
       maintainers: ["Scout Team"],
-      licenses: ["Scout Software Agent License"],
+      licenses: ["MIT"],
       links: %{
         "GitHub" => "https://github.com/scoutapp/scout_apm_elixir",
         "Docs" => "http://docs.scoutapm.com/elixir"

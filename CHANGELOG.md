@@ -2,6 +2,9 @@
 
 # 2.1.0
 
+* License
+  * The agent is now licensed under the MIT License, aligning with the Scout Ruby and Python agents. It was previously under the proprietary "Scout Software Agent License".
+
 * Enhancements
   * Allow hackney 4.x: the hackney dependency constraint is now `~> 1.0 or ~> 4.0 and >= 4.0.1` (previously `~> 1.0`). This unblocks resolution alongside packages that require hackney 4.x (e.g. `ex_aws` 2.7+) and allows upgrading past the hackney 1.25.0 CVEs (CVE-2026-47069, CVE-2026-47071, CVE-2026-47075, CVE-2026-47076), whose fixes ship only in hackney 4.0.1+. The agent remains fully compatible with hackney 1.x — existing lock files are unaffected. Note: hackney 4.x itself requires Erlang/OTP 27+; on older OTP releases, keep hackney 1.x by adding `{:hackney, "~> 1.24"}` to your application's deps. ([#141](https://github.com/scoutapp/scout_apm_elixir/issues/141))
 
