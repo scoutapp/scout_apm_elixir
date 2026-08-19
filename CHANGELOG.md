@@ -1,5 +1,14 @@
 # master
 
+* Enhancements
+  * Allow hackney 4.x: the hackney dependency constraint is now `~> 1.0 or ~> 4.0 and >= 4.0.1` (previously `~> 1.0`). This unblocks resolution alongside packages that require hackney 4.x (e.g. `ex_aws` 2.7+) and allows upgrading past the hackney 1.25.0 CVEs (CVE-2026-47069, CVE-2026-47071, CVE-2026-47075, CVE-2026-47076), whose fixes ship only in hackney 4.0.1+. The agent remains fully compatible with hackney 1.x — existing lock files are unaffected. Note: hackney 4.x itself requires Erlang/OTP 27+; on older OTP releases, keep hackney 1.x by adding `{:hackney, "~> 1.24"}` to your application's deps. ([#141](https://github.com/scoutapp/scout_apm_elixir/issues/141))
+
+* Bug Fixes
+  * Core agent download no longer uses `:hackney.body/1`, which was removed for regular requests in hackney 3.0+. Under hackney 4.x (e.g. via `override: true`), a fresh boot with no core agent on disk previously raised `FunctionClauseError` inside the agent's supervision tree.
+
+* Testing
+  * Added HTTP-level test coverage (via Bypass) for the core agent download, error reporting, and OTLP log export paths; CI now runs the suite against both hackney 1.x and hackney 4.x.
+
 # 2.0.0
 
 * New Features

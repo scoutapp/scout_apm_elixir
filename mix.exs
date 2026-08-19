@@ -30,8 +30,12 @@ defmodule ScoutApm.Mixfile do
       {:plug, "~> 1.0"},
       {:jason, "~> 1.0"},
 
-      # We only use `request/5` from hackney, which hasn't changed in the 1.0 line.
-      {:hackney, "~> 1.0"},
+      # Compatible with both the hackney 1.x and 4.x lines. The 4.0.1 floor
+      # excludes hackney 4.0.0, which is affected by the CVEs fixed in 4.0.1
+      # (e.g. CVE-2026-47066/47067/47071/47077). Note: hackney 4.x requires
+      # Erlang/OTP 27+; on older OTP releases, pin {:hackney, "~> 1.24"} in
+      # your application.
+      {:hackney, "~> 1.0 or ~> 4.0 and >= 4.0.1"},
       {:approximate_histogram, "~> 0.1.1"},
       {:telemetry, "~> 1.0"},
 
@@ -42,7 +46,8 @@ defmodule ScoutApm.Mixfile do
 
       # Dev & Testing Deps
       {:ex_doc, ">= 0.0.0", only: [:dev]},
-      {:dialyxir, "~> 0.5", only: [:dev], runtime: false}
+      {:dialyxir, "~> 0.5", only: [:dev], runtime: false},
+      {:bypass, "~> 2.1", only: [:test]}
     ]
   end
 
