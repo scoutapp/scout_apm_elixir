@@ -63,10 +63,7 @@ defmodule ScoutApm.Mixfile do
       name: :scout_apm,
       files: ["lib", "priv", "mix.exs", "README*", "LICENSE*"],
       maintainers: ["Scout Team"],
-      # Hex requires SPDX identifiers; custom licenses use the SPDX
-      # LicenseRef- form, with the license text shipped in the package
-      # (LICENSE.md, included via :files above).
-      licenses: ["LicenseRef-Scout-Software-Agent-License"],
+      licenses: ["MIT"],
       links: %{
         "GitHub" => "https://github.com/scoutapp/scout_apm_elixir",
         "Docs" => "http://docs.scoutapm.com/elixir"
