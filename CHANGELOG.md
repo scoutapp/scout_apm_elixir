@@ -1,5 +1,7 @@
 # master
 
+# 2.2.0
+
 * Enhancements
   * Update Core Agent to v1.6.0 (from v1.5.1)
 
