@@ -1,5 +1,8 @@
 # master
 
+* New Configuration Options
+  * `core_agent_ca_cert` (default: `nil`) — Path to an additional CA certificate to pass to the Core Agent as `--ca-cert <path>` when it is launched. Lets the Core Agent trust a private/self-signed CA (e.g. one presented by a corporate TLS-terminating proxy) when reporting over HTTPS. When unset, no flag is added.
+
 # 2.1.0
 
 * License

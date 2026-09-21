@@ -350,6 +350,7 @@ defmodule ScoutApm.Core.AgentManager do
       |> maybe_add_log_level()
       |> maybe_add_log_file()
       |> maybe_add_config_file()
+      |> maybe_add_ca_cert()
 
     ScoutApm.Logger.log(:debug, "Starting Core Agent: #{bin_path} #{Enum.join(args, " ")}")
 
@@ -716,6 +717,17 @@ defmodule ScoutApm.Core.AgentManager do
       path when is_binary(path) ->
         expanded_path = Path.expand(path)
         args ++ ["--config-file", expanded_path]
+    end
+  end
+
+  @spec maybe_add_ca_cert(list(String.t())) :: list(String.t())
+  defp maybe_add_ca_cert(args) do
+    case ScoutApm.Config.find(:core_agent_ca_cert) do
+      nil ->
+        args
+
+      path when is_binary(path) ->
+        args ++ ["--ca-cert", path]
     end
   end
 end
