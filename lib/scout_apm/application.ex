@@ -18,6 +18,7 @@ defmodule ScoutApm.Application do
     :core_agent_log_level,
     :core_agent_log_file,
     :core_agent_config_file,
+    :core_agent_ca_cert,
     :errors_enabled,
     :errors_host,
     :logs_enabled,
