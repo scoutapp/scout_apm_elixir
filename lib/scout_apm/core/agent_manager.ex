@@ -111,6 +111,8 @@ defmodule ScoutApm.Core.AgentManager do
   end
 
   @spec download_binary(String.t(), String.t(), String.t()) :: :ok | {:error, any()}
+  # The directory and file name come from the agent's configuration, not external input.
+  # sobelow_skip ["Traversal.FileModule"]
   def download_binary(url, directory, file_name) do
     destination = Path.join([directory, file_name])
     ScoutApm.Logger.log(:info, "Attempting to download ScoutApm Core Agent from: #{url}")

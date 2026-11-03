@@ -12,6 +12,8 @@ defmodule ScoutApm.Core.Manifest do
         }
 
   @spec build_from_directory(String.t(), String.t()) :: t()
+  # The directory comes from the agent's configuration, not external input.
+  # sobelow_skip ["Traversal.FileModule"]
   def build_from_directory(directory, file \\ "manifest.json") do
     manifest_path = Path.join([directory, file])
 
@@ -42,6 +44,8 @@ defmodule ScoutApm.Core.Manifest do
   def bin_path(%Manifest{directory: dir, bin_name: bin}), do: Path.join([dir, bin])
 
   @spec sha256_valid?(t()) :: boolean | :error
+  # The binary path is built from the manifest in the configured agent directory.
+  # sobelow_skip ["Traversal.FileModule"]
   def sha256_valid?(%Manifest{valid: true} = manifest) do
     bin_path = Manifest.bin_path(manifest)
 

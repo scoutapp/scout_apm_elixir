@@ -1,0 +1,42 @@
+name: Sobelow
+
+# Elixir security static analysis (Sobelow) on every PR to master. Semgrep's
+# open-source engine doesn't parse Elixir, so this is what covers lib/.
+# Any finding fails the check. Reviewed false positives are marked in the code
+# with a `# sobelow_skip [...]` comment and a reason; those move with the code,
+# unlike a .sobelow-skips file, which matches on line numbers.
+# Config.HTTPS is ignored because this library has no HTTP endpoint of its own.
+
+on:
+  pull_request:
+    branches:
+    - master
+  push:
+    branches:
+    - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sobelow:
+    name: Sobelow
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+        with:
+          elixir-version: '1.17'
+          otp-version: '27'
+
+      - name: Install Sobelow
+        run: mix escript.install --force hex sobelow 0.18.1
+
+      - name: Scan
+        run: '"${MIX_HOME:-$HOME/.mix}/escripts/sobelow" --root . --skip --exit low --ignore Config.HTTPS'

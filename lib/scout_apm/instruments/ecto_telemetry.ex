@@ -7,6 +7,8 @@ if Code.ensure_loaded?(Telemetry) || Code.ensure_loaded?(:telemetry) do
 
         ScoutApm.Instruments.EctoTelemetry.attach(MyApp.Repo)
     """
+    # Atoms come from the segments of the application's own Repo module name.
+    # sobelow_skip ["DOS.StringToAtom"]
     def attach(repo_module) do
       query_event =
         repo_module
