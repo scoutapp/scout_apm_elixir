@@ -8,6 +8,8 @@ defmodule ScoutApm.Watcher do
 
   @server __MODULE__
 
+  # The atom name is derived from a supervised module name, not external input.
+  # sobelow_skip ["DOS.StringToAtom"]
   def start_link(mod) do
     name =
       mod
