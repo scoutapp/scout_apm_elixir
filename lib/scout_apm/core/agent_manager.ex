@@ -452,6 +452,9 @@ defmodule ScoutApm.Core.AgentManager do
         :ok
 
       text ->
+        # Invalid UTF-8 would make the logger drop the whole line.
+        text = if String.valid?(text), do: text, else: inspect(text)
+
         text =
           if String.length(text) > @max_logged_output,
             do: "..." <> String.slice(text, -@max_logged_output, @max_logged_output),

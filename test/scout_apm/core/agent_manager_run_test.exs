@@ -63,6 +63,14 @@ defmodule ScoutApm.Core.AgentManagerRunTest do
     assert log =~ "Unable to connect to ScoutApm Core Agent"
   end
 
+  test "logs output that isn't valid UTF-8", %{dir: dir} do
+    bin = fake_core_agent(dir, "printf 'bad \\377\\376 bytes' >&2\nexit 1\n")
+
+    log = capture_log(fn -> assert AgentManager.run(bin) == nil end)
+
+    assert log =~ ~s(ScoutApm Core Agent output: <<98, 97, 100, 32, 255, 254)
+  end
+
   defp fake_core_agent(dir, body) do
     bin = Path.join(dir, "core-agent")
     File.write!(bin, "#!/bin/sh\n" <> body)
