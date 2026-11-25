@@ -727,9 +727,9 @@ defmodule ScoutApm.Core.AgentManager do
   # was downloaded for another version or platform triple (e.g. the glibc build
   # an earlier release fetched into the default /tmp/scout_apm_core), so fetch
   # the current one. Agents placed by hand with downloads disabled are kept.
+  @spec stale_download?(String.t()) :: boolean()
   # The directory comes from the agent's configuration, not external input.
   # sobelow_skip ["Traversal.FileModule"]
-  @spec stale_download?(String.t()) :: boolean()
   defp stale_download?(dir) do
     if ScoutApm.Config.find(:core_agent_download),
       do: not File.exists?(Path.join(dir, "#{Core.agent_full_name()}.tgz")),
