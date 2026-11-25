@@ -361,13 +361,17 @@ defmodule ScoutApm.Core.AgentManager do
     # Give the core agent time to start listening, then check if
     # the launched process exited quickly (e.g. already running).
     Process.sleep(500)
-    port = drain_port_exit(port)
+    {port, output} = drain_port(port)
 
     case try_connect(socket_path, ip, tcp_port) do
       {:ok, socket} ->
         {:ok, port, socket}
 
       nil ->
+        # Collect anything the Core Agent wrote while we were connecting, so a
+        # launch failure (e.g. a missing shared library) shows up in the logs.
+        {_port, output} = drain_port(port, output)
+        log_core_agent_output(output)
         ScoutApm.Logger.log(:error, "Unable to connect to ScoutApm Core Agent")
 
         if port do
@@ -411,25 +415,49 @@ defmodule ScoutApm.Core.AgentManager do
     "'" <> String.replace(arg, "'", "'\\''") <> "'"
   end
 
-  # Check if the port process already exited. If so, consume the
-  # exit_status message so it doesn't trigger handle_info later,
-  # and return nil (we don't own the running agent).
-  defp drain_port_exit(nil), do: nil
+  # Consume the messages the port has sent so far. Returns the port, or nil if
+  # the process already exited (consuming the exit_status message so it doesn't
+  # trigger handle_info later; we don't own the running agent), along with the
+  # output it wrote so a failed launch can be logged.
+  @spec drain_port(port() | nil, iodata()) :: {port() | nil, iodata()}
+  defp drain_port(port, output \\ [])
 
-  defp drain_port_exit(port) do
+  defp drain_port(nil, output), do: {nil, output}
+
+  defp drain_port(port, output) do
     receive do
-      {^port, {:exit_status, _status}} ->
+      {^port, {:exit_status, status}} ->
         ScoutApm.Logger.log(
           :debug,
-          "Core Agent process exited quickly (likely already running)"
+          "Core Agent process exited quickly with status #{status} (likely already running)"
         )
 
-        nil
+        {nil, output}
 
-      {^port, {:data, _data}} ->
-        drain_port_exit(port)
+      {^port, {:data, data}} ->
+        drain_port(port, [output, data])
     after
-      0 -> port
+      0 -> {port, output}
+    end
+  end
+
+  # Enough to show a loader or startup error without flooding the log, since
+  # this runs on every failed launch attempt.
+  @max_logged_output 2_000
+
+  @spec log_core_agent_output(iodata()) :: :ok
+  defp log_core_agent_output(output) do
+    case output |> IO.iodata_to_binary() |> String.trim() do
+      "" ->
+        :ok
+
+      text ->
+        text =
+          if String.length(text) > @max_logged_output,
+            do: "..." <> String.slice(text, -@max_logged_output, @max_logged_output),
+            else: text
+
+        ScoutApm.Logger.log(:error, "ScoutApm Core Agent output: #{text}")
     end
   end
 

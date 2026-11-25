@@ -1,5 +1,9 @@
 # master
 
+* Bug Fixes
+  * Use the statically linked musl build of the Core Agent on all Linux hosts, not just Alpine. The glibc builds of Core Agent v1.6.0 (the 2.2.0 default) need glibc 2.38, so on Debian 12, Ubuntu 22.04, RHEL 9 and other older distributions the Core Agent never started and the app stopped reporting. The Python and Node agents already use the musl build everywhere. To use a specific build, set `core_agent_triple`.
+  * Log the Core Agent's output when the agent can't connect to it after launching. Startup failures, such as a missing shared library, now show up in the logs instead of only repeated connection errors.
+
 # 2.2.0
 
 * Enhancements

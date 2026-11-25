@@ -55,9 +55,16 @@ defmodule ScoutApm.Core do
       {:unix, :darwin} ->
         "apple-darwin"
 
+      # Always use the statically linked musl build on Linux, on glibc systems
+      # too. The glibc ("gnu") builds link against whatever glibc they were
+      # built with, so a build-environment change can raise the minimum glibc
+      # and stop the Core Agent from starting on older distributions (Core
+      # Agent v1.6.0's gnu builds need glibc 2.38, which Debian 12 and
+      # Ubuntu 22.04 don't have). The musl build has no such dependency. The
+      # Python and Node agents made the same choice. Set `core_agent_triple`
+      # to override.
       {:unix, _} ->
-        libc = libc()
-        "unknown-linux-#{libc}"
+        "unknown-linux-musl"
 
       _ ->
         "unknown"
@@ -84,29 +91,6 @@ defmodule ScoutApm.Core do
       end
     rescue
       ErlangError -> "unknown"
-    end
-  end
-
-  @spec libc :: String.t()
-  def libc do
-    case File.read("/etc/alpine-release") do
-      {:ok, _} -> "musl"
-      {:error, _} -> detect_libc_from_ldd()
-    end
-  end
-
-  @spec detect_libc_from_ldd :: String.t()
-  def detect_libc_from_ldd do
-    try do
-      {ldd_version, 0} = System.cmd("ldd", ["--version"])
-
-      if String.contains?(ldd_version, "musl") do
-        "musl"
-      else
-        "gnu"
-      end
-    rescue
-      ErlangError -> "gnu"
     end
   end
 
