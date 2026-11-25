@@ -707,11 +707,47 @@ defmodule ScoutApm.Core.AgentManager do
 
     case Core.verify(dir) do
       {:ok, manifest} ->
-        ScoutApm.Logger.log(:info, "Found valid Scout Core Agent")
-        {:ok, manifest}
+        if stale_download?(dir) do
+          replace_stale_download(dir)
+        else
+          ScoutApm.Logger.log(:info, "Found valid Scout Core Agent")
+          {:ok, manifest}
+        end
 
       {:error, _reason} ->
         maybe_download()
+    end
+  end
+
+  # `download_binary/3` keeps the tarball next to the extracted agent, named
+  # after `Core.agent_full_name()`. If it's missing, the agent in the directory
+  # was downloaded for another version or platform triple (e.g. the glibc build
+  # an earlier release fetched into the default /tmp/scout_apm_core), so fetch
+  # the current one. Agents placed by hand with downloads disabled are kept.
+  # The directory comes from the agent's configuration, not external input.
+  # sobelow_skip ["Traversal.FileModule"]
+  @spec stale_download?(String.t()) :: boolean()
+  defp stale_download?(dir) do
+    if ScoutApm.Config.find(:core_agent_download),
+      do: not File.exists?(Path.join(dir, "#{Core.agent_full_name()}.tgz")),
+      else: false
+  end
+
+  @spec replace_stale_download(String.t()) :: {:ok, map()} | {:error, any()}
+  defp replace_stale_download(dir) do
+    ScoutApm.Logger.log(
+      :info,
+      "Found a Scout Core Agent that doesn't match #{Core.agent_full_name()}. Downloading it."
+    )
+
+    case maybe_download() do
+      {:ok, new_manifest} ->
+        {:ok, new_manifest}
+
+      {:error, _reason} ->
+        # Keep the agent that was already there rather than running none,
+        # unless a failed extraction left the directory invalid.
+        Core.verify(dir)
     end
   end
 
