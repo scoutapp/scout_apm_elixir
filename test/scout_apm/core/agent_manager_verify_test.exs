@@ -66,6 +66,47 @@ defmodule ScoutApm.Core.AgentManagerVerifyTest do
     assert File.read!(Core.Manifest.bin_path(manifest)) == "gnu build"
   end
 
+  test "retries the replacement on the next start when extraction fails",
+       %{bypass: bypass, dir: dir} do
+    seed_agent(dir, "gnu build", "scout_apm_core-v1.6.0-x86_64-unknown-linux-gnu.tgz")
+    path = "/#{Core.agent_full_name()}.tgz"
+
+    Bypass.expect_once(bypass, "GET", path, fn conn ->
+      Plug.Conn.resp(conn, 200, "not a tarball")
+    end)
+
+    assert {:ok, manifest} = AgentManager.verify_or_download()
+    assert File.read!(Core.Manifest.bin_path(manifest)) == "gnu build"
+    refute File.exists?(Path.join(dir, "#{Core.agent_full_name()}.tgz"))
+
+    tgz = agent_tgz("musl build")
+
+    Bypass.expect_once(bypass, "GET", path, fn conn ->
+      Plug.Conn.resp(conn, 200, tgz)
+    end)
+
+    assert {:ok, manifest} = AgentManager.verify_or_download()
+    assert File.read!(Core.Manifest.bin_path(manifest)) == "musl build"
+  end
+
+  test "replaces an agent binary it can't write over", %{bypass: bypass, dir: dir} do
+    # Stands in for a running Core Agent, which Linux won't let a write
+    # replace (:etxtbsy). A rename replaces either.
+    seed_agent(dir, "gnu build", "scout_apm_core-v1.6.0-x86_64-unknown-linux-gnu.tgz")
+    File.chmod!(Path.join(dir, "core-agent"), 0o555)
+    File.chmod!(Path.join(dir, "manifest.json"), 0o444)
+    tgz = agent_tgz("musl build")
+
+    Bypass.expect_once(bypass, "GET", "/#{Core.agent_full_name()}.tgz", fn conn ->
+      Plug.Conn.resp(conn, 200, tgz)
+    end)
+
+    assert {:ok, manifest} = AgentManager.verify_or_download()
+    assert File.read!(Core.Manifest.bin_path(manifest)) == "musl build"
+    assert File.exists?(Path.join(dir, "#{Core.agent_full_name()}.tgz"))
+    assert Enum.all?(File.ls!(dir), &(not String.starts_with?(&1, ".")))
+  end
+
   test "reuses the agent when its tarball matches the current build", %{dir: dir} do
     seed_agent(dir, "musl build", "#{Core.agent_full_name()}.tgz")
 

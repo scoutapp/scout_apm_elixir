@@ -115,27 +115,52 @@ defmodule ScoutApm.Core.AgentManager do
   # sobelow_skip ["Traversal.FileModule"]
   def download_binary(url, directory, file_name) do
     destination = Path.join([directory, file_name])
+    staging = Path.join(directory, ".#{file_name}.#{System.unique_integer([:positive])}")
     ScoutApm.Logger.log(:info, "Attempting to download ScoutApm Core Agent from: #{url}")
 
     # `:with_body` makes hackney 1.x return the body directly in the response
     # tuple, matching the (only) behavior of hackney 3.0+, where
     # `:hackney.body/1` no longer exists for regular requests. This form works
     # on both the 1.x and 4.x lines.
-    with :ok <- File.mkdir_p(directory),
-         {:ok, 200, _headers, body} <-
-           :hackney.get(url, [], "", [:with_body, {:follow_redirect, true}]),
-         :ok <- File.write(destination, body),
-         :ok <- :erl_tar.extract(destination, [:compressed, {:cwd, directory}]) do
-      ScoutApm.Logger.log(:info, "Downloaded and extracted ScoutApm Core Agent")
-      :ok
-    else
-      e ->
-        ScoutApm.Logger.log(
-          :error,
-          "Failed to download and extract ScoutApm Core Agent from #{url}: #{inspect(e)}"
-        )
+    #
+    # Extract into a staging directory and rename the files into place: Linux
+    # won't let a write replace a Core Agent binary that is still running
+    # (:etxtbsy), but a rename can. The tarball, which `stale_download?/1`
+    # treats as the marker of what's installed, is written last, so a failed
+    # replacement is retried on the next start.
+    try do
+      with :ok <- File.mkdir_p(staging),
+           {:ok, 200, _headers, body} <-
+             :hackney.get(url, [], "", [:with_body, {:follow_redirect, true}]),
+           :ok <- :erl_tar.extract({:binary, body}, [:compressed, {:cwd, staging}]),
+           :ok <- move_into_place(staging, directory),
+           :ok <- File.write(destination, body) do
+        ScoutApm.Logger.log(:info, "Downloaded and extracted ScoutApm Core Agent")
+        :ok
+      else
+        e ->
+          ScoutApm.Logger.log(
+            :error,
+            "Failed to download and extract ScoutApm Core Agent from #{url}: #{inspect(e)}"
+          )
 
-        {:error, :failed_to_download_and_extract}
+          {:error, :failed_to_download_and_extract}
+      end
+    after
+      File.rm_rf(staging)
+    end
+  end
+
+  # The paths come from the agent's configuration and the release tarball.
+  # sobelow_skip ["Traversal.FileModule"]
+  defp move_into_place(staging, directory) do
+    with {:ok, names} <- File.ls(staging) do
+      Enum.reduce_while(names, :ok, fn name, :ok ->
+        case File.rename(Path.join(staging, name), Path.join(directory, name)) do
+          :ok -> {:cont, :ok}
+          error -> {:halt, error}
+        end
+      end)
     end
   end
 
