@@ -115,27 +115,52 @@ defmodule ScoutApm.Core.AgentManager do
   # sobelow_skip ["Traversal.FileModule"]
   def download_binary(url, directory, file_name) do
     destination = Path.join([directory, file_name])
+    staging = Path.join(directory, ".#{file_name}.#{System.unique_integer([:positive])}")
     ScoutApm.Logger.log(:info, "Attempting to download ScoutApm Core Agent from: #{url}")
 
     # `:with_body` makes hackney 1.x return the body directly in the response
     # tuple, matching the (only) behavior of hackney 3.0+, where
     # `:hackney.body/1` no longer exists for regular requests. This form works
     # on both the 1.x and 4.x lines.
-    with :ok <- File.mkdir_p(directory),
-         {:ok, 200, _headers, body} <-
-           :hackney.get(url, [], "", [:with_body, {:follow_redirect, true}]),
-         :ok <- File.write(destination, body),
-         :ok <- :erl_tar.extract(destination, [:compressed, {:cwd, directory}]) do
-      ScoutApm.Logger.log(:info, "Downloaded and extracted ScoutApm Core Agent")
-      :ok
-    else
-      e ->
-        ScoutApm.Logger.log(
-          :error,
-          "Failed to download and extract ScoutApm Core Agent from #{url}: #{inspect(e)}"
-        )
+    #
+    # Extract into a staging directory and rename the files into place: Linux
+    # won't let a write replace a Core Agent binary that is still running
+    # (:etxtbsy), but a rename can. The tarball, which `stale_download?/1`
+    # treats as the marker of what's installed, is written last, so a failed
+    # replacement is retried on the next start.
+    try do
+      with :ok <- File.mkdir_p(staging),
+           {:ok, 200, _headers, body} <-
+             :hackney.get(url, [], "", [:with_body, {:follow_redirect, true}]),
+           :ok <- :erl_tar.extract({:binary, body}, [:compressed, {:cwd, staging}]),
+           :ok <- move_into_place(staging, directory),
+           :ok <- File.write(destination, body) do
+        ScoutApm.Logger.log(:info, "Downloaded and extracted ScoutApm Core Agent")
+        :ok
+      else
+        e ->
+          ScoutApm.Logger.log(
+            :error,
+            "Failed to download and extract ScoutApm Core Agent from #{url}: #{inspect(e)}"
+          )
 
-        {:error, :failed_to_download_and_extract}
+          {:error, :failed_to_download_and_extract}
+      end
+    after
+      File.rm_rf(staging)
+    end
+  end
+
+  # The paths come from the agent's configuration and the release tarball.
+  # sobelow_skip ["Traversal.FileModule"]
+  defp move_into_place(staging, directory) do
+    with {:ok, names} <- File.ls(staging) do
+      Enum.reduce_while(names, :ok, fn name, :ok ->
+        case File.rename(Path.join(staging, name), Path.join(directory, name)) do
+          :ok -> {:cont, :ok}
+          error -> {:halt, error}
+        end
+      end)
     end
   end
 
@@ -361,13 +386,17 @@ defmodule ScoutApm.Core.AgentManager do
     # Give the core agent time to start listening, then check if
     # the launched process exited quickly (e.g. already running).
     Process.sleep(500)
-    port = drain_port_exit(port)
+    {port, output} = drain_port(port)
 
     case try_connect(socket_path, ip, tcp_port) do
       {:ok, socket} ->
         {:ok, port, socket}
 
       nil ->
+        # Collect anything the Core Agent wrote while we were connecting, so a
+        # launch failure (e.g. a missing shared library) shows up in the logs.
+        {_port, output} = drain_port(port, output)
+        log_core_agent_output(output)
         ScoutApm.Logger.log(:error, "Unable to connect to ScoutApm Core Agent")
 
         if port do
@@ -411,25 +440,52 @@ defmodule ScoutApm.Core.AgentManager do
     "'" <> String.replace(arg, "'", "'\\''") <> "'"
   end
 
-  # Check if the port process already exited. If so, consume the
-  # exit_status message so it doesn't trigger handle_info later,
-  # and return nil (we don't own the running agent).
-  defp drain_port_exit(nil), do: nil
+  # Consume the messages the port has sent so far. Returns the port, or nil if
+  # the process already exited (consuming the exit_status message so it doesn't
+  # trigger handle_info later; we don't own the running agent), along with the
+  # output it wrote so a failed launch can be logged.
+  @spec drain_port(port() | nil, iodata()) :: {port() | nil, iodata()}
+  defp drain_port(port, output \\ [])
 
-  defp drain_port_exit(port) do
+  defp drain_port(nil, output), do: {nil, output}
+
+  defp drain_port(port, output) do
     receive do
-      {^port, {:exit_status, _status}} ->
+      {^port, {:exit_status, status}} ->
         ScoutApm.Logger.log(
           :debug,
-          "Core Agent process exited quickly (likely already running)"
+          "Core Agent process exited quickly with status #{status} (likely already running)"
         )
 
-        nil
+        {nil, output}
 
-      {^port, {:data, _data}} ->
-        drain_port_exit(port)
+      {^port, {:data, data}} ->
+        drain_port(port, [output, data])
     after
-      0 -> port
+      0 -> {port, output}
+    end
+  end
+
+  # Enough to show a loader or startup error without flooding the log, since
+  # this runs on every failed launch attempt.
+  @max_logged_output 2_000
+
+  @spec log_core_agent_output(iodata()) :: :ok
+  defp log_core_agent_output(output) do
+    case output |> IO.iodata_to_binary() |> String.trim() do
+      "" ->
+        :ok
+
+      text ->
+        # Invalid UTF-8 would make the logger drop the whole line.
+        text = if String.valid?(text), do: text, else: inspect(text)
+
+        text =
+          if String.length(text) > @max_logged_output,
+            do: "..." <> String.slice(text, -@max_logged_output, @max_logged_output),
+            else: text
+
+        ScoutApm.Logger.log(:error, "ScoutApm Core Agent output: #{text}")
     end
   end
 
@@ -679,11 +735,47 @@ defmodule ScoutApm.Core.AgentManager do
 
     case Core.verify(dir) do
       {:ok, manifest} ->
-        ScoutApm.Logger.log(:info, "Found valid Scout Core Agent")
-        {:ok, manifest}
+        if stale_download?(dir) do
+          replace_stale_download(dir)
+        else
+          ScoutApm.Logger.log(:info, "Found valid Scout Core Agent")
+          {:ok, manifest}
+        end
 
       {:error, _reason} ->
         maybe_download()
+    end
+  end
+
+  # `download_binary/3` keeps the tarball next to the extracted agent, named
+  # after `Core.agent_full_name()`. If it's missing, the agent in the directory
+  # was downloaded for another version or platform triple (e.g. the glibc build
+  # an earlier release fetched into the default /tmp/scout_apm_core), so fetch
+  # the current one. Agents placed by hand with downloads disabled are kept.
+  @spec stale_download?(String.t()) :: boolean()
+  # The directory comes from the agent's configuration, not external input.
+  # sobelow_skip ["Traversal.FileModule"]
+  defp stale_download?(dir) do
+    if ScoutApm.Config.find(:core_agent_download),
+      do: not File.exists?(Path.join(dir, "#{Core.agent_full_name()}.tgz")),
+      else: false
+  end
+
+  @spec replace_stale_download(String.t()) :: {:ok, map()} | {:error, any()}
+  defp replace_stale_download(dir) do
+    ScoutApm.Logger.log(
+      :info,
+      "Found a Scout Core Agent that doesn't match #{Core.agent_full_name()}. Downloading it."
+    )
+
+    case maybe_download() do
+      {:ok, new_manifest} ->
+        {:ok, new_manifest}
+
+      {:error, _reason} ->
+        # Keep the agent that was already there rather than running none,
+        # unless a failed extraction left the directory invalid.
+        Core.verify(dir)
     end
   end
 
